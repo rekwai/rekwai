@@ -2,6 +2,8 @@
 
 Development guidelines for Claude Code when working with this repository.
 
+**ALWAYS follow [CONTRIBUTING.md](CONTRIBUTING.md)** for branching, commits, PRs, and issue management.
+
 ## Development Workflow
 
 ### Critical: Don't Guess

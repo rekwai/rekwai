@@ -1,5 +1,7 @@
 # Rekwai App Developer Guidelines
 
+**ALWAYS follow [CONTRIBUTING.md](../CONTRIBUTING.md)** for branching, commits, PRs, and issue management.
+
 ## Project Overview
 Rekwai is a Requirements Management System that leverages AI for intelligent data extraction, processing, and answer generation. The system handles two primary workflows:
 1. Requirements Extraction: Upload documents, extract requirements, and integrate them into a database
