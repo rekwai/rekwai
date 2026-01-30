@@ -194,6 +194,3 @@ For more detailed information, refer to:
   - queries.md: Query system documentation
   - requirements.md: Requirements management documentation
 
-## Extra files
-
-Load file `SYSTEM_ACTIONS_REFERENCE.md` in the context window to have a quick reference of all the actions available in the system.
