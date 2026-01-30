@@ -107,6 +107,12 @@ The `main` branch is protected with the following rules:
 - CLA must be signed (`CLAssistant`)
 - Branch must be up-to-date with `main` before merging
 
+### Pull Requests
+
+- Keep PRs focused — one logical change per PR
+- Fill in the [PR template](.github/PULL_REQUEST_TEMPLATE.md) (summary + related issue)
+- Link the issue with `Closes #N` so it auto-closes on merge
+
 ### Issue Management
 
 Use [issue templates](.github/ISSUE_TEMPLATE/) when creating issues: **Bug Report**, **Feature Request**, or **Task**.
