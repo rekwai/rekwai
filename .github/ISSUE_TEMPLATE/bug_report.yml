@@ -1,0 +1,37 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+type: Bug
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug. Include steps to reproduce if applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: "OS, browser, relevant versions, or deployment method (e.g. Docker)."
+      placeholder: "e.g. macOS 15, Chrome 131, Docker Compose"
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Paste any error output, logs, or attach screenshots.
+      render: shell
+    validations:
+      required: false
