@@ -127,6 +127,18 @@ Use [issue templates](.github/ISSUE_TEMPLATE/) when creating issues: **Bug Repor
 3. Link PRs to issues with `Closes #N` in the PR description
 4. Use milestones to group issues by release when applicable
 
+### Documentation
+
+We maintain two types of documentation:
+
+- **User-facing docs** (`docs/`) — installation, features, workflows. Update when user-facing behavior changes.
+- **Component READMEs** (`backend/`, `frontend/`, `db/`, `garage/`) — setup commands, configuration, component-specific details. Update when the development setup changes.
+
+**When to update docs:**
+
+- New feature or changed behavior → update `docs/`
+- New or changed dev commands, dependencies, or config → update the relevant component README
+
 ### Development Process
 
 1. Fork the repository
