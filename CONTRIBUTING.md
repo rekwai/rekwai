@@ -107,6 +107,26 @@ The `main` branch is protected with the following rules:
 - CLA must be signed (`CLAssistant`)
 - Branch must be up-to-date with `main` before merging
 
+### Issue Management
+
+Use [issue templates](.github/ISSUE_TEMPLATE/) when creating issues: **Bug Report**, **Feature Request**, or **Task**.
+
+**Labels:**
+
+| Label | Purpose |
+|-------|---------|
+| `good first issue` | Suitable for new contributors |
+| `help wanted` | Open for community contributions |
+| `duplicate` | Already reported |
+| `wontfix` | Intentionally not addressing |
+
+**Workflow:**
+
+1. Check for existing issues before opening a new one
+2. Use the appropriate issue template
+3. Link PRs to issues with `Closes #N` in the PR description
+4. Use milestones to group issues by release when applicable
+
 ### Development Process
 
 1. Fork the repository
