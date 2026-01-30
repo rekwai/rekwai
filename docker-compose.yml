@@ -1,0 +1,137 @@
+---
+services:
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}"
+      SELECTED_PROVIDER: ${SELECTED_PROVIDER}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      GEMINI_SMART_MODEL: ${GEMINI_SMART_MODEL}
+      GEMINI_FAST_MODEL: ${GEMINI_FAST_MODEL}
+      CUSTOM_OPENAI_BASE_URL: ${CUSTOM_OPENAI_BASE_URL:-}
+      CUSTOM_OPENAI_API_KEY: ${CUSTOM_OPENAI_API_KEY:-}
+      CUSTOM_OPENAI_SMART_MODEL: ${CUSTOM_OPENAI_SMART_MODEL:-}
+      CUSTOM_OPENAI_FAST_MODEL: ${CUSTOM_OPENAI_FAST_MODEL:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_SMART_MODEL: ${OPENROUTER_SMART_MODEL:-}
+      OPENROUTER_FAST_MODEL: ${OPENROUTER_FAST_MODEL:-}
+      BACKEND_PORT: ${BACKEND_PORT}
+      UVICORN_HOST: ${UVICORN_HOST}
+      # UVICORN_LOG_LEVEL: trace
+      DOCLING_HOST: ${DOCLING_HOST}
+      DOCLING_PORT: ${DOCLING_PORT}
+      S3_URL: ${S3_URL}
+      S3_PORT: ${S3_PORT}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_REGION: ${S3_REGION}
+      LOG_LEVEL: ${LOG_LEVEL}
+      ENABLE_LOGFIRE: ${ENABLE_LOGFIRE:-false}
+      LOGFIRE_TOKEN: ${LOGFIRE_TOKEN:-}
+    depends_on:
+      - postgres
+      - flyway
+      - docling-serve
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    environment:
+      BACKEND_SERVICE_URL: ${BACKEND_SERVICE_URL}
+      PORT: ${FRONTEND_PORT}
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  docling-serve:
+    image: quay.io/docling-project/docling-serve
+    ports:
+      - "5001:5001"
+    networks:
+      - app-network
+
+  postgres:
+    image: pgvector/pgvector:0.8.0-pg17
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+    networks:
+      - app-network
+
+  flyway:
+    image: flyway/flyway
+    container_name: flyway_migrations
+    command: migrate
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:${POSTGRES_PORT}/${POSTGRES_DB}
+      FLYWAY_USER: ${POSTGRES_USER}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DATABASE: ${POSTGRES_DB}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+    volumes:
+      - ./db/migrations:/flyway/sql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  garage:
+    # We're building this intentionally in order to hardcode the config file & ease deployment in simple environments.
+    build:
+      context: ./garage
+    container_name: garage
+    restart: unless-stopped
+    ports:
+      - 3900:3900
+    volumes:
+      - ./garage/data:/data
+    environment:
+      - RUST_LOG=garage=info
+      - GARAGE_ADMIN_TOKEN=${GARAGE_ADMIN_TOKEN}
+      - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET}
+      - GARAGE_METRICS_TOKEN=${GARAGE_METRICS_TOKEN}
+    networks:
+      - app-network
+
+  garage-init:
+    # The purpose of garage-init is to handle all needed configurations in order to use a most simple garage deployment.
+    build:
+      context: ./garage/cli
+    container_name: garage-init
+    volumes:
+      - ./garage/data:/data:ro
+    environment:
+      - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET}
+      - INITIAL_BUCKET_NAME=${INITIAL_BUCKET_NAME}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+    depends_on:
+      - garage
+    networks:
+      - app-network
+
+networks:
+  app-network:
+
+volumes:
+  pgdata:

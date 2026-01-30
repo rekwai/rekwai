@@ -1,0 +1,11 @@
+metadata_dir = "/data/meta"
+data_dir = "/data/data"
+rpc_bind_addr = "[::]:3901"
+
+rpc_public_addr = "garage:3901"
+
+[s3_api]
+s3_region = "ca-central-1"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+

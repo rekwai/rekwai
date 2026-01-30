@@ -1,0 +1,48 @@
+[project]
+name = "rekwai-backend"
+version = "0.1.0"
+description = "Rekwai Backend API - Requirements Management System with AI"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.128.0",
+    "fastapi-mcp>=0.4.0",
+    "google-genai>=1.60.0",
+    "httpx>=0.28.1",
+    "jinja2>=3.1.6", # Template engine for PDF generation (questionnaire export)
+    "logfire>=4.20.0",
+    "minio>=7.2.20",
+    "mypy>=1.19.1",
+    "pgvector>=0.4.2",
+    "psycopg2-binary>=2.9.11",
+    "pydantic-ai>=1.47.0",
+    "python-dotenv>=1.2.1",
+    "python-multipart>=0.0.22",
+    "sqlalchemy>=2.0.46",
+    "uuid6>=2025.0.1",
+    "weasyprint>=68.0", # HTML to PDF converter for questionnaire export
+]
+
+[tool.ruff]
+# You might have other settings here like 'line-length', 'select', etc.
+
+[tool.ruff.lint.per-file-ignores]
+# Add F401 and F811 to the list of rules to ignore for test files
+# F401: unused import
+# F811: redefinition of unused name
+"tests/*.py" = ["F401", "F811"]
+"tests/**/*.py" = ["F401", "F811"]
+
+[tool.pytest.ini_options]
+# Ignore the Pydantic V2.11 deprecation warning about __get_pydantic_core_schema__
+filterwarnings = [
+    "ignore:The `__get_pydantic_core_schema__` method.*:pydantic.PydanticDeprecatedSince211"
+]
+pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "sqlalchemy-utils>=0.42.1",
+]

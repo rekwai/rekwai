@@ -1,0 +1,177 @@
+# Requirements Management
+
+## Overview
+
+Requirements management helps you build a central database of all your organizational requirements. You can upload documents to automatically extract requirements, or add them manually. This database becomes the foundation for automatically answering questionnaires later.
+
+For a general introduction, see the **[Overview Guide](overview.md)**. Requirements are managed within **[Products](product.md)** - make sure you have a product workspace set up first. For setup instructions, see the **[Installation Guide](installation.md)**.
+
+The Rekwai app maintains a complete history of where each requirement came from, creating an automated evidence trail that saves you time when answering compliance questions. When you upload a source, the system finds statements that look like requirements, decides if this is a new requirement or matches something you already have, and remembers exactly where it came from.
+
+## What Are Requirements?
+
+Requirements are statements that describe what your organization, system, or project needs to do or achieve. The Rekwai app automatically identifies and categorizes these from your sources, recognizing different types such as:
+
+- **Functional Requirements**: What the system should do (e.g., "Users must be able to login with their email")
+- **Non-Functional Requirements**: How the system should perform (e.g., "The system must respond within 2 seconds")
+- **Security Requirements**: How to keep things secure (e.g., "All data must be encrypted")
+- **Business Requirements**: What the business needs (e.g., "Reports must be generated monthly")
+
+The app automatically determines which categories each requirement belongs to, and requirements can have **multiple types** assigned simultaneously. For example, a requirement might be classified as both "Security" and "Functional" if it describes secure functionality.
+
+Each requirement has:
+- **Description**: What needs to be done
+- **Types**: The categories (automatically assigned, can have multiple types)
+- **Implementation Status**: The current state of the requirement:
+  - **Implemented**: Already working and complete
+  - **Planned**: Scheduled for future work
+  - **To do**: Needs to be done but not yet scheduled
+  - **Won't do**: Decided not to implement
+- **Implementation Details**: How it's being handled
+- **Requirement Verification**: How the requirement can be verified or tested
+- **Source Traceability**: Exactly which source and statement it came from
+
+## How to Work with Requirements
+
+### Option 1: Upload Sources (Recommended)
+
+This approach leverages the system's automatic processing to build a comprehensive, evidence-backed requirements database.
+
+#### Step 1: Upload Your Source
+
+1. Select your product workspace
+2. Click the "Upload" dropdown and select "Upload Source"
+3. Choose a source file containing requirements (PDF, Word, Excel, etc.)
+4. Wait for processing to complete - the dialog shows step-by-step progress indicators
+
+#### Step 2: Automatic Processing
+
+**What You See:**
+- A progress indicator showing each processing step
+
+**What the System Does:**
+1. **Extracts requirements** from your document
+2. **Categorizes each requirement** by type (Security, Functional, etc.)
+3. **Analyzes implementation status** based on document context
+4. **Generates verification methods** for each requirement
+5. **Searches your existing database** and links similar requirements automatically
+
+When processing completes, you are navigated to the Requirement Indexing page where the heavy lifting is already done.
+
+#### Step 3: Working in the Requirement Indexing Interface
+
+**Interface Layout:**
+- **Left Panel**: All extracted requirements with completion indicators (checkmark when linked to your database)
+- **Metadata Tab**: Document information (key, name, type, size) and upload date
+- **Right Panel**: Details for the selected requirement with linking tools
+
+When you open a requirement, you'll see any requirements the system already linked from your database. Your job is to **review and refine** - most of the matching work is already done.
+
+#### Reviewing and Improving Links
+
+**The Linked Requirements Section:**
+- Shows requirements from your database that match this source requirement
+- The system has already linked high-confidence matches automatically
+- Each linked requirement displays its description, types, and implementation status
+
+**Actions for Each Linked Requirement:**
+- **Edit** (pencil icon): Modify the linked requirement details
+- **Merge** (arrows icon): Combine source requirement content into the linked requirement
+- **Unlink** (X icon): Remove this link if it's not relevant
+
+**Adding More Links:**
+If the system missed relevant requirements or you need more context:
+- **Refresh** (rotate icon): Search again for similar requirements and auto-link matches
+- **Link requirement(s)**: Opens a modal to search and select from all requirements in your product
+- **Create requirement**: Create a new requirement based on the source (the form is pre-filled)
+
+**Merging Requirements:**
+- Click the merge icon on any linked requirement
+- The system creates merged text that preserves important details from both requirements
+- Review the merged content in the edit dialog and save to update the requirement
+- Use this to enrich your database as new sources provide additional context
+
+#### Navigation and Progress
+
+- Use "Previous" and "Next" buttons to work through requirements systematically
+- Green checkmarks indicate requirements that are linked to your database
+- Progress is automatically saved - return to any source later to continue
+- Click "Close" on the last requirement to finish
+
+#### Bulk Operations
+
+**Bulk Create Requirements:**
+- Use the "Add X unlinked requirements to Rekwai" button in the header
+- Creates main requirements from all unlinked source requirements at once
+- Useful when most extracted requirements should become new entries in your database
+
+### Option 2: Add Requirements Manually
+
+**What You Do:**
+1. Click "Create Requirement"
+2. Type the requirement description
+3. Select or type a requirement type
+4. Choose the implementation status (implemented, planned, to-do, won't do)
+5. Add implementation details
+6. Add requirement verification details (how the requirement can be verified or tested)
+7. Click "Create"
+
+**Note:** Manual requirements won't have automatic source traceability, but you can add source information in the implementation details if needed.
+
+## Managing Your Requirements
+
+### Viewing Your Requirements
+- All your requirements appear in a comprehensive data table on the Requirements tab
+- **Advanced search**: Use the search box to find specific requirements by typing keywords in descriptions, types, or implementation details
+- **Multiple selection**: Select multiple requirements using checkboxes for bulk operations
+- **Type indicators**: Visual badges show all assigned types with color coding
+- **Implementation status**: Color-coded status indicators with hover tooltips showing implementation details
+- **Source traceability**: Click on any requirement to see full details, including complete source traceability when available
+
+### Editing Requirements
+1. Click on a requirement to open the details panel
+2. Make your changes to description, type, status, or implementation details
+3. Changes save automatically
+4. The system maintains a complete change history including:
+   - Manual edits to requirement details
+   - Modifications from source merging operations
+   - Updates to implementation status over time
+   - Original source traceability preservation
+
+### Deleting Requirements
+- **Bulk deletion**: Check the boxes next to multiple requirements and use the "Delete requirements" button
+- **Individual deletion**: Click the trash icon on individual requirements for single deletions
+- **Source management**: Delete entire sources and their associated extracted requirements from the Sources tab
+- **Confirmation**: System requests confirmation before permanent deletion to prevent accidental loss
+
+> **⚠️ Important:** For a complete understanding of your product or project, consider keeping all requirements in the system - even those that are no longer valid. Instead of deleting outdated requirements, mark them as "Won't do" and explain the reasoning in the implementation details. This preserves your decision-making history and helps you remember what was considered but ultimately rejected, which is valuable context for understanding how your project evolved.
+
+## Source Management
+
+The Rekwai app provides comprehensive source management capabilities to help you organize and track all your requirement sources.
+
+### Sources Tab Features
+- **Source library**: View all uploaded requirement sources with file details, upload dates, and processing status
+- **Download sources**: Download original files for offline reference or sharing
+- **Source details**: See exactly how many requirements were extracted from each source
+- **Source deletion**: Remove sources and all their associated extracted requirements. This breaks the links to main requirements but preserves the main requirements themselves
+- **File format support**: Upload PDFs, Word documents, Excel spreadsheets, and other common formats
+
+### Integration with Questionnaires
+
+Your requirements database integrates with the questionnaire system to automatically generate answers to compliance questions. See **[Query Management](queries.md)** for details.
+
+## Why Traceability Matters
+
+When someone asks a compliance question, instead of manually hunting through 50 sources, the system works like this:
+
+- **Client:** "Do you have MFA?"
+- **System:** Searches your requirements → Finds "MFA requirement" → Looks up the traceability records → Says "Yes, we have MFA. Here's proof: Source A said this, Source B said that."
+
+As you add more sources over time, your answers get more complete but you never lose track of them:
+- **Remembers sources**: Maintains complete traceability to original sources
+- **Finds matches**: Locates relevant requirements even when questions use different terminology
+- **Tracks changes**: Maintains a complete audit trail of how requirements evolve over time
+- **Builds over time**: Each new source enriches your database for future responses
+
+The requirements you build here become the source for automatically answering questionnaires later, so the more complete and accurate your database, the better your questionnaire responses will be.
