@@ -57,6 +57,8 @@ def create_get_source_documents_tool() -> Callable[
             List of SourceDocumentInfo objects with document_key and filename.
             Returns empty list if requirement doesn't exist or has no linked documents.
         """
+        ctx.deps.total_tool_call_count += 1
+
         deps = ctx.deps
 
         # Create session and services with proper lifecycle management
@@ -151,6 +153,9 @@ def create_search_source_document_tool() -> Callable[
         Raises:
             ValueError: If regex pattern is invalid
         """
+        ctx.deps.source_doc_search_count += 1
+        ctx.deps.total_tool_call_count += 1
+
         deps = ctx.deps
 
         # Step 1: Query database to resolve document_key to s3_object_key

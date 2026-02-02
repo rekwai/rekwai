@@ -30,7 +30,13 @@ class AnsweringDeps:
         organization_id: ID of the organization owning the question
         question_text: The actual question text to be answered
         search_count: Counter for tracking semantic search tool calls
+        source_doc_search_count: Counter for tracking source document search tool calls
+        total_tool_call_count: Counter for tracking all tool calls across all tools
     """
+
+    MAX_SEARCH_CALLS: int = 3
+    MAX_SOURCE_DOC_SEARCH_CALLS: int = 5
+    MAX_TOTAL_TOOL_CALLS: int = 40
 
     db_engine: Engine
     s3_service: S3Service
@@ -38,6 +44,8 @@ class AnsweringDeps:
     organization_id: str
     question_text: str
     search_count: int = 0
+    source_doc_search_count: int = 0
+    total_tool_call_count: int = 0
 
     def create_requirement_repository(self, session: Session) -> RequirementRepository:
         """Create a RequirementRepository instance for the given session.
