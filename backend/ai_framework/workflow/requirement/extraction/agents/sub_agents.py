@@ -11,7 +11,6 @@ are available in coverage_validation_agents.py.
 from pydantic_ai import Agent
 
 from ai_framework.agent import create_agent
-from ai_framework.workflow.requirement.extraction.extraction_deps import ExtractionDeps
 from ai_framework.workflow.requirement.extraction.models import (
     QualityCheckResult,
     TypeConsistencyResult,
@@ -127,7 +126,7 @@ Output: value="Violations of the organization's Access Control Standard policy m
 """
 
 
-def create_quality_fix_agent() -> Agent[ExtractionDeps, QualityCheckResult]:
+def create_quality_fix_agent() -> Agent[None, QualityCheckResult]:
     """
     Create a quality fix agent with document access for rejected requirements.
 
@@ -138,7 +137,7 @@ def create_quality_fix_agent() -> Agent[ExtractionDeps, QualityCheckResult]:
     The agent is configured with:
     - Fast model for cost-effective validation
     - Structured output (QualityCheckResult) for consistent feedback
-    - ExtractionDeps dependency for context
+    - No dependencies needed (context provided in prompt)
 
     Returns:
         A configured Agent instance ready for quality fixing with document access
