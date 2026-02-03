@@ -3,7 +3,7 @@ Integration tests for the product API.
 
 This module tests the CRUD operations for products using FastAPI's TestClient.
 It creates a temporary test database for testing and cleans it up after tests are complete.
-It uses Flyway migrations to set up the database schema.
+It uses golang-migrate migrations to set up the database schema.
 """
 
 import pytest
