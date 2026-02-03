@@ -27,5 +27,18 @@ RUN uv sync --frozen --no-dev
 # Copy application code
 COPY . .
 
+# Copy database migrations into the image from additional context
+COPY --from=db migrations /migrations
+
+# Install golang-migrate binary
+RUN wget -qO- https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xvz \
+    && mv migrate /usr/local/bin/migrate \
+    && chmod +x /usr/local/bin/migrate
+
+# Add entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 # Use the virtual environment directly instead of `uv run` to avoid runtime package installation
 CMD [".venv/bin/uvicorn", "main:app"]

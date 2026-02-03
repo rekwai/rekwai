@@ -1,1 +1,0 @@
-INSERT INTO organization (id, name) VALUES ('0198d954-33a8-7939-93eb-fb3ed1317045', 'My Organization');

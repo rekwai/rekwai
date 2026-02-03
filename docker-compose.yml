@@ -4,6 +4,8 @@ services:
   backend:
     build:
       context: ./backend
+      additional_contexts:
+        db: ./db
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     environment:
@@ -33,9 +35,10 @@ services:
       ENABLE_LOGFIRE: ${ENABLE_LOGFIRE:-false}
       LOGFIRE_TOKEN: ${LOGFIRE_TOKEN:-}
     depends_on:
-      - postgres
-      - flyway
-      - docling-serve
+      postgres:
+        condition: service_healthy
+      docling-serve:
+        condition: service_started
     networks:
       - app-network
 
@@ -74,24 +77,6 @@ services:
       interval: 2s
       timeout: 2s
       retries: 5
-    networks:
-      - app-network
-
-  flyway:
-    image: flyway/flyway
-    container_name: flyway_migrations
-    command: migrate
-    environment:
-      FLYWAY_URL: jdbc:postgresql://postgres:${POSTGRES_PORT}/${POSTGRES_DB}
-      FLYWAY_USER: ${POSTGRES_USER}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DATABASE: ${POSTGRES_DB}
-      FLYWAY_LOCATIONS: filesystem:/flyway/sql
-    volumes:
-      - ./db/migrations:/flyway/sql
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - app-network
 
