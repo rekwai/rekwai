@@ -19,19 +19,14 @@ from ai_framework.workflow.question.answering.models import (
     FullAnswerResult,
     ValidationResult,
 )
-from ai_framework.workflow.question.answering.source_document_tools import (
-    create_get_source_documents_tool,
-    create_search_source_document_tool,
-)
 from ai_framework.workflow.question.answering.agents.validation_agents import (
     create_answer_quality_agent,
     create_requirement_linkage_agent,
-    create_source_reference_agent,
 )
 
 
-# System prompt for answer agent (requirements + sources)
-FULL_ANSWER_SYSTEM_PROMPT = """You are a specialized AI assistant that answers questions about software requirements and their source documents.
+# System prompt for answer agent (requirements only)
+FULL_ANSWER_SYSTEM_PROMPT = """You are a specialized AI assistant that answers questions about software requirements.
 
 **CRITICAL - Determine Question Type First**:
 
@@ -52,11 +47,8 @@ Search Strategy
 
 1. **Use semantic search** to find requirements related to the question
 2. **Get full requirement details** when initial results look relevant
-3. **Access source documents ONLY when requirements lack specific details** needed to answer the question
-   - Get list of source documents linked to relevant requirements
-   - Search within source documents for specific values, configurations, or technical details
-4. **Find ALL relevant requirements** - don't stop at the first match
-5. **Never hallucinate** - base answers ONLY on explicit text from requirements and sources
+3. **Find ALL relevant requirements** - don't stop at the first match
+4. **Never hallucinate** - base answers ONLY on explicit text from requirements
 
 **Search Efficiency**:
 - Limit searches to 3 attempts maximum
@@ -78,18 +70,14 @@ Output Format
   * Rephrase meta info naturally ("status: to do" → "not yet implemented")
   * If no requirements found, explain that no relevant requirements were found
 - **requirements_referenced**: List with requirement_key and reason (empty list [] if none found)
-- **sources_referenced**: List with document_key, section (excerpt), and reason (empty list [] if none used)
 
 ---
 
-Example: "What is the OAuth2 token expiration time?"
+Example: "Does the system support OAuth2 authentication?"
 
-1. Semantic search: "OAuth2 token expiration"
-2. Get requirement details → finds OAuth2 mentioned but no expiration time
-3. Get source documents for OAuth2 requirement
-4. Search source document: "token expiration"
-5. Find: "OAuth2 token expiration: 30 minutes"
-6. Answer: answer_type="n/a", explanation="The system's OAuth2 tokens expire after 30 minutes.", requirements_referenced=[REQ-AUTH-001], sources_referenced=[DOC-OAUTH-001 with section]
+1. Semantic search: "OAuth2 authentication"
+2. Get requirement details → finds REQ-AUTH-001 describing OAuth2 with JWT tokens
+3. Answer: answer_type="yes", explanation="The system supports OAuth2 authentication with JWT tokens for secure user login.", requirements_referenced=[REQ-AUTH-001]
 """
 
 async def limit_tools(
@@ -99,10 +87,9 @@ async def limit_tools(
     """Dynamically filter tools based on usage limits.
 
     This callback is passed to the agent's prepare_tools parameter.
-    It enforces three limits:
+    It enforces two limits:
     1. Total tool calls: strips ALL tools to force the agent to conclude
     2. Semantic search calls: removes search_requirements_semantic
-    3. Source doc search calls: removes search_source_document
 
     Args:
         ctx: The run context containing AnsweringDeps with counters
@@ -122,19 +109,13 @@ async def limit_tools(
             for tool_def in filtered
             if tool_def.name != "search_requirements_semantic"
         ]
-    if deps.source_doc_search_count >= AnsweringDeps.MAX_SOURCE_DOC_SEARCH_CALLS:
-        filtered = [
-            tool_def
-            for tool_def in filtered
-            if tool_def.name != "search_source_document"
-        ]
     return filtered
 
 
 def create_answer_agent(
     enable_validation: bool = False,
 ) -> Agent[AnsweringDeps, FullAnswerResult]:
-    """Create an answer agent that answers questions using requirements and sources.
+    """Create an answer agent that answers questions using requirements.
 
     Args:
         enable_validation: If True, adds automatic validation with retry using @output_validator.
@@ -143,24 +124,20 @@ def create_answer_agent(
     The agent has access to:
     - Semantic requirement search (for conceptual similarity)
     - Get requirement details (for full information)
-    - Get source documents (linked to requirements)
-    - Search source document (for specific details)
 
     When enable_validation=True, the agent will:
-    - Automatically validate output using 3 validation agents
+    - Automatically validate output using 2 validation agents
     - Retry with feedback if validation fails
     - Keep session open until validation passes or max retries reached
 
     The agent autonomously decides which tools to use and when to stop searching.
 
     Returns:
-        Agent configured to answer questions using requirements and sources
+        Agent configured to answer questions using requirements
     """
     tools = [
         create_search_requirements_semantic_tool(),
         create_get_requirement_tool(),
-        create_get_source_documents_tool(),
-        create_search_source_document_tool(),
     ]
 
     agent = create_agent(
@@ -213,7 +190,6 @@ async def _validate_answer_inline(
     """
     quality_agent = create_answer_quality_agent()
     linkage_agent = create_requirement_linkage_agent()
-    source_agent = create_source_reference_agent()
 
     quality_task = run_agent_with_retry(
         quality_agent,
@@ -225,27 +201,20 @@ async def _validate_answer_inline(
         f"Question: {deps.question_text}\n\nAnswer: {answer_result.explanation}\n\nRequirement References: {[ref.model_dump() for ref in answer_result.requirements_referenced]}",
         deps=deps,
     )
-    source_task = run_agent_with_retry(
-        source_agent,
-        f"Question: {deps.question_text}\n\nAnswer: {answer_result.explanation}\n\nRequirement References: {[ref.model_dump() for ref in answer_result.requirements_referenced]}\n\nSource References: {[ref.model_dump() for ref in answer_result.sources_referenced]}",
-        deps=deps,
-    )
 
-    quality_result, linkage_result, source_result = await asyncio.gather(
-        quality_task, linkage_task, source_task
+    quality_result, linkage_result = await asyncio.gather(
+        quality_task, linkage_task
     )
 
     # Build ValidationResult
     overall_valid = (
         quality_result.output.is_valid
         and linkage_result.output.is_valid
-        and source_result.output.is_valid
     )
 
     return ValidationResult(
         answer_quality=quality_result.output,
         requirement_linkage=linkage_result.output,
-        source_reference=source_result.output,
         overall_valid=overall_valid,
     )
 
@@ -275,13 +244,6 @@ def _construct_validation_feedback(validation_result: ValidationResult) -> str:
         for invalid_req in validation_result.requirement_linkage.invalid_requirements:
             feedback_parts.append(
                 f"  - {invalid_req.requirement_key}: {invalid_req.issue}"
-            )
-
-    if not validation_result.source_reference.is_valid:
-        feedback_parts.append("\nSource Reference Issues:")
-        for invalid_src in validation_result.source_reference.invalid_sources:
-            feedback_parts.append(
-                f"  - {invalid_src.document_key}: {invalid_src.issue}"
             )
 
     return "\n".join(feedback_parts)

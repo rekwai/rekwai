@@ -2,7 +2,6 @@ from typing import Optional
 from sqlalchemy.engine import Engine
 
 from questionnaire.models import QuestionAnswer
-from s3_service import S3Service
 
 from ai_framework.workflow.question.answering.answering_deps import AnsweringDeps
 from ai_framework.workflow.question.answering.agents.answer_agent import (
@@ -14,10 +13,8 @@ class RagQuestionAnsweringService:
     def __init__(
         self,
         db_engine: Optional[Engine] = None,
-        s3_service: Optional[S3Service] = None,
     ):
         self.db_engine = db_engine
-        self.s3_service = s3_service
 
     async def answer_question_with_rag(
         self,
@@ -32,7 +29,6 @@ class RagQuestionAnsweringService:
 
         deps = AnsweringDeps(
             db_engine=self.db_engine,
-            s3_service=self.s3_service,
             product_id=product_id,
             organization_id=organization_id,
             question_text=question_text,

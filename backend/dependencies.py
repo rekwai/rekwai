@@ -64,12 +64,9 @@ def get_question_extractor(
     return QuestionExtractor(s3_service)
 
 
-def get_rag_question_answering_service(
-    s3_service: S3Service = Depends(get_s3_service),
-) -> RagQuestionAnsweringService:
+def get_rag_question_answering_service() -> RagQuestionAnsweringService:
     return RagQuestionAnsweringService(
         db_engine=engine,
-        s3_service=s3_service,
     )
 
 
