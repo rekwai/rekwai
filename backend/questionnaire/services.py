@@ -565,31 +565,34 @@ class QuestionnaireService:
             task_id, progress=0.7, message="Generating answers for questions"
         )
 
+        semaphore = asyncio.Semaphore(10)
+
         async def generate_answer_for_question(q_data: dict) -> dict:
             """Generate answer for a single question."""
-            question_text = q_data.get("question", "Missing question text")
-            order = q_data.get("order")
-            generated_answer = None
-            answer_type = None
-            source_requirement_keys: list[str] = []
+            async with semaphore:
+                question_text = q_data.get("question", "Missing question text")
+                order = q_data.get("order")
+                generated_answer = None
+                answer_type = None
+                source_requirement_keys: list[str] = []
 
-            answer_response = await self.rag_service.answer_question_with_rag(
-                question_text=question_text,
-                product_id=product_id,
-                organization_id=organization_id,
-            )
-            if answer_response.context_sufficient:
-                generated_answer = answer_response.answer
-                answer_type = answer_response.answer_type
-            source_requirement_keys = answer_response.source_requirement_keys
+                answer_response = await self.rag_service.answer_question_with_rag(
+                    question_text=question_text,
+                    product_id=product_id,
+                    organization_id=organization_id,
+                )
+                if answer_response.context_sufficient:
+                    generated_answer = answer_response.answer
+                    answer_type = answer_response.answer_type
+                source_requirement_keys = answer_response.source_requirement_keys
 
-            return {
-                "question_text": question_text,
-                "generated_answer": generated_answer,
-                "answer_type": answer_type,
-                "source_requirement_keys": source_requirement_keys,
-                "order": order,
-            }
+                return {
+                    "question_text": question_text,
+                    "generated_answer": generated_answer,
+                    "answer_type": answer_type,
+                    "source_requirement_keys": source_requirement_keys,
+                    "order": order,
+                }
 
         # Generate answers for all questions in parallel
         questions_with_data = await asyncio.gather(
