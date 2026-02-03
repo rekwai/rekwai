@@ -92,36 +92,43 @@ Example: "What is the OAuth2 token expiration time?"
 6. Answer: answer_type="n/a", explanation="The system's OAuth2 tokens expire after 30 minutes.", requirements_referenced=[REQ-AUTH-001], sources_referenced=[DOC-OAUTH-001 with section]
 """
 
-# Maximum number of semantic search calls allowed before disabling the tool
-MAX_SEARCH_CALLS = 3
-
-
-async def limit_search_tool(
+async def limit_tools(
     ctx: RunContext[AnsweringDeps],
     tool_defs: list[ToolDefinition],
 ) -> list[ToolDefinition] | None:
-    """Filter out search_requirements_semantic tool after MAX_SEARCH_CALLS.
+    """Dynamically filter tools based on usage limits.
 
     This callback is passed to the agent's prepare_tools parameter.
-    It dynamically disables the semantic search tool after the configured
-    number of calls to prevent excessive searching when no requirements exist.
+    It enforces three limits:
+    1. Total tool calls: strips ALL tools to force the agent to conclude
+    2. Semantic search calls: removes search_requirements_semantic
+    3. Source doc search calls: removes search_source_document
 
     Args:
-        ctx: The run context containing AnsweringDeps with search_count
+        ctx: The run context containing AnsweringDeps with counters
         tool_defs: List of available tool definitions
 
     Returns:
-        Filtered list of tool definitions, excluding search_requirements_semantic
-        if the search limit has been reached
+        Filtered list of tool definitions based on current usage limits
     """
-    if ctx.deps.search_count >= MAX_SEARCH_CALLS:
-        # Filter out the search tool, keep all others (get_requirement, get_source_documents, etc.)
-        return [
+    deps = ctx.deps
+    if deps.total_tool_call_count >= AnsweringDeps.MAX_TOTAL_TOOL_CALLS:
+        return []
+
+    filtered = tool_defs
+    if deps.search_count >= AnsweringDeps.MAX_SEARCH_CALLS:
+        filtered = [
             tool_def
-            for tool_def in tool_defs
+            for tool_def in filtered
             if tool_def.name != "search_requirements_semantic"
         ]
-    return tool_defs
+    if deps.source_doc_search_count >= AnsweringDeps.MAX_SOURCE_DOC_SEARCH_CALLS:
+        filtered = [
+            tool_def
+            for tool_def in filtered
+            if tool_def.name != "search_source_document"
+        ]
+    return filtered
 
 
 def create_answer_agent(
@@ -161,7 +168,7 @@ def create_answer_agent(
         system_prompt=FULL_ANSWER_SYSTEM_PROMPT,
         tools=tools,
         output_type=FullAnswerResult,
-        prepare_tools=limit_search_tool,
+        prepare_tools=limit_tools,
     )
 
     # Add validation if enabled

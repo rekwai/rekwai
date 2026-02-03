@@ -101,6 +101,7 @@ def create_search_requirements_semantic_tool() -> Callable[
         """
         # Increment search counter for tracking tool usage
         ctx.deps.search_count += 1
+        ctx.deps.total_tool_call_count += 1
 
         deps = ctx.deps
 
@@ -167,6 +168,8 @@ def create_get_requirement_tool() -> Callable[
         Returns:
             RequirementDetails object with full requirement information, or None if not found
         """
+        ctx.deps.total_tool_call_count += 1
+
         deps = ctx.deps
 
         # Create session and services with proper lifecycle management
