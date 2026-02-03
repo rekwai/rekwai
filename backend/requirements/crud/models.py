@@ -195,6 +195,7 @@ class MergedRequirement(BaseModel):
     types: List[str]
     implementation_status: str
     implementation_description: str
+    requirement_verification: Optional[str] = None
 
 
 class IntermediateExtractedRequirementBase(BaseModel):
