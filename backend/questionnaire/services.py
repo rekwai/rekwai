@@ -5,6 +5,7 @@ Business logic services for questionnaire operations.
 import asyncio
 import logging
 import uuid6
+from collections import Counter
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 from io import BytesIO
@@ -333,6 +334,22 @@ class QuestionnaireService:
 
             # Check for cancellation after question extraction
             self.async_tasks_service.check_cancellation(task_id)
+
+            # Validate order values before expensive answer generation
+            orders = [q.get("order") for q in extracted_questions_data]
+            missing = [i for i, o in enumerate(orders) if o is None]
+            if missing:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Questions at indices {missing} are missing an 'order' value",
+                )
+            order_counts = Counter(orders)
+            duplicates = {o for o, count in order_counts.items() if count > 1}
+            if duplicates:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Duplicate question order values detected: {duplicates}",
+                )
 
             questions_with_data = await self._generate_answers_for_questions(
                 extracted_questions_data, product_id, task_id, organization_id

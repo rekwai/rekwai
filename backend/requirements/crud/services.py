@@ -73,12 +73,7 @@ class RequirementService:
     async def create_requirement(
         self, requirement_data: models.RequirementCreate
     ) -> models.RequirementDto:
-        text_to_embed = _build_text_to_embed(
-            requirement_data.description, requirement_data.implementation_description
-        )
-        embedding = await self.external_ai_service.create_embeddings(text_to_embed)
-        requirement_data.embedding = embedding
-
+        # Validate product_id and generate key BEFORE expensive embedding call
         org_id = get_organization_id()
         row = self.product_repository.increment_and_get_product_key(
             requirement_data.product_id
@@ -88,8 +83,13 @@ class RequirementService:
                 status_code=400, detail="Invalid product_id for requirement creation"
             )
         current_number, product_key = row
-
         requirement_key = f"{product_key}-{current_number}"
+
+        text_to_embed = _build_text_to_embed(
+            requirement_data.description, requirement_data.implementation_description
+        )
+        embedding = await self.external_ai_service.create_embeddings(text_to_embed)
+        requirement_data.embedding = embedding
 
         return self.repository.create(
             requirement_data, organization_id=org_id, requirement_key=requirement_key
@@ -302,6 +302,9 @@ class RequirementService:
             # Check for cancellation before AI extraction
             self.async_tasks_service.check_cancellation(task_id)
 
+            # Validate product_id and generate document key BEFORE expensive AI extraction
+            document_key = self._generate_document_key(product_id)
+
             # Get existing requirement types for the organization
             existing_types = self.repository.get_distinct_types(organization_id)
 
@@ -317,9 +320,6 @@ class RequirementService:
 
             # Check for cancellation after AI extraction
             self.async_tasks_service.check_cancellation(task_id)
-
-            # Generate document key
-            document_key = self._generate_document_key(product_id)
 
             # Remove file extension from the filename for display purposes
             filename_without_extension = Path(file_name).stem
