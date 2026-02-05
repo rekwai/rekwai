@@ -6,6 +6,7 @@ import {
   RequirementHistory,
   ExtractedRequirementDto,
   SuggestedAction,
+  SuggestedActionType,
 } from "../../types/requirement-types";
 import { QuestionAnswer, QuestionRequest } from "../../types/query-types";
 
@@ -168,6 +169,11 @@ export interface DocumentWithRequirements {
     requirement_verification: string | null;
     order: number;
     has_links: boolean;
+    suggested_action?: SuggestedActionType | null;
+    suggested_target_requirement_id?: string | null;
+    suggestion_justification?: string | null;
+    suggestion_similarity_score?: number | null;
+    suggested_target_requirement?: Requirement | null;
   }>;
 }
 
@@ -368,6 +374,37 @@ export async function generateMerge(
     `${getApiUrl()}/requirements/extracted-requirement/${extractedRequirementId}/generate-merge/${requirementId}`,
   );
   return handleResponse<MergedRequirement>(response);
+}
+
+/**
+ * Accepts the AI suggestion for an extracted requirement.
+ * For attach/merge: creates the extraction link and clears suggestion.
+ * For create_new: just clears suggestion.
+ */
+export async function acceptSuggestion(
+  extractedRequirementId: string,
+): Promise<{ action: string; target_requirement_id: string | null }> {
+  const response = await fetch(
+    `${getApiUrl()}/requirements/extracted-requirement/${extractedRequirementId}/accept-suggestion`,
+    { method: "POST" },
+  );
+  return handleResponse<{
+    action: string;
+    target_requirement_id: string | null;
+  }>(response);
+}
+
+/**
+ * Dismisses the AI suggestion for an extracted requirement.
+ */
+export async function dismissSuggestion(
+  extractedRequirementId: string,
+): Promise<{ status: string }> {
+  const response = await fetch(
+    `${getApiUrl()}/requirements/extracted-requirement/${extractedRequirementId}/dismiss-suggestion`,
+    { method: "POST" },
+  );
+  return handleResponse<{ status: string }>(response);
 }
 
 /**

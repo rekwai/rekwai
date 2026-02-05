@@ -6,6 +6,7 @@
 import {
   RequirementItem,
   ImplementationStatus,
+  SuggestedActionType,
 } from "@/types/requirement-types";
 import { DocumentWithRequirements } from "@/lib/api/requirements";
 
@@ -31,5 +32,10 @@ export function transformDocumentRequirementsToItems(
     updatedAt: req.extraction_timestamp,
     decisionType: "",
     product_id: data.product_id,
+    suggestedAction: req.suggested_action as SuggestedActionType | undefined,
+    suggestedTargetRequirementId: req.suggested_target_requirement_id ?? undefined,
+    suggestionJustification: req.suggestion_justification ?? undefined,
+    suggestionSimilarityScore: req.suggestion_similarity_score ?? undefined,
+    suggestedTargetRequirement: req.suggested_target_requirement ?? undefined,
   }));
 }

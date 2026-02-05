@@ -537,3 +537,33 @@ class RequirementRepository:
         self.db.refresh(db_extracted_req)
         self.db.commit()
         return db_extracted_req
+
+    def set_extracted_requirement_suggestion(
+        self,
+        extracted_requirement_id: str,
+        action: Optional[str] = None,
+        target_requirement_id: Optional[str] = None,
+        justification: Optional[str] = None,
+        similarity_score: Optional[float] = None,
+    ) -> Optional[tables.ExtractedRequirementDB]:
+        """Set or clear the AI suggestion on an extracted requirement row.
+
+        Pass values to store a suggestion, or call with no arguments to clear.
+        """
+        db_extracted_req = (
+            self.db.query(tables.ExtractedRequirementDB)
+            .filter(tables.ExtractedRequirementDB.id == extracted_requirement_id)
+            .first()
+        )
+        if not db_extracted_req:
+            return None
+
+        db_extracted_req.suggested_action = action
+        db_extracted_req.suggested_target_requirement_id = target_requirement_id
+        db_extracted_req.suggestion_justification = justification
+        db_extracted_req.suggestion_similarity_score = similarity_score
+
+        self.db.flush()
+        self.db.refresh(db_extracted_req)
+        self.db.commit()
+        return db_extracted_req

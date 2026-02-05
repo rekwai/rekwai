@@ -12,6 +12,7 @@ from .repository import RequirementDocumentRepository
 from ..crud.repository import RequirementRepository
 from ..crud import models as crud_models
 from ..extraction_link.repository import RequirementExtractionLinkRepository
+from ..extraction_link.models import RequirementExtractionLinkCreate
 from auth.org_context import get_organization_id
 from s3_service import S3Service
 from ai_framework.agent import create_agent
@@ -101,6 +102,13 @@ class RequirementDocumentService:
                 req_id
             )
 
+            # Resolve suggested target requirement if set
+            suggested_target_req = None
+            if extracted_requirement_db.suggested_target_requirement_id:
+                suggested_target_req = self.requirement_repository.get(
+                    str(extracted_requirement_db.suggested_target_requirement_id)
+                )
+
             extracted_requirement_dto = crud_models.ExtractedRequirementDto(
                 id=req_id,
                 document_name=extracted_requirement_db.document_name,
@@ -113,6 +121,13 @@ class RequirementDocumentService:
                 extraction_timestamp=extracted_requirement_db.extraction_timestamp,
                 order=extracted_requirement_db.order,
                 has_links=len(linked_req_ids) > 0,
+                suggested_action=extracted_requirement_db.suggested_action,
+                suggested_target_requirement_id=str(extracted_requirement_db.suggested_target_requirement_id)
+                if extracted_requirement_db.suggested_target_requirement_id
+                else None,
+                suggestion_justification=extracted_requirement_db.suggestion_justification,
+                suggestion_similarity_score=extracted_requirement_db.suggestion_similarity_score,
+                suggested_target_requirement=suggested_target_req,
             )
 
             requirements_list.append(extracted_requirement_dto)
@@ -261,6 +276,69 @@ class RequirementDocumentService:
 
         # Step 5: Delete the requirement document
         return self.repository.delete(document_id)
+
+    def accept_suggestion(self, extracted_requirement_id: str) -> dict:
+        """Accept the AI suggestion for an extracted requirement.
+
+        For attach/merge: creates the extraction link and clears suggestion columns.
+        For create_new: just clears suggestion columns (requirement creation handled by frontend).
+        """
+        db_req = self.requirement_repository.get_extracted_requirement_by_id(
+            extracted_requirement_id
+        )
+        if not db_req:
+            raise HTTPException(
+                status_code=404, detail="Extracted requirement not found"
+            )
+
+        if not db_req.suggested_action:
+            raise HTTPException(
+                status_code=400, detail="No suggestion to accept"
+            )
+
+        action = db_req.suggested_action
+        target_id = (
+            str(db_req.suggested_target_requirement_id)
+            if db_req.suggested_target_requirement_id
+            else None
+        )
+
+        # For attach/merge: create the extraction link
+        if action in ("attach", "merge") and target_id:
+            try:
+                link_data = RequirementExtractionLinkCreate(
+                    requirement_id=target_id,
+                    extracted_requirement_id=extracted_requirement_id,
+                )
+                self.extraction_link_repository.create_link(link_data)
+            except ValueError:
+                log.info(
+                    f"Link already exists for requirement {target_id} "
+                    f"and extracted requirement {extracted_requirement_id}"
+                )
+
+        # Clear suggestion columns
+        self.requirement_repository.set_extracted_requirement_suggestion(
+            extracted_requirement_id
+        )
+
+        return {"action": action, "target_requirement_id": target_id}
+
+    def dismiss_suggestion(self, extracted_requirement_id: str) -> dict:
+        """Dismiss the AI suggestion by clearing all suggestion columns."""
+        db_req = self.requirement_repository.get_extracted_requirement_by_id(
+            extracted_requirement_id
+        )
+        if not db_req:
+            raise HTTPException(
+                status_code=404, detail="Extracted requirement not found"
+            )
+
+        self.requirement_repository.set_extracted_requirement_suggestion(
+            extracted_requirement_id
+        )
+
+        return {"status": "dismissed"}
 
     async def generate_merge(
         self, extracted_requirement_id: str, requirement_id: str

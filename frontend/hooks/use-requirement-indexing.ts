@@ -15,6 +15,8 @@ import {
   getRequirement,
   generateMerge,
   updateExtractedRequirement,
+  acceptSuggestion,
+  dismissSuggestion as dismissSuggestionApi,
 } from "@/lib/api/requirements";
 import { updateRequirementInList } from "@/lib/utils/requirement-indexing-utils";
 
@@ -163,6 +165,24 @@ export function useRequirementIndexing({
     }
   }, [selectedRequirement, linkedRequirements]);
 
+  // Helper to clear stored suggestion fields from the local requirement
+  const clearSelectedRequirementSuggestion = useCallback(() => {
+    setRequirements((prev) =>
+      prev.map((req, idx) =>
+        idx === selectedRequirementIndex
+          ? {
+              ...req,
+              suggestedAction: null,
+              suggestedTargetRequirementId: null,
+              suggestionJustification: null,
+              suggestionSimilarityScore: null,
+              suggestedTargetRequirement: null,
+            }
+          : req,
+      ),
+    );
+  }, [selectedRequirementIndex]);
+
   // Confirm the AI suggestion
   const confirmSuggestion = useCallback(async (): Promise<{
     action: SuggestedAction["action"];
@@ -173,15 +193,13 @@ export function useRequirementIndexing({
     const { action, target_requirement_id, target_requirement } =
       suggestedAction;
 
+    // Call backend accept endpoint (creates link for attach/merge, clears suggestion)
+    await acceptSuggestion(selectedRequirement.id.toString());
+
     if (
       (action === "attach" || action === "merge") &&
       target_requirement_id
     ) {
-      // Create the link
-      await createExtractionLink(
-        target_requirement_id,
-        selectedRequirement.id.toString(),
-      );
       await fetchAndSetLinkedRequirements();
       updateSelectedRequirementHasLinks(true);
     }
@@ -192,17 +210,41 @@ export function useRequirementIndexing({
     };
 
     setSuggestedAction(null);
+    clearSelectedRequirementSuggestion();
     return result;
-  }, [suggestedAction, selectedRequirement, fetchAndSetLinkedRequirements, updateSelectedRequirementHasLinks]);
+  }, [suggestedAction, selectedRequirement, fetchAndSetLinkedRequirements, updateSelectedRequirementHasLinks, clearSelectedRequirementSuggestion]);
 
   // Dismiss the AI suggestion
-  const dismissSuggestion = useCallback(() => {
+  const dismissSuggestion = useCallback(async () => {
+    try {
+      if (selectedRequirement?.id) {
+        await dismissSuggestionApi(selectedRequirement.id.toString());
+      }
+    } catch (error) {
+      console.error("Failed to dismiss suggestion:", error);
+    }
     setSuggestedAction(null);
-  }, []);
+    clearSelectedRequirementSuggestion();
+  }, [selectedRequirement, clearSelectedRequirementSuggestion]);
 
-  // Clear suggestion when selected requirement changes
+  // Auto-populate suggestion from stored data when selected requirement changes
   useEffect(() => {
-    setSuggestedAction(null);
+    if (
+      selectedRequirement?.suggestedAction &&
+      selectedRequirement.suggestionJustification
+    ) {
+      setSuggestedAction({
+        action: selectedRequirement.suggestedAction,
+        target_requirement_id:
+          selectedRequirement.suggestedTargetRequirementId ?? null,
+        target_requirement:
+          selectedRequirement.suggestedTargetRequirement ?? null,
+        justification: selectedRequirement.suggestionJustification,
+        similarity_score: selectedRequirement.suggestionSimilarityScore ?? 0,
+      });
+    } else {
+      setSuggestedAction(null);
+    }
   }, [selectedRequirement?.id]);
 
   // Load linked requirements when selectedRequirement changes

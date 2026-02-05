@@ -67,6 +67,11 @@ class ExtractedRequirementDto(BaseModel):
     extraction_timestamp: datetime
     order: float  # Sequential order within document for frontend sorting
     has_links: bool = False  # Whether this requirement has any linked main requirements
+    suggested_action: Optional[str] = None
+    suggested_target_requirement_id: Optional[str] = None
+    suggestion_justification: Optional[str] = None
+    suggestion_similarity_score: Optional[float] = None
+    suggested_target_requirement: Optional["RequirementDto"] = None
 
     model_config = ConfigDict(from_attributes=True)
 

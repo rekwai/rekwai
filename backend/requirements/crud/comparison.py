@@ -234,9 +234,13 @@ class RequirementComparisonService:
             f"Found {len(candidates)} candidate requirements for action decision"
         )
 
-        # Build formatted candidate list for the LLM
-        candidates_text = "\n".join(
-            f"[{i}] (key: {dto.requirement_key}) {dto.description}"
+        # Build formatted candidate list for the LLM with full details
+        candidates_text = "\n\n".join(
+            f"[{i}] (key: {dto.requirement_key})\n"
+            f"  Description: {dto.description}\n"
+            f"  Types: {', '.join(dto.types)}\n"
+            f"  Implementation: {dto.implementation_status} — {dto.implementation_description}\n"
+            f"  Verification: {dto.requirement_verification or 'N/A'}"
             for i, dto in enumerate(candidate_dtos)
         )
 

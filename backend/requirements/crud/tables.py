@@ -176,6 +176,14 @@ class ExtractedRequirementDB(Base):
         index=True,
     )
     order = Column(REAL, nullable=False)
+    suggested_action = Column(String(20), nullable=True)
+    suggested_target_requirement_id = Column(
+        UUID(as_uuid=False),
+        ForeignKey("requirement.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    suggestion_justification = Column(Text, nullable=True)
+    suggestion_similarity_score = Column(REAL, nullable=True)
 
     __table_args__ = (
         Index("idx_extracted_requirement_org_product", organization_id, product_id),

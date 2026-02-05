@@ -18,6 +18,11 @@ export interface RequirementItem {
   description: string;
   decisionType: string;
   product_id: string;
+  suggestedAction?: SuggestedActionType | null;
+  suggestedTargetRequirementId?: string | null;
+  suggestionJustification?: string | null;
+  suggestionSimilarityScore?: number | null;
+  suggestedTargetRequirement?: Requirement | null;
 }
 
 export interface DocumentMetadata {
@@ -112,6 +117,11 @@ export interface ExtractedRequirementDto {
   has_links: boolean;
   extraction_timestamp: string;
   order: number;
+  suggested_action?: SuggestedActionType | null;
+  suggested_target_requirement_id?: string | null;
+  suggestion_justification?: string | null;
+  suggestion_similarity_score?: number | null;
+  suggested_target_requirement?: Requirement | null;
 }
 
 export interface ExtractedRequirementUpdate {

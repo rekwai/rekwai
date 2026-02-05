@@ -27,7 +27,6 @@ from async_tasks.exceptions import TaskCancelledException
 from ..document.services import RequirementDocumentService
 from ..document.models import RequirementDocumentCreate
 from ..extraction_link.repository import RequirementExtractionLinkRepository
-from ..extraction_link.models import RequirementExtractionLinkCreate
 from product.repository import ProductRepository
 
 logger = logging.getLogger(__name__)
@@ -355,65 +354,40 @@ class RequirementService:
             # Check for cancellation after saving requirements
             self.async_tasks_service.check_cancellation(task_id)
 
-            # Auto-link similar requirements during upload (parallel)
+            # Generate AI suggestions for each extracted requirement (parallel)
             self.async_tasks_service.update_task(
                 task_id,
                 progress=0.85,
-                message="Finding and linking similar requirements...",
+                message="Generating AI suggestions...",
             )
 
-            async def link_requirement(saved_req) -> int:
-                """Suggest action and auto-link for a single extracted requirement."""
+            async def generate_suggestion(saved_req) -> int:
+                """Generate and store AI suggestion for a single extracted requirement."""
                 try:
-                    suggestion = (
-                        await self.suggest_action_for_extracted_requirement(
-                            extracted_requirement_id=str(saved_req.id),
-                            filter_reqs=None,
-                        )
+                    await self.suggest_action_for_extracted_requirement(
+                        extracted_requirement_id=str(saved_req.id),
+                        filter_reqs=None,
                     )
-
-                    # Only create a link for attach or merge actions
-                    if (
-                        suggestion.action
-                        in (
-                            models.SuggestedActionType.ATTACH,
-                            models.SuggestedActionType.MERGE,
-                        )
-                        and suggestion.target_requirement_id
-                    ):
-                        try:
-                            link_data = RequirementExtractionLinkCreate(
-                                requirement_id=suggestion.target_requirement_id,
-                                extracted_requirement_id=str(saved_req.id),
-                            )
-                            self.extraction_link_repository.create_link(link_data)
-                            return 1
-                        except ValueError as link_error:
-                            logger.info(
-                                f"Could not create link for requirement "
-                                f"{suggestion.target_requirement_id}: {link_error}"
-                            )
-                            return 0
-                    return 0
+                    return 1
                 except TaskCancelledException:
                     raise
                 except Exception as req_error:
                     logger.warning(
-                        f"Error suggesting action for extracted requirement {saved_req.id}: {req_error}"
+                        f"Error generating suggestion for extracted requirement {saved_req.id}: {req_error}"
                     )
                     return 0
 
-            # Run all linking in parallel
-            link_results = await asyncio.gather(
-                *[link_requirement(req) for req in saved_extracted_requirements]
+            # Run all suggestions in parallel
+            suggestion_results = await asyncio.gather(
+                *[generate_suggestion(req) for req in saved_extracted_requirements]
             )
-            total_links_created = sum(link_results)
+            total_suggestions = sum(suggestion_results)
 
             self.async_tasks_service.update_task(
                 task_id,
                 status=TaskStatus.COMPLETED,
                 progress=1.0,
-                message=f"Successfully extracted {len(extracted_requirements)} requirements and created {total_links_created} links",
+                message=f"Successfully extracted {len(extracted_requirements)} requirements and generated {total_suggestions} AI suggestions",
                 entity_id=created_document.document_key,
             )
 
@@ -478,6 +452,13 @@ class RequirementService:
         linked_req_ids = self.extraction_link_repository.get_requirement_ids_for_extracted_requirement(
             extracted_requirement_id
         )
+        # Resolve suggested target requirement if set
+        suggested_target_req = None
+        if updated.suggested_target_requirement_id:
+            suggested_target_req = self.repository.get(
+                str(updated.suggested_target_requirement_id)
+            )
+
         return models.ExtractedRequirementDto(
             id=str(updated.id),
             document_name=updated.document_name,
@@ -490,6 +471,13 @@ class RequirementService:
             extraction_timestamp=updated.extraction_timestamp,
             order=updated.order,
             has_links=len(linked_req_ids) > 0,
+            suggested_action=updated.suggested_action,
+            suggested_target_requirement_id=str(updated.suggested_target_requirement_id)
+            if updated.suggested_target_requirement_id
+            else None,
+            suggestion_justification=updated.suggestion_justification,
+            suggestion_similarity_score=updated.suggestion_similarity_score,
+            suggested_target_requirement=suggested_target_req,
         )
 
     async def suggest_action_for_extracted_requirement(
@@ -518,13 +506,36 @@ class RequirementService:
             extracted_requirement.implementation_description,
         )
 
-        return await self.comparison_service.decide_action_for_requirement(
+        # Build full extracted requirement text for the LLM
+        types = self.repository.get_extracted_requirement_types(
+            extracted_requirement_id
+        )
+        doc_req_text = (
+            f"Description: {extracted_requirement.description}\n"
+            f"Types: {', '.join(types) if types else 'N/A'}\n"
+            f"Implementation: {extracted_requirement.implementation_status or 'N/A'}"
+            f" — {extracted_requirement.implementation_description or 'N/A'}\n"
+            f"Verification: {extracted_requirement.requirement_verification or 'N/A'}"
+        )
+
+        suggestion = await self.comparison_service.decide_action_for_requirement(
             text_to_embed=text_to_embed,
-            doc_req_text=extracted_requirement.description,
+            doc_req_text=doc_req_text,
             product_id=extracted_requirement.product_id,
             limit=SIMILAR_REQUIREMENTS_LIMIT,
             filter_reqs=filter_reqs,
         )
+
+        # Persist the suggestion on the extracted requirement row
+        self.repository.set_extracted_requirement_suggestion(
+            extracted_requirement_id,
+            action=suggestion.action.value,
+            target_requirement_id=suggestion.target_requirement_id,
+            justification=suggestion.justification,
+            similarity_score=suggestion.similarity_score,
+        )
+
+        return suggestion
 
     async def answer_question(
         self,

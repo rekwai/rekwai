@@ -69,7 +69,7 @@ async def suggest_action_for_extracted_requirement(
     Suggests a single action (attach, merge, or create_new) for an extracted requirement.
 
     Uses vector search to find candidates, then a single LLM call to decide the best action,
-    validated by a second LLM agent.
+    validated by a second LLM agent. Also stores the suggestion on the extracted requirement row.
     """
     return await service.suggest_action_for_extracted_requirement(
         extracted_requirement_id, exclude_req or None
@@ -228,6 +228,30 @@ async def delete_document(
         )
 
     return {"message": "Document successfully deleted"}
+
+
+@router.post(
+    "/extracted-requirement/{extracted_requirement_id}/accept-suggestion",
+    tags=["requirements_document"],
+)
+def accept_suggestion(
+    extracted_requirement_id: str,
+    service: RequirementDocumentService = Depends(get_requirement_document_service),
+):
+    """Accept the AI suggestion for an extracted requirement."""
+    return service.accept_suggestion(extracted_requirement_id)
+
+
+@router.post(
+    "/extracted-requirement/{extracted_requirement_id}/dismiss-suggestion",
+    tags=["requirements_document"],
+)
+def dismiss_suggestion(
+    extracted_requirement_id: str,
+    service: RequirementDocumentService = Depends(get_requirement_document_service),
+):
+    """Dismiss the AI suggestion for an extracted requirement."""
+    return service.dismiss_suggestion(extracted_requirement_id)
 
 
 @router.get(
