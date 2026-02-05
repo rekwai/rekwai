@@ -26,16 +26,24 @@ REQUIREMENT_ACTION_DECISION_PROMPT = """
 You are an expert requirements analyst. Given an extracted requirement from a source document \
 and a list of candidate existing requirements, decide the single best action.
 
+**Goal:** Keep the requirements database lean and consolidated. Avoid bloat — prefer linking \
+to or enriching existing requirements over creating new ones.
+
 **Actions:**
-- **attach**: An existing requirement already FULLY covers this extracted requirement. \
-The source document should simply be linked to it. Use when the existing requirement \
-captures the same goal/capability with no meaningful new information to add.
-- **merge**: An existing requirement is CLOSE but would benefit from details in the \
-source document. The existing requirement should be updated/enriched. Use when the \
-extracted requirement adds specifics, context, or nuance to an existing one.
-- **create_new**: No existing requirement captures this goal. A brand-new requirement \
-should be created. Use when the extracted requirement addresses a fundamentally different \
-topic from all candidates.
+- **attach**: An existing requirement *fully covers* the extracted one. Just link the document — \
+no content changes needed. The match is a near-duplicate: same goal, same scope, no meaningful \
+new information to add.
+- **merge**: An existing requirement covers the *same topic area* and could be enriched. Use when:
+  - The extracted requirement adds specifics, context, or nuance to an existing one.
+  - Implementation and verification would stay similar between the two.
+  - The new document provides an implementation status update for an existing requirement \
+(e.g., one describes the planned capability, the other confirms it's been implemented — \
+merge to update status/details).
+- **create_new**: Use *sparingly*. Only when:
+  - The topic is completely new (none of the candidates cover it).
+  - It doesn't fit the spirit of any existing requirement (e.g., fundamentally different perspective).
+  - Implementation would be *completely* different from all candidates.
+  - Verification would be *completely* different from all candidates.
 
 **Rules:**
 1. Pick exactly ONE action and (for attach/merge) exactly ONE best match.
@@ -43,11 +51,15 @@ topic from all candidates.
 3. For merge: similarity_score should be >= 0.5. The match covers the same topic but differs in detail.
 4. For create_new: set best_match_index to null and similarity_score to the highest candidate score (or 0.0 if no candidates).
 5. When in doubt between attach and merge, prefer merge — it's safer to review than to silently link.
-6. When in doubt between merge and create_new, prefer create_new — it's safer to create than to incorrectly merge unrelated requirements.
+6. When in doubt between merge and create_new, prefer merge — consolidation keeps the database lean. \
+Only choose create_new when you are confident the requirement is truly novel.
+7. Use the provided implementation and verification details to assess merge vs create_new. \
+If implementation or verification would be similar, that strongly favors merge.
 """
 
 ACTION_DECISION_VALIDATION_PROMPT = """
-You are a validation agent for requirement action decisions. Check whether the decision is sound.
+You are a validation agent for requirement action decisions. The goal is to keep the requirements \
+database lean — prefer consolidation (attach/merge) over creating new entries.
 
 **Validation checks:**
 1. If action is 'attach' or 'merge', best_match_index must be a valid index into the candidate list.
@@ -56,9 +68,12 @@ You are a validation agent for requirement action decisions. Check whether the d
 "no existing requirement covers this", the action should be 'create_new', not 'attach'.
 4. For 'attach', verify the candidate truly FULLY covers the extracted requirement (the justification \
 should reflect this). If the candidate only partially covers it, the action should be 'merge'.
-5. For 'merge', verify the candidate is related enough to justify merging. If the candidate is about \
-a fundamentally different topic, the action should be 'create_new'.
+5. For 'merge', verify the candidate is related enough to justify merging. If implementation or \
+verification would be similar between the extracted requirement and the candidate, merge is correct.
 6. similarity_score should be reasonable for the action: attach >= 0.8, merge >= 0.5.
+7. For 'create_new', scrutinize the justification: does it explain why implementation AND verification \
+would be *completely* different from all candidates? If not, suggest merge instead. \
+create_new decisions need strong justification — the requirement must be truly novel.
 
 Output your validation result.
 """
