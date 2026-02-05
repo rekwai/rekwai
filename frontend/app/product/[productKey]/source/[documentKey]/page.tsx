@@ -11,6 +11,7 @@ import { EditExtractedRequirementModal } from "@/components/source/edit-extracte
 import {
   getDocumentWithRequirements,
   DocumentWithRequirements,
+  createRequirement,
 } from "@/lib/api/requirements";
 import { getProductByKey } from "@/lib/api/products";
 import {
@@ -221,8 +222,21 @@ export default function DocumentPage({
       } catch {
         setPendingMergeLinkId(null);
       }
-    } else if (result?.action === "create_new") {
-      createRequirementModal.open();
+    } else if (result?.action === "create_new" && selectedRequirement) {
+      const created = await createRequirement({
+        description: getFirstNonEmpty(
+          selectedRequirement.text,
+          selectedRequirement.description,
+        ),
+        types: selectedRequirement.types || [],
+        implementation_status: selectedRequirement.implementation || "To do",
+        implementation_description:
+          selectedRequirement.implementationDescription || "",
+        requirement_verification:
+          selectedRequirement.requirementVerification || "",
+        product_id: selectedRequirement.product_id,
+      });
+      await linkNewRequirement(created.id.toString());
     }
   };
 
