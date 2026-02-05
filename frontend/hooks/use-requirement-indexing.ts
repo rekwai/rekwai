@@ -193,13 +193,17 @@ export function useRequirementIndexing({
     const { action, target_requirement_id, target_requirement } =
       suggestedAction;
 
-    // Call backend accept endpoint (creates link for attach/merge, clears suggestion)
-    await acceptSuggestion(selectedRequirement.id.toString());
+    // Call backend accept endpoint (creates link for attach, clears suggestion)
+    try {
+      await acceptSuggestion(selectedRequirement.id.toString());
+    } catch (error) {
+      console.error("Failed to accept suggestion:", error);
+      return null; // Keep suggestion state intact so user can retry
+    }
 
-    if (
-      (action === "attach" || action === "merge") &&
-      target_requirement_id
-    ) {
+    // Only update linked requirements state for attach (backend creates link immediately).
+    // For merge, the link is created later after the user completes the merge drawer.
+    if (action === "attach" && target_requirement_id) {
       await fetchAndSetLinkedRequirements();
       updateSelectedRequirementHasLinks(true);
     }

@@ -50,6 +50,9 @@ export default function DocumentPage({
   const [activeTab, setActiveTab] = useState("Requirements");
   const [drawerOverrideValues, setDrawerOverrideValues] =
     useState<Partial<Requirement> | null>(null);
+  const [pendingMergeLinkId, setPendingMergeLinkId] = useState<string | null>(
+    null,
+  );
 
   // Modal state management using custom hook
   const createRequirementModal = useRequirementModal();
@@ -206,10 +209,17 @@ export default function DocumentPage({
   const handleConfirmSuggestion = async () => {
     const result = await confirmSuggestion();
     if (result?.action === "merge" && result.requirement) {
-      const mergeResult = await handleGenerateMerge(result.requirement);
-      if (mergeResult) {
-        mergeDrawerModal.open(mergeResult.requirement);
-        setDrawerOverrideValues(mergeResult.overrideValues);
+      setPendingMergeLinkId(result.requirement.id.toString());
+      try {
+        const mergeResult = await handleGenerateMerge(result.requirement);
+        if (mergeResult) {
+          mergeDrawerModal.open(mergeResult.requirement);
+          setDrawerOverrideValues(mergeResult.overrideValues);
+        } else {
+          setPendingMergeLinkId(null);
+        }
+      } catch {
+        setPendingMergeLinkId(null);
       }
     } else if (result?.action === "create_new") {
       createRequirementModal.open();
@@ -373,15 +383,25 @@ export default function DocumentPage({
       {/* Requirement Edit Modal for Updates */}
       <CreateRequirementModal
         open={mergeDrawerModal.isOpen}
-        onOpenChange={mergeDrawerModal.close}
+        onOpenChange={(open) => {
+          if (!open) {
+            // Drawer was cancelled — clear pending merge link
+            mergeDrawerModal.close();
+            setPendingMergeLinkId(null);
+          }
+        }}
         requirement={mergeDrawerModal.data}
         overrideValues={drawerOverrideValues || undefined}
         onComplete={async () => {
-          // Close the drawer
           mergeDrawerModal.close();
 
-          // Reload requirements to refresh the linked requirements list
-          await loadLinkedRequirements();
+          // Create the extraction link now that merge is complete
+          if (pendingMergeLinkId) {
+            await linkNewRequirement(pendingMergeLinkId);
+            setPendingMergeLinkId(null);
+          } else {
+            await loadLinkedRequirements();
+          }
         }}
         productId={mergeDrawerModal.data?.product_id || null}
       />

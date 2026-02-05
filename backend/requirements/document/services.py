@@ -280,7 +280,8 @@ class RequirementDocumentService:
     def accept_suggestion(self, extracted_requirement_id: str) -> dict:
         """Accept the AI suggestion for an extracted requirement.
 
-        For attach/merge: creates the extraction link and clears suggestion columns.
+        For attach: creates the extraction link and clears suggestion columns.
+        For merge: only clears suggestion columns (link is created after merge completion).
         For create_new: just clears suggestion columns (requirement creation handled by frontend).
         """
         db_req = self.requirement_repository.get_extracted_requirement_by_id(
@@ -303,8 +304,9 @@ class RequirementDocumentService:
             else None
         )
 
-        # For attach/merge: create the extraction link
-        if action in ("attach", "merge") and target_id:
+        # For attach: create the extraction link immediately
+        # For merge: skip link creation (link is created after user completes the merge)
+        if action == "attach" and target_id:
             try:
                 link_data = RequirementExtractionLinkCreate(
                     requirement_id=target_id,
