@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 REQUIREMENT_ACTION_DECISION_PROMPT = """
 You are an expert requirements analyst. Given an extracted requirement from a source document \
-and a list of candidate existing requirements, decide the single best action.
+and a list of existing requirements, decide the single best action.
 
 **Goal:** Keep the requirements database lean and consolidated. Avoid bloat — prefer linking \
 to or enriching existing requirements over creating new ones.
@@ -40,16 +40,16 @@ new information to add.
 (e.g., one describes the planned capability, the other confirms it's been implemented — \
 merge to update status/details).
 - **create_new**: Use *sparingly*. Only when:
-  - The topic is completely new (none of the candidates cover it).
+  - The topic is completely new (none of the existing requirements cover it).
   - It doesn't fit the spirit of any existing requirement (e.g., fundamentally different perspective).
-  - Implementation would be *completely* different from all candidates.
-  - Verification would be *completely* different from all candidates.
+  - Implementation would be *completely* different from all existing requirements.
+  - Verification would be *completely* different from all existing requirements.
 
 **Rules:**
 1. Pick exactly ONE action and (for attach/merge) exactly ONE best match.
 2. For attach: similarity_score should be >= 0.8. The match must be a near-duplicate.
 3. For merge: similarity_score should be >= 0.5. The match covers the same topic but differs in detail.
-4. For create_new: set best_match_index to null and similarity_score to the highest candidate score (or 0.0 if no candidates).
+4. For create_new: set best_match_index to null and similarity_score to the highest score among existing requirements (or 0.0 if none).
 5. When in doubt between attach and merge, prefer merge — it's safer to review than to silently link.
 6. When in doubt between merge and create_new, prefer merge — consolidation keeps the database lean. \
 Only choose create_new when you are confident the requirement is truly novel.
@@ -62,17 +62,17 @@ You are a validation agent for requirement action decisions. The goal is to keep
 database lean — prefer consolidation (attach/merge) over creating new entries.
 
 **Validation checks:**
-1. If action is 'attach' or 'merge', best_match_index must be a valid index into the candidate list.
+1. If action is 'attach' or 'merge', best_match_index must be a valid index into the existing requirements list.
 2. If action is 'create_new', best_match_index should be null.
 3. The justification must be consistent with the chosen action — e.g., if the justification says \
 "no existing requirement covers this", the action should be 'create_new', not 'attach'.
-4. For 'attach', verify the candidate truly FULLY covers the extracted requirement (the justification \
-should reflect this). If the candidate only partially covers it, the action should be 'merge'.
-5. For 'merge', verify the candidate is related enough to justify merging. If implementation or \
-verification would be similar between the extracted requirement and the candidate, merge is correct.
+4. For 'attach', verify the existing requirement truly FULLY covers the extracted requirement (the justification \
+should reflect this). If the existing requirement only partially covers it, the action should be 'merge'.
+5. For 'merge', verify the existing requirement is related enough to justify merging. If implementation or \
+verification would be similar between the extracted requirement and the existing requirement, merge is correct.
 6. similarity_score should be reasonable for the action: attach >= 0.8, merge >= 0.5.
 7. For 'create_new', scrutinize the justification: does it explain why implementation AND verification \
-would be *completely* different from all candidates? If not, suggest merge instead. \
+would be *completely* different from all existing requirements? If not, suggest merge instead. \
 create_new decisions need strong justification — the requirement must be truly novel.
 
 Output your validation result.
@@ -262,7 +262,7 @@ class RequirementComparisonService:
         user_prompt = f"""**Extracted Requirement (from source document):**
 {doc_req_text}
 
-**Candidate Existing Requirements:**
+**Existing Requirements:**
 {candidates_text}
 """
 
@@ -359,7 +359,7 @@ Justification: {decision.justification}
 **Extracted Requirement:**
 {doc_req_text}
 
-**Candidate Existing Requirements:**
+**Existing Requirements:**
 {candidates_text}
 """
         try:
