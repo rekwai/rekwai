@@ -65,7 +65,7 @@ export function AISuggestionBanner({
       <div className="flex items-center gap-2">
         <Sparkles size={14} className="text-[#080705] flex-none" />
         <span className="font-inter font-semibold text-sm text-[#080705]">
-          AI Suggestion
+          Rekwai Suggestion
         </span>
         <Badge
           className={`flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded border ${config.badgeBg}`}

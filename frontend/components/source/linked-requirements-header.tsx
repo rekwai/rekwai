@@ -49,7 +49,7 @@ export function LinkedRequirementsHeader({
         onClick={onFetchSuggestedAction}
         disabled={isFetchingSuggestion}
         className={`${buttonStyles.iconButton} disabled:opacity-50`}
-        title="Get AI suggestion"
+        title="Get Rekwai suggestion"
         data-testid="refresh-requirements-button"
       >
         <RotateCcw
