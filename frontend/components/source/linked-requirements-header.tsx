@@ -8,15 +8,15 @@ import { buttonStyles } from "@/lib/utils/styles";
 interface LinkedRequirementsHeaderProps {
   onCreateNewRequirement: () => void;
   onOpenLinkModal: () => void;
-  onRefreshSimilarRequirements?: () => Promise<void>;
-  isSearchingSimilar?: boolean;
+  onFetchSuggestedAction?: () => Promise<void>;
+  isFetchingSuggestion?: boolean;
 }
 
 export function LinkedRequirementsHeader({
   onCreateNewRequirement,
   onOpenLinkModal,
-  onRefreshSimilarRequirements,
-  isSearchingSimilar = false,
+  onFetchSuggestedAction,
+  isFetchingSuggestion = false,
 }: LinkedRequirementsHeaderProps) {
   return (
     <div className="flex flex-row items-center p-0 gap-2.5 h-7">
@@ -46,15 +46,15 @@ export function LinkedRequirementsHeader({
       <Button
         variant="ghost"
         size="sm"
-        onClick={onRefreshSimilarRequirements}
-        disabled={isSearchingSimilar}
+        onClick={onFetchSuggestedAction}
+        disabled={isFetchingSuggestion}
         className={`${buttonStyles.iconButton} disabled:opacity-50`}
-        title="Search for similar requirements"
+        title="Get AI suggestion"
         data-testid="refresh-requirements-button"
       >
         <RotateCcw
           size={12}
-          className={`text-[#080705] dark:text-[#080705] ${isSearchingSimilar ? "animate-[spin_1s_linear_infinite_reverse]" : ""}`}
+          className={`text-[#080705] dark:text-[#080705] ${isFetchingSuggestion ? "animate-[spin_1s_linear_infinite_reverse]" : ""}`}
         />
       </Button>
     </div>

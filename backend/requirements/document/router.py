@@ -25,10 +25,10 @@ from dependencies import (
     get_requirement_extraction_link_repository,
     get_requirement_document_service,
 )
-from ..crud.services import RequirementService, SIMILAR_REQUIREMENTS_LIMIT
+from ..crud.services import RequirementService
 from ..extraction_link.repository import RequirementExtractionLinkRepository
 from ..crud.models import (
-    SimilarRequirementWithLLM,
+    SuggestedAction,
     MergedRequirement,
     ExtractedRequirementDto,
     ExtractedRequirementUpdate,
@@ -56,25 +56,23 @@ async def update_extracted_requirement(
 
 
 @router.get(
-    "/extracted-requirement/{extracted_requirement_id}/similar",
-    response_model=List[SimilarRequirementWithLLM],
+    "/extracted-requirement/{extracted_requirement_id}/suggest-action",
+    response_model=SuggestedAction,
     tags=["requirements_document"],
 )
-async def get_similar_main_requirements_with_llm(
+async def suggest_action_for_extracted_requirement(
     extracted_requirement_id: str,
-    limit: int = SIMILAR_REQUIREMENTS_LIMIT,
-    filter_req: List[str] = Query(default=[]),
+    exclude_req: List[str] = Query(default=[]),
     service: RequirementService = Depends(get_requirement_service),
 ):
     """
-    Finds main requirements similar to a given document requirement using vector search,
-    then performs LLM-based comparison on the top results.
+    Suggests a single action (attach, merge, or create_new) for an extracted requirement.
 
-    Uses the extracted requirement ID to load the requirement from the database.
-    Optionally filters out specific requirement IDs using the 'req' query parameter.
+    Uses vector search to find candidates, then a single LLM call to decide the best action,
+    validated by a second LLM agent.
     """
-    return await service.find_similar_requirements_with_llm(
-        extracted_requirement_id, limit, filter_req or None
+    return await service.suggest_action_for_extracted_requirement(
+        extracted_requirement_id, exclude_req or None
     )
 
 

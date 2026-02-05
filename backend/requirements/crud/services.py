@@ -363,42 +363,43 @@ class RequirementService:
             )
 
             async def link_requirement(saved_req) -> int:
-                """Find and link similar requirements for a single extracted requirement."""
+                """Suggest action and auto-link for a single extracted requirement."""
                 try:
-                    # Find similar requirements with LLM comparison
-                    similar_requirements = (
-                        await self.find_similar_requirements_with_llm(
+                    suggestion = (
+                        await self.suggest_action_for_extracted_requirement(
                             extracted_requirement_id=str(saved_req.id),
-                            limit=SIMILAR_REQUIREMENTS_LIMIT,
                             filter_reqs=None,
                         )
                     )
 
-                    # Auto-link requirements where LLM determined they are similar
-                    links_created = 0
-                    for similar_req in similar_requirements:
-                        if similar_req.llm_result and similar_req.llm_result.is_similar:
-                            try:
-                                link_data = RequirementExtractionLinkCreate(
-                                    requirement_id=similar_req.id,
-                                    extracted_requirement_id=str(saved_req.id),
-                                )
-                                self.extraction_link_repository.create_link(link_data)
-                                links_created += 1
-                            except ValueError as link_error:
-                                # Link might already exist or have invalid foreign key - log and continue
-                                logger.info(
-                                    f"Could not create link for requirement {similar_req.id}: {link_error}"
-                                )
-                                continue
-                    return links_created
+                    # Only create a link for attach or merge actions
+                    if (
+                        suggestion.action
+                        in (
+                            models.SuggestedActionType.ATTACH,
+                            models.SuggestedActionType.MERGE,
+                        )
+                        and suggestion.target_requirement_id
+                    ):
+                        try:
+                            link_data = RequirementExtractionLinkCreate(
+                                requirement_id=suggestion.target_requirement_id,
+                                extracted_requirement_id=str(saved_req.id),
+                            )
+                            self.extraction_link_repository.create_link(link_data)
+                            return 1
+                        except ValueError as link_error:
+                            logger.info(
+                                f"Could not create link for requirement "
+                                f"{suggestion.target_requirement_id}: {link_error}"
+                            )
+                            return 0
+                    return 0
                 except TaskCancelledException:
-                    # Re-raise cancellation to propagate through asyncio.gather
                     raise
                 except Exception as req_error:
-                    # Log error but continue processing other requirements
                     logger.warning(
-                        f"Error finding similar requirements for extracted requirement {saved_req.id}: {req_error}"
+                        f"Error suggesting action for extracted requirement {saved_req.id}: {req_error}"
                     )
                     return 0
 
@@ -491,9 +492,12 @@ class RequirementService:
             has_links=len(linked_req_ids) > 0,
         )
 
-    async def find_similar_requirements_with_llm(
-        self, extracted_requirement_id: str, limit: int, filter_reqs: List[str] = None
-    ) -> List[models.SimilarRequirementWithLLM]:
+    async def suggest_action_for_extracted_requirement(
+        self,
+        extracted_requirement_id: str,
+        filter_reqs: List[str] = None,
+    ) -> models.SuggestedAction:
+        """Suggest a single action (attach, merge, or create_new) for an extracted requirement."""
         extracted_requirement = self.repository.get_extracted_requirement_by_id(
             extracted_requirement_id
         )
@@ -514,14 +518,12 @@ class RequirementService:
             extracted_requirement.implementation_description,
         )
 
-        return (
-            await self.comparison_service.find_similar_requirements_with_llm_comparison(
-                text_to_embed=text_to_embed,
-                doc_req_text=extracted_requirement.description,
-                product_id=extracted_requirement.product_id,
-                limit=limit,
-                filter_reqs=filter_reqs,
-            )
+        return await self.comparison_service.decide_action_for_requirement(
+            text_to_embed=text_to_embed,
+            doc_req_text=extracted_requirement.description,
+            product_id=extracted_requirement.product_id,
+            limit=SIMILAR_REQUIREMENTS_LIMIT,
+            filter_reqs=filter_reqs,
         )
 
     async def answer_question(

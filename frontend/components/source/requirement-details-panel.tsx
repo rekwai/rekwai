@@ -3,13 +3,18 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirementDisplayCard } from "./requirement-display-card";
 import { LinkedRequirementsSection } from "./linked-requirements-section";
-import { RequirementItem, Requirement } from "@/types/requirement-types";
+import {
+  RequirementItem,
+  Requirement,
+  SuggestedAction,
+} from "@/types/requirement-types";
 
 interface LinkedRequirementsProps {
   linkedRequirements: Requirement[];
   linkedRequirementsLoading: boolean;
   mergingRequirementId: string | null;
-  isSearchingSimilar?: boolean;
+  isFetchingSuggestion?: boolean;
+  suggestedAction?: SuggestedAction | null;
 }
 
 interface ActionHandlers {
@@ -19,7 +24,9 @@ interface ActionHandlers {
   onUnlinkRequirement: (requirement: Requirement) => Promise<void>;
   onGenerateMerge: (requirement: Requirement) => void;
   onCreateNewRequirement: () => void;
-  onRefreshSimilarRequirements?: () => Promise<void>;
+  onFetchSuggestedAction?: () => Promise<void>;
+  onConfirmSuggestion?: () => Promise<unknown>;
+  onDismissSuggestion?: () => void;
 }
 
 interface RequirementDetailsPanelProps {
@@ -89,10 +96,11 @@ export function RequirementDetailsPanel({
         onGenerateMerge={actionHandlers.onGenerateMerge}
         onCreateNewRequirement={actionHandlers.onCreateNewRequirement}
         onEditLinkedRequirement={actionHandlers.onEditLinkedRequirement}
-        onRefreshSimilarRequirements={
-          actionHandlers.onRefreshSimilarRequirements
-        }
-        isSearchingSimilar={linkedRequirementsProps.isSearchingSimilar}
+        onFetchSuggestedAction={actionHandlers.onFetchSuggestedAction}
+        isFetchingSuggestion={linkedRequirementsProps.isFetchingSuggestion}
+        suggestedAction={linkedRequirementsProps.suggestedAction}
+        onConfirmSuggestion={actionHandlers.onConfirmSuggestion}
+        onDismissSuggestion={actionHandlers.onDismissSuggestion}
       />
     </div>
   );

@@ -4,10 +4,11 @@ import {
   Requirement,
   ImplementationStatus,
   ExtractedRequirementDto,
+  SuggestedAction,
 } from "@/types/requirement-types";
 import {
   getDistinctRequirementTypes,
-  getSimilarRequirements,
+  getSuggestedAction,
   listExtractedRequirementLinks,
   createExtractionLink,
   deleteExtractionLink,
@@ -15,14 +16,7 @@ import {
   generateMerge,
   updateExtractedRequirement,
 } from "@/lib/api/requirements";
-import {
-  createIgnoredRequirementsStorage,
-  updateRequirementInList,
-} from "@/lib/utils/requirement-indexing-utils";
-import { autoLinkSimilarRequirements } from "@/lib/utils/auto-link-requirements";
-
-// Module-level singleton for localStorage access
-const ignoredRequirementsStorage = createIgnoredRequirementsStorage();
+import { updateRequirementInList } from "@/lib/utils/requirement-indexing-utils";
 
 interface UseRequirementIndexingProps {
   open: boolean;
@@ -50,7 +44,9 @@ export function useRequirementIndexing({
   );
   const [linkedRequirementsLoading, setLinkedRequirementsLoading] =
     useState(false);
-  const [isSearchingSimilar, setIsSearchingSimilar] = useState(false);
+  const [isFetchingSuggestion, setIsFetchingSuggestion] = useState(false);
+  const [suggestedAction, setSuggestedAction] =
+    useState<SuggestedAction | null>(null);
 
   // UI state
   const [mergingRequirementId, setMergingRequirementId] = useState<
@@ -129,55 +125,6 @@ export function useRequirementIndexing({
     setLinkedRequirementsLoading(false);
   }, [open, fetchAndSetLinkedRequirements]);
 
-  // Search for similar requirements and auto-link (manual refresh)
-  const refreshSimilarRequirements = useCallback(async () => {
-    if (!selectedRequirement?.id) {
-      return;
-    }
-
-    setIsSearchingSimilar(true);
-
-    try {
-      // Always load ignored requirements fresh from localStorage to avoid race conditions
-      const currentIgnored = ignoredRequirementsStorage.loadIgnoredRequirements(
-        selectedRequirement.id.toString(),
-      );
-
-      // Get currently linked requirement IDs
-      const linkedRequirementIds = await listExtractedRequirementLinks(
-        selectedRequirement.id.toString(),
-      );
-
-      // Get similar requirements (excluding already linked and ignored ones)
-      const allExcludeIds = [...linkedRequirementIds, ...currentIgnored];
-      const results = await getSimilarRequirements(
-        selectedRequirement,
-        allExcludeIds,
-      );
-
-      // Auto-link requirements with high similarity using shared utility
-      await autoLinkSimilarRequirements(results, (requirementId) =>
-        createExtractionLink(requirementId, selectedRequirement.id.toString()),
-      );
-
-      // Reload linked requirements to show newly auto-linked ones
-      await fetchAndSetLinkedRequirements();
-    } catch (error) {
-      console.error("Failed to refresh similar requirements:", error);
-    } finally {
-      setIsSearchingSimilar(false);
-    }
-  }, [selectedRequirement, fetchAndSetLinkedRequirements]);
-
-  // Load linked requirements when selectedRequirement changes
-  // Note: loadLinkedRequirements is intentionally excluded from deps to prevent
-  // infinite re-renders. We only want to reload when the selected requirement ID
-  // or dialog open state changes, not when the callback reference changes.
-  useEffect(() => {
-    loadLinkedRequirements();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRequirement?.id, open]);
-
   // Helper to update hasLinks on the selected requirement
   const updateSelectedRequirementHasLinks = useCallback(
     (hasLinks: boolean) => {
@@ -189,6 +136,83 @@ export function useRequirementIndexing({
     },
     [selectedRequirementIndex],
   );
+
+  // Fetch AI suggested action for the selected requirement
+  const fetchSuggestedAction = useCallback(async () => {
+    if (!selectedRequirement?.id) {
+      return;
+    }
+
+    setIsFetchingSuggestion(true);
+    setSuggestedAction(null);
+
+    try {
+      // Derive exclude IDs from already-loaded linked requirements state
+      const excludeIds = linkedRequirements.map((r) => r.id.toString());
+
+      const result = await getSuggestedAction(
+        selectedRequirement.id.toString(),
+        excludeIds,
+      );
+
+      setSuggestedAction(result);
+    } catch (error) {
+      console.error("Failed to fetch suggested action:", error);
+    } finally {
+      setIsFetchingSuggestion(false);
+    }
+  }, [selectedRequirement, linkedRequirements]);
+
+  // Confirm the AI suggestion
+  const confirmSuggestion = useCallback(async (): Promise<{
+    action: SuggestedAction["action"];
+    requirement?: Requirement;
+  } | null> => {
+    if (!suggestedAction || !selectedRequirement?.id) return null;
+
+    const { action, target_requirement_id, target_requirement } =
+      suggestedAction;
+
+    if (
+      (action === "attach" || action === "merge") &&
+      target_requirement_id
+    ) {
+      // Create the link
+      await createExtractionLink(
+        target_requirement_id,
+        selectedRequirement.id.toString(),
+      );
+      await fetchAndSetLinkedRequirements();
+      updateSelectedRequirementHasLinks(true);
+    }
+
+    const result = {
+      action,
+      requirement: target_requirement ?? undefined,
+    };
+
+    setSuggestedAction(null);
+    return result;
+  }, [suggestedAction, selectedRequirement, fetchAndSetLinkedRequirements, updateSelectedRequirementHasLinks]);
+
+  // Dismiss the AI suggestion
+  const dismissSuggestion = useCallback(() => {
+    setSuggestedAction(null);
+  }, []);
+
+  // Clear suggestion when selected requirement changes
+  useEffect(() => {
+    setSuggestedAction(null);
+  }, [selectedRequirement?.id]);
+
+  // Load linked requirements when selectedRequirement changes
+  // Note: loadLinkedRequirements is intentionally excluded from deps to prevent
+  // infinite re-renders. We only want to reload when the selected requirement ID
+  // or dialog open state changes, not when the callback reference changes.
+  useEffect(() => {
+    loadLinkedRequirements();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRequirement?.id, open]);
 
   // Generic helper to create links and reload (DRY principle)
   const createLinksAndReload = useCallback(
@@ -349,7 +373,8 @@ export function useRequirementIndexing({
     availableTypes,
     linkedRequirements,
     linkedRequirementsLoading,
-    isSearchingSimilar,
+    isFetchingSuggestion,
+    suggestedAction,
     mergingRequirementId,
 
     // Actions
@@ -358,7 +383,9 @@ export function useRequirementIndexing({
     persistField,
     persistTypes,
     loadLinkedRequirements,
-    refreshSimilarRequirements,
+    fetchSuggestedAction,
+    confirmSuggestion,
+    dismissSuggestion,
     linkNewRequirement,
     handleLinkExistingRequirements,
     handleUnlinkRequirement,

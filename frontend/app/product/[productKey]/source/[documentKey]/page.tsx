@@ -102,14 +102,17 @@ export default function DocumentPage({
     availableTypes,
     linkedRequirements,
     linkedRequirementsLoading,
-    isSearchingSimilar,
+    isFetchingSuggestion,
+    suggestedAction,
     mergingRequirementId,
     handleRequirementSelect,
     updateRequirement,
     persistField,
     persistTypes,
     loadLinkedRequirements,
-    refreshSimilarRequirements,
+    fetchSuggestedAction,
+    confirmSuggestion,
+    dismissSuggestion,
     linkNewRequirement,
     handleLinkExistingRequirements,
     handleUnlinkRequirement,
@@ -196,6 +199,20 @@ export default function DocumentPage({
       console.error("Failed to save extracted requirement:", error);
       // TODO: Show user notification (toast) about the error
       throw error;
+    }
+  };
+
+  // Handle AI suggestion confirmation with follow-up actions
+  const handleConfirmSuggestion = async () => {
+    const result = await confirmSuggestion();
+    if (result?.action === "merge" && result.requirement) {
+      const mergeResult = await handleGenerateMerge(result.requirement);
+      if (mergeResult) {
+        mergeDrawerModal.open(mergeResult.requirement);
+        setDrawerOverrideValues(mergeResult.overrideValues);
+      }
+    } else if (result?.action === "create_new") {
+      createRequirementModal.open();
     }
   };
 
@@ -286,7 +303,8 @@ export default function DocumentPage({
             linkedRequirementsProps={{
               linkedRequirements,
               linkedRequirementsLoading,
-              isSearchingSimilar,
+              isFetchingSuggestion,
+              suggestedAction,
               mergingRequirementId,
             }}
             actionHandlers={{
@@ -297,7 +315,9 @@ export default function DocumentPage({
               onUnlinkRequirement: handleUnlinkRequirement,
               onGenerateMerge: handleGenerateMergeWithModal,
               onCreateNewRequirement: () => createRequirementModal.open(),
-              onRefreshSimilarRequirements: refreshSimilarRequirements,
+              onFetchSuggestedAction: fetchSuggestedAction,
+              onConfirmSuggestion: handleConfirmSuggestion,
+              onDismissSuggestion: dismissSuggestion,
             }}
           />
         </div>

@@ -3,10 +3,11 @@
 import { useState, useMemo } from "react";
 import { Plus, Link } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Requirement } from "@/types/requirement-types";
+import { Requirement, SuggestedAction } from "@/types/requirement-types";
 import { RequirementItem } from "@/components/query/requirement-item";
 import { RequirementSelectionModal } from "@/components/query/requirement-selection-modal";
 import { LinkedRequirementsHeader } from "./linked-requirements-header";
+import { AISuggestionBanner } from "./ai-suggestion-banner";
 import { withLoadingState } from "@/lib/utils/loading-state";
 
 interface LinkedRequirementsSectionProps {
@@ -19,8 +20,11 @@ interface LinkedRequirementsSectionProps {
   onGenerateMerge: (requirement: Requirement) => void;
   onCreateNewRequirement: () => void;
   onEditLinkedRequirement: (requirement: Requirement) => void;
-  onRefreshSimilarRequirements?: () => Promise<void>;
-  isSearchingSimilar?: boolean;
+  onFetchSuggestedAction?: () => Promise<void>;
+  isFetchingSuggestion?: boolean;
+  suggestedAction?: SuggestedAction | null;
+  onConfirmSuggestion?: () => Promise<unknown>;
+  onDismissSuggestion?: () => void;
 }
 
 export function LinkedRequirementsSection({
@@ -33,8 +37,11 @@ export function LinkedRequirementsSection({
   onGenerateMerge,
   onCreateNewRequirement,
   onEditLinkedRequirement,
-  onRefreshSimilarRequirements,
-  isSearchingSimilar = false,
+  onFetchSuggestedAction,
+  isFetchingSuggestion = false,
+  suggestedAction,
+  onConfirmSuggestion,
+  onDismissSuggestion,
 }: LinkedRequirementsSectionProps) {
   const [unlinkingRequirementIds, setUnlinkingRequirementIds] = useState<
     Set<string>
@@ -73,9 +80,18 @@ export function LinkedRequirementsSection({
         <LinkedRequirementsHeader
           onCreateNewRequirement={onCreateNewRequirement}
           onOpenLinkModal={() => setIsSelectionModalOpen(true)}
-          onRefreshSimilarRequirements={onRefreshSimilarRequirements}
-          isSearchingSimilar={isSearchingSimilar}
+          onFetchSuggestedAction={onFetchSuggestedAction}
+          isFetchingSuggestion={isFetchingSuggestion}
         />
+
+        {/* AI Suggestion Banner */}
+        {suggestedAction && onConfirmSuggestion && onDismissSuggestion && (
+          <AISuggestionBanner
+            suggestion={suggestedAction}
+            onConfirm={onConfirmSuggestion}
+            onDismiss={onDismissSuggestion}
+          />
+        )}
 
         {showEmptyState ? (
           // Empty state action buttons

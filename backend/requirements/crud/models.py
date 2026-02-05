@@ -151,6 +151,66 @@ class LLMSimilarityResult(BaseModel):
     )
 
 
+class SuggestedActionType(str, enum.Enum):
+    """The action the AI suggests for an extracted requirement."""
+
+    ATTACH = "attach"
+    MERGE = "merge"
+    CREATE_NEW = "create_new"
+
+
+class LLMActionDecision(BaseModel):
+    """Internal LLM output: the AI's decision for a single extracted requirement."""
+
+    action: SuggestedActionType = Field(
+        ...,
+        description="The recommended action: 'attach' (existing requirement fully covers this), "
+        "'merge' (existing requirement is close but would benefit from details in the source), "
+        "or 'create_new' (no existing requirement captures this).",
+    )
+    best_match_index: Optional[int] = Field(
+        None,
+        description="0-based index of the best matching candidate requirement. "
+        "Required for 'attach' and 'merge', null for 'create_new'.",
+    )
+    similarity_score: float = Field(
+        ...,
+        description="A score between 0.0 and 1.0 indicating how close the best match is.",
+        ge=0.0,
+        le=1.0,
+    )
+    justification: str = Field(
+        ...,
+        description="A brief explanation (1-3 sentences) justifying the decision.",
+    )
+
+
+class SuggestedAction(BaseModel):
+    """API response: the AI's suggested action for an extracted requirement."""
+
+    action: SuggestedActionType
+    target_requirement_id: Optional[str] = None
+    target_requirement: Optional[RequirementDto] = None
+    justification: str
+    similarity_score: float = Field(ge=0.0, le=1.0)
+
+
+class ActionDecisionValidationResult(BaseModel):
+    """Validation output for an AI action decision."""
+
+    is_valid: bool = Field(
+        ..., description="Whether the decision passes validation."
+    )
+    issues: List[str] = Field(
+        default_factory=list,
+        description="List of issues found during validation.",
+    )
+    suggested_action: Optional[SuggestedActionType] = Field(
+        None,
+        description="If invalid, the action the validator thinks is correct.",
+    )
+
+
 class SimilarRequirementWithLLM(RequirementDto):
     """Extends RequirementDto to include optional LLM comparison results."""
 

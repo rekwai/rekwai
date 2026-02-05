@@ -4,12 +4,64 @@ import logging
 import asyncio
 from typing import Optional, List
 
+from pydantic_ai import RunContext, ModelRetry
+
 from ai.external_ai import ExternalAIService
 from ai_framework.agent import create_agent
-from .models import LLMSimilarityResult, SimilarRequirementWithLLM
+from ai_framework.agent_utils import run_agent_with_retry
+from .models import (
+    LLMSimilarityResult,
+    SimilarRequirementWithLLM,
+    LLMActionDecision,
+    SuggestedAction,
+    SuggestedActionType,
+    ActionDecisionValidationResult,
+)
 from .repository import RequirementRepository
+from . import tables
 
 logger = logging.getLogger(__name__)
+
+REQUIREMENT_ACTION_DECISION_PROMPT = """
+You are an expert requirements analyst. Given an extracted requirement from a source document \
+and a list of candidate existing requirements, decide the single best action.
+
+**Actions:**
+- **attach**: An existing requirement already FULLY covers this extracted requirement. \
+The source document should simply be linked to it. Use when the existing requirement \
+captures the same goal/capability with no meaningful new information to add.
+- **merge**: An existing requirement is CLOSE but would benefit from details in the \
+source document. The existing requirement should be updated/enriched. Use when the \
+extracted requirement adds specifics, context, or nuance to an existing one.
+- **create_new**: No existing requirement captures this goal. A brand-new requirement \
+should be created. Use when the extracted requirement addresses a fundamentally different \
+topic from all candidates.
+
+**Rules:**
+1. Pick exactly ONE action and (for attach/merge) exactly ONE best match.
+2. For attach: similarity_score should be >= 0.8. The match must be a near-duplicate.
+3. For merge: similarity_score should be >= 0.5. The match covers the same topic but differs in detail.
+4. For create_new: set best_match_index to null and similarity_score to the highest candidate score (or 0.0 if no candidates).
+5. When in doubt between attach and merge, prefer merge — it's safer to review than to silently link.
+6. When in doubt between merge and create_new, prefer create_new — it's safer to create than to incorrectly merge unrelated requirements.
+"""
+
+ACTION_DECISION_VALIDATION_PROMPT = """
+You are a validation agent for requirement action decisions. Check whether the decision is sound.
+
+**Validation checks:**
+1. If action is 'attach' or 'merge', best_match_index must be a valid index into the candidate list.
+2. If action is 'create_new', best_match_index should be null.
+3. The justification must be consistent with the chosen action — e.g., if the justification says \
+"no existing requirement covers this", the action should be 'create_new', not 'attach'.
+4. For 'attach', verify the candidate truly FULLY covers the extracted requirement (the justification \
+should reflect this). If the candidate only partially covers it, the action should be 'merge'.
+5. For 'merge', verify the candidate is related enough to justify merging. If the candidate is about \
+a fundamentally different topic, the action should be 'create_new'.
+6. similarity_score should be reasonable for the action: attach >= 0.8, merge >= 0.5.
+
+Output your validation result.
+"""
 
 REQUIREMENT_COMPARISON_PROMPT = """
 You are an expert requirements analyst helping maintain a clean, comprehensive requirements database.
@@ -53,6 +105,38 @@ class RequirementComparisonService:
         self.external_ai_service = external_ai_service
         self.requirement_repository = requirement_repository
 
+    async def _find_candidates_with_descriptions(
+        self,
+        text_to_embed: str,
+        product_id: str,
+        limit: int,
+        filter_reqs: List[str] = None,
+    ) -> Optional[List[tables.RequirementDB]]:
+        """
+        Shared helper: validate text, create embedding, and find candidate requirements.
+
+        Returns:
+            List of candidate DB objects with descriptions, or None if no candidates found.
+        """
+        if not text_to_embed or not text_to_embed.strip():
+            return None
+
+        embedding = await self.external_ai_service.create_embeddings(
+            text_to_embed.strip()
+        )
+        if not embedding:
+            return None
+
+        similar_reqs_db = self.requirement_repository.find_similar(
+            embedding=embedding,
+            product_id=product_id,
+            limit=limit,
+            filter_reqs=filter_reqs,
+        )
+
+        candidates = [req for req in similar_reqs_db if req.description]
+        return candidates if candidates else None
+
     async def find_similar_requirements_with_llm_comparison(
         self,
         text_to_embed: str,
@@ -74,46 +158,29 @@ class RequirementComparisonService:
         Returns:
             List of similar requirements with LLM comparison results
         """
-        if not text_to_embed or not text_to_embed.strip():
-            return []
-
-        # Create embedding for the text
-        embedding = await self.external_ai_service.create_embeddings(
-            text_to_embed.strip()
+        candidates = await self._find_candidates_with_descriptions(
+            text_to_embed, product_id, limit, filter_reqs
         )
-
-        if not embedding:
-            return []
-
-        # Find similar requirements using the repository
-        similar_reqs_db = self.requirement_repository.find_similar(
-            embedding=embedding,
-            product_id=product_id,
-            limit=limit,
-            filter_reqs=filter_reqs,
-        )
-        if not similar_reqs_db:
+        if not candidates:
             return []
 
         logger.debug(
-            f"Found {len(similar_reqs_db)} candidate requirements for comparison"
+            f"Found {len(candidates)} candidate requirements for comparison"
         )
 
-        # Filter requirements with descriptions and compare with LLM
-        reqs_with_description = [req for req in similar_reqs_db if req.description]
         tasks = [
             self.compare_requirements_with_llm(
                 doc_req_text=doc_req_text,
-                main_req_text=similar_req.description,
+                main_req_text=candidate.description,
             )
-            for similar_req in reqs_with_description
+            for candidate in candidates
         ]
 
         llm_results = await asyncio.gather(*tasks)
 
         # Build results with LLM comparison
         results_with_llm = []
-        for similar_req_db, llm_result in zip(reqs_with_description, llm_results):
+        for similar_req_db, llm_result in zip(candidates, llm_results):
             if llm_result and llm_result.is_similar:
                 # Convert RequirementDB to RequirementDto first
                 similar_req_dto = self.requirement_repository.transform_to_dto(
@@ -130,6 +197,167 @@ class RequirementComparisonService:
         )
 
         return results_with_llm
+
+    async def decide_action_for_requirement(
+        self,
+        text_to_embed: str,
+        doc_req_text: str,
+        product_id: str,
+        limit: int = 5,
+        filter_reqs: List[str] = None,
+    ) -> SuggestedAction:
+        """
+        Decide a single action (attach, merge, or create_new) for an extracted requirement.
+
+        Uses vector search to find candidates, then a single LLM call to decide the best action,
+        validated by a second LLM agent.
+
+        Returns:
+            SuggestedAction with the recommended action and target requirement (if any).
+        """
+        candidates = await self._find_candidates_with_descriptions(
+            text_to_embed, product_id, limit, filter_reqs
+        )
+        if not candidates:
+            return SuggestedAction(
+                action=SuggestedActionType.CREATE_NEW,
+                justification="No existing requirements found for comparison.",
+                similarity_score=0.0,
+            )
+
+        # Convert candidates to DTOs for the response
+        candidate_dtos = [
+            self.requirement_repository.transform_to_dto(req) for req in candidates
+        ]
+
+        logger.debug(
+            f"Found {len(candidates)} candidate requirements for action decision"
+        )
+
+        # Build formatted candidate list for the LLM
+        candidates_text = "\n".join(
+            f"[{i}] (key: {dto.requirement_key}) {dto.description}"
+            for i, dto in enumerate(candidate_dtos)
+        )
+
+        user_prompt = f"""**Extracted Requirement (from source document):**
+{doc_req_text}
+
+**Candidate Existing Requirements:**
+{candidates_text}
+"""
+
+        try:
+            # Create decision agent with output validation
+            decision_agent = create_agent(
+                "fast",
+                system_prompt=REQUIREMENT_ACTION_DECISION_PROMPT,
+                output_type=LLMActionDecision,
+            )
+
+            # Register output validator that uses a validation agent
+            @decision_agent.output_validator
+            async def validate_decision(
+                ctx: RunContext, output: LLMActionDecision
+            ) -> LLMActionDecision:
+                validation_result = await self._validate_action_decision(
+                    output, doc_req_text, candidates_text
+                )
+                if not validation_result.is_valid:
+                    feedback = (
+                        f"Validation failed. Issues: {'; '.join(validation_result.issues)}. "
+                    )
+                    if validation_result.suggested_action:
+                        feedback += (
+                            f"Consider changing action to '{validation_result.suggested_action.value}'."
+                        )
+                    raise ModelRetry(feedback)
+                return output
+
+            result = await run_agent_with_retry(
+                decision_agent,
+                user_prompt=user_prompt,
+                deps=None,
+            )
+            decision: LLMActionDecision = result.output
+
+            # Validate best_match_index bounds
+            if decision.action in (
+                SuggestedActionType.ATTACH,
+                SuggestedActionType.MERGE,
+            ):
+                if (
+                    decision.best_match_index is None
+                    or decision.best_match_index < 0
+                    or decision.best_match_index >= len(candidate_dtos)
+                ):
+                    logger.warning(
+                        f"Invalid best_match_index {decision.best_match_index} "
+                        f"for {len(candidate_dtos)} candidates. Defaulting to create_new."
+                    )
+                    return SuggestedAction(
+                        action=SuggestedActionType.CREATE_NEW,
+                        justification="AI returned invalid match index; defaulting to create new.",
+                        similarity_score=decision.similarity_score,
+                    )
+
+                target_dto = candidate_dtos[decision.best_match_index]
+                return SuggestedAction(
+                    action=decision.action,
+                    target_requirement_id=target_dto.id,
+                    target_requirement=target_dto,
+                    justification=decision.justification,
+                    similarity_score=decision.similarity_score,
+                )
+            else:
+                return SuggestedAction(
+                    action=SuggestedActionType.CREATE_NEW,
+                    justification=decision.justification,
+                    similarity_score=decision.similarity_score,
+                )
+
+        except Exception as e:
+            logger.error(f"Error in action decision: {e}", exc_info=True)
+            return SuggestedAction(
+                action=SuggestedActionType.CREATE_NEW,
+                justification="Error during AI decision; defaulting to create new.",
+                similarity_score=0.0,
+            )
+
+    async def _validate_action_decision(
+        self,
+        decision: LLMActionDecision,
+        doc_req_text: str,
+        candidates_text: str,
+    ) -> ActionDecisionValidationResult:
+        """Run a validation agent to check the action decision."""
+        validation_prompt = f"""**Decision to validate:**
+Action: {decision.action.value}
+Best match index: {decision.best_match_index}
+Similarity score: {decision.similarity_score}
+Justification: {decision.justification}
+
+**Extracted Requirement:**
+{doc_req_text}
+
+**Candidate Existing Requirements:**
+{candidates_text}
+"""
+        try:
+            validation_agent = create_agent(
+                "fast",
+                system_prompt=ACTION_DECISION_VALIDATION_PROMPT,
+                output_type=ActionDecisionValidationResult,
+            )
+            result = await run_agent_with_retry(
+                validation_agent,
+                user_prompt=validation_prompt,
+                deps=None,
+            )
+            return result.output
+        except Exception as e:
+            logger.warning(f"Validation agent failed, accepting decision: {e}")
+            return ActionDecisionValidationResult(is_valid=True, issues=[])
 
     async def compare_requirements_with_llm(
         self, doc_req_text: str, main_req_text: str

@@ -1,12 +1,11 @@
 import {
   Requirement,
-  RequirementItem,
-  SimilarRequirementWithLLM,
   CreateRequirementPayload,
   RequirementUpdate,
   MergedRequirement,
   RequirementHistory,
   ExtractedRequirementDto,
+  SuggestedAction,
 } from "../../types/requirement-types";
 import { QuestionAnswer, QuestionRequest } from "../../types/query-types";
 
@@ -84,22 +83,22 @@ export async function getRequirementHistory(
   const response = await fetch(`${getApiUrl()}/requirements/${id}/history`);
   return handleResponse<RequirementHistory[]>(response);
 }
-export async function getSimilarRequirements(
-  docReq: RequirementItem,
-  excludeRequirementIds?: string[],
-): Promise<SimilarRequirementWithLLM[]> {
+export async function getSuggestedAction(
+  extractedRequirementId: string,
+  excludeIds?: string[],
+): Promise<SuggestedAction> {
   const url = new URL(
-    `${getApiUrl()}/requirements/extracted-requirement/${docReq.id}/similar`,
+    `${getApiUrl()}/requirements/extracted-requirement/${extractedRequirementId}/suggest-action`,
   );
 
-  if (excludeRequirementIds && excludeRequirementIds.length > 0) {
-    excludeRequirementIds.forEach((id) => {
-      url.searchParams.append("filter_req", id);
+  if (excludeIds && excludeIds.length > 0) {
+    excludeIds.forEach((id) => {
+      url.searchParams.append("exclude_req", id);
     });
   }
 
   const response = await fetch(url.toString());
-  return handleResponse<SimilarRequirementWithLLM[]>(response);
+  return handleResponse<SuggestedAction>(response);
 }
 
 // --- Integration API Functions ---

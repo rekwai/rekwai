@@ -71,24 +71,26 @@ export interface RequirementHistory {
   new_implementation_status: string | null;
 }
 
+// Used by the questionnaire flow only (not the source document flow)
 export interface LLMSimilarityResult {
   is_similar: boolean;
   similarity_score: number;
   justification: string;
 }
 
-export interface SimilarRequirementBase {
-  id: string;
-  requirement_key: string;
-  description: string;
-  types: string[];
-  implementation_description: string;
-  implementation_status: ImplementationStatus;
-  distance: number;
+// Used by the questionnaire flow only (not the source document flow)
+export interface SimilarRequirementWithLLM extends Requirement {
+  llm_result: LLMSimilarityResult | null;
 }
 
-export interface SimilarRequirementWithLLM extends SimilarRequirementBase {
-  llm_result: LLMSimilarityResult | null;
+export type SuggestedActionType = "attach" | "merge" | "create_new";
+
+export interface SuggestedAction {
+  action: SuggestedActionType;
+  target_requirement_id: string | null;
+  target_requirement: Requirement | null;
+  justification: string;
+  similarity_score: number;
 }
 
 export interface MergedRequirement {
