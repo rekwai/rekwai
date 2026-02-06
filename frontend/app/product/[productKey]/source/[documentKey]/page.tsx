@@ -19,9 +19,6 @@ import {
   RequirementItem,
   Requirement,
   ExtractedRequirementUpdate,
-  ImplementationStatus,
-  MergedRequirement,
-  RequirementUpdate,
 } from "@/types/requirement-types";
 import {
   PageLoadingState,
@@ -31,23 +28,11 @@ import {
 import { useRequirementIndexing } from "@/hooks/use-requirement-indexing";
 import { useRequirementModal } from "@/hooks/use-requirement-modal";
 import { getFirstNonEmpty } from "@/lib/utils/string-utils";
-import { transformDocumentRequirementsToItems } from "@/lib/utils/requirement-transformers";
+import {
+  transformDocumentRequirementsToItems,
+  mergePreviewToUpdatePayload,
+} from "@/lib/utils/requirement-transformers";
 import { useResolvedParams } from "@/hooks/use-resolved-params";
-
-function mergePreviewToUpdatePayload(
-  preview: MergedRequirement,
-  productId: string,
-): RequirementUpdate {
-  return {
-    description: preview.description,
-    types: preview.types,
-    implementation_status:
-      preview.implementation_status as ImplementationStatus,
-    implementation_description: preview.implementation_description,
-    requirement_verification: preview.requirement_verification || undefined,
-    product_id: productId,
-  };
-}
 
 export default function DocumentPage({
   params,
@@ -351,7 +336,7 @@ export default function DocumentPage({
           documentId={documentData.id}
           requirements={requirements}
           productId={documentData.product_id}
-          onBulkCreateComplete={async () => {
+          onBulkApproveComplete={async () => {
             // Reload document data to refresh hasLinks status
             const data = await getDocumentWithRequirements(documentKey!);
             setDocumentData(data);

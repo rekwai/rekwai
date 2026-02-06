@@ -12,9 +12,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useDocumentDelete } from "@/hooks/use-document-delete";
-import { useBulkCreateRequirements } from "@/hooks/use-bulk-create-requirements";
+import { useBulkApproveSuggestions } from "@/hooks/use-bulk-approve-suggestions";
 import { PageHeader } from "@/components/common/page-header";
-import { BulkCreateDialog } from "@/components/source/bulk-create-dialog";
+import { BulkApproveDialog } from "@/components/source/bulk-approve-dialog";
 import { RequirementItem } from "@/types/requirement-types";
 import { Loader2 } from "lucide-react";
 
@@ -32,7 +32,7 @@ interface RequirementHeaderProps {
   documentId: string;
   requirements: RequirementItem[];
   productId: string;
-  onBulkCreateComplete: () => Promise<void>;
+  onBulkApproveComplete: () => Promise<void>;
 }
 
 export function RequirementHeader({
@@ -42,7 +42,7 @@ export function RequirementHeader({
   documentId,
   requirements,
   productId,
-  onBulkCreateComplete,
+  onBulkApproveComplete,
 }: RequirementHeaderProps) {
   const {
     isDeleting,
@@ -53,16 +53,16 @@ export function RequirementHeader({
   } = useDocumentDelete(documentId, productKey);
 
   const {
-    isBulkCreating,
-    showConfirmDialog: showBulkCreateDialog,
-    unlinkedCount,
+    isApproving,
+    showDialog: showBulkApproveDialog,
+    breakdown,
     progress,
     result,
-    openConfirmDialog: openBulkCreateDialog,
-    closeConfirmDialog: closeBulkCreateDialog,
-    handleDone: handleBulkCreateDone,
-    confirmBulkCreate,
-  } = useBulkCreateRequirements(requirements, productId, onBulkCreateComplete);
+    openDialog: openBulkApproveDialog,
+    closeDialog: closeBulkApproveDialog,
+    handleDone: handleBulkApproveDone,
+    confirmBulkApprove,
+  } = useBulkApproveSuggestions(requirements, productId, onBulkApproveComplete);
 
   const breadcrumbs: Array<{ label: string; path?: string; isBold?: boolean }> =
     [
@@ -88,17 +88,17 @@ export function RequirementHeader({
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={openBulkCreateDialog}
-              disabled={isBulkCreating || unlinkedCount === 0}
+              onClick={openBulkApproveDialog}
+              disabled={isApproving || breakdown.total === 0}
               className={BULK_CREATE_BUTTON_STYLES}
             >
-              {isBulkCreating ? (
+              {isApproving ? (
                 <>
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  Creating...
+                  Approving...
                 </>
               ) : (
-                `Add ${unlinkedCount} unlinked requirements to Rekwai`
+                `Approve ${breakdown.total} Rekwai suggestions`
               )}
             </Button>
             <Button
@@ -139,16 +139,16 @@ export function RequirementHeader({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Bulk Create Confirmation Dialog */}
-      <BulkCreateDialog
-        open={showBulkCreateDialog}
-        onOpenChange={closeBulkCreateDialog}
-        unlinkedCount={unlinkedCount}
-        isBulkCreating={isBulkCreating}
+      {/* Bulk Approve Confirmation Dialog */}
+      <BulkApproveDialog
+        open={showBulkApproveDialog}
+        onOpenChange={closeBulkApproveDialog}
+        breakdown={breakdown}
+        isApproving={isApproving}
         progress={progress}
         result={result}
-        onConfirm={confirmBulkCreate}
-        onDone={handleBulkCreateDone}
+        onConfirm={confirmBulkApprove}
+        onDone={handleBulkApproveDone}
       />
     </>
   );

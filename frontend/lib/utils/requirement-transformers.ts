@@ -7,6 +7,8 @@ import {
   RequirementItem,
   ImplementationStatus,
   SuggestedActionType,
+  MergedRequirement,
+  RequirementUpdate,
 } from "@/types/requirement-types";
 import { DocumentWithRequirements } from "@/lib/api/requirements";
 
@@ -39,4 +41,23 @@ export function transformDocumentRequirementsToItems(
     suggestedTargetRequirement: req.suggested_target_requirement ?? undefined,
     mergePreview: req.merge_preview ?? undefined,
   }));
+}
+
+/**
+ * Converts a MergedRequirement preview into a RequirementUpdate payload
+ * for updating an existing main requirement with merged data.
+ */
+export function mergePreviewToUpdatePayload(
+  preview: MergedRequirement,
+  productId: string,
+): RequirementUpdate {
+  return {
+    description: preview.description,
+    types: preview.types,
+    implementation_status:
+      preview.implementation_status as ImplementationStatus,
+    implementation_description: preview.implementation_description,
+    requirement_verification: preview.requirement_verification || undefined,
+    product_id: productId,
+  };
 }
