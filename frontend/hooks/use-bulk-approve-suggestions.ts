@@ -9,6 +9,7 @@ import {
   createExtractionLink,
   updateRequirement as updateRequirementApi,
   acceptSuggestion,
+  getSuggestedAction,
 } from "@/lib/api/requirements";
 import { getFirstNonEmpty } from "@/lib/utils/string-utils";
 import { mergePreviewToUpdatePayload } from "@/lib/utils/requirement-transformers";
@@ -95,34 +96,63 @@ export function useBulkApproveSuggestions(
     let failed = 0;
     let skipped = 0;
 
+    // Track which target requirements have already been merged into,
+    // so we can detect conflicts and re-suggest
+    const mergedTargetIds = new Set<string>();
+
     for (let i = 0; i < suggestedRequirements.length; i++) {
       const req = suggestedRequirements[i];
       setProgress({ current: i + 1, total: breakdown.total });
 
       try {
-        if (req.suggestedAction === "attach") {
+        let action: SuggestedActionType | undefined = req.suggestedAction as
+          | SuggestedActionType
+          | undefined;
+        let targetId = req.suggestedTargetRequirementId;
+        let mergePreview = req.mergePreview;
+
+        // Detect merge conflict: target was already merged by an earlier item
+        if (
+          action === "merge" &&
+          targetId &&
+          mergedTargetIds.has(targetId)
+        ) {
+          // Re-suggest: get a fresh suggestion from the AI
+          try {
+            const freshSuggestion = await getSuggestedAction(
+              req.id.toString(),
+            );
+            action = freshSuggestion.action;
+            targetId = freshSuggestion.target_requirement_id ?? undefined;
+            mergePreview = freshSuggestion.merge_preview ?? undefined;
+          } catch (error) {
+            console.error(
+              `Failed to re-suggest for conflicting merge ${req.id}:`,
+              error,
+            );
+            failed++;
+            continue;
+          }
+        }
+
+        if (action === "attach") {
           await acceptSuggestion(req.id.toString());
           succeeded++;
-        } else if (req.suggestedAction === "merge") {
-          if (!req.mergePreview || !req.suggestedTargetRequirementId) {
+        } else if (action === "merge") {
+          if (!mergePreview || !targetId) {
             skipped++;
             continue;
           }
           const payload = mergePreviewToUpdatePayload(
-            req.mergePreview,
+            mergePreview,
             productId,
           );
-          await updateRequirementApi(
-            req.suggestedTargetRequirementId,
-            payload,
-          );
-          await createExtractionLink(
-            req.suggestedTargetRequirementId,
-            req.id.toString(),
-          );
+          await updateRequirementApi(targetId, payload);
+          await createExtractionLink(targetId, req.id.toString());
           await acceptSuggestion(req.id.toString());
+          mergedTargetIds.add(targetId);
           succeeded++;
-        } else if (req.suggestedAction === "create_new") {
+        } else if (action === "create_new") {
           const createPayload: CreateRequirementPayload = {
             description: getFirstNonEmpty(req.description, req.text),
             types: req.types || [],

@@ -16,6 +16,7 @@ interface RequirementListPanelProps {
   onRequirementSelect: (index: number) => void;
   combinedLoading: boolean;
   documentMetadata: DocumentMetadata;
+  refreshingSuggestionIds?: Set<string>;
 }
 
 export function RequirementListPanel({
@@ -26,6 +27,7 @@ export function RequirementListPanel({
   onRequirementSelect,
   combinedLoading,
   documentMetadata,
+  refreshingSuggestionIds,
 }: RequirementListPanelProps) {
   return (
     <ItemListPanel
@@ -45,6 +47,11 @@ export function RequirementListPanel({
       getItemText={(req) => req.text}
       isItemCompleted={(req) => req.hasLinks}
       getItemSuggestionType={(req) => req.suggestedAction ?? null}
+      isItemRefreshingSuggestion={
+        refreshingSuggestionIds
+          ? (req) => refreshingSuggestionIds.has(req.id.toString())
+          : undefined
+      }
       itemTestIdPrefix="extracted-requirement"
       renderMetadata={() => (
         <div className="p-4 space-y-6">

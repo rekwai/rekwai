@@ -125,7 +125,21 @@ export default function DocumentPage({
     handleLinkExistingRequirements,
     handleUnlinkRequirement,
     handleGenerateMerge,
+    refreshSuggestionsForIds,
+    refreshingSuggestionIds,
   } = hook;
+
+  // Helper to reload document data after merges
+  const reloadDocumentData = async () => {
+    if (!documentKey) return;
+    try {
+      const data = await getDocumentWithRequirements(documentKey);
+      setDocumentData(data);
+      setTransformedRequirements(transformDocumentRequirementsToItems(data));
+    } catch (error) {
+      console.error("Failed to reload document data:", error);
+    }
+  };
 
   // Compute whether we're on the last requirement
   const isOnLastItem = selectedRequirementIndex === requirements.length - 1;
@@ -251,6 +265,12 @@ export default function DocumentPage({
             payload,
           );
           await linkNewRequirement(result.requirement.id.toString());
+          // Reload document data after merge to refresh hasLinks
+          await reloadDocumentData();
+          // Trigger re-suggestion for invalidated siblings
+          if (result.invalidated_ids && result.invalidated_ids.length > 0) {
+            refreshSuggestionsForIds(result.invalidated_ids);
+          }
         } catch (error) {
           console.error("Failed to apply merge directly, falling back to merge drawer:", error);
           await openMergeDrawerFallback(result.requirement, payload);
@@ -336,14 +356,7 @@ export default function DocumentPage({
           documentId={documentData.id}
           requirements={requirements}
           productId={documentData.product_id}
-          onBulkApproveComplete={async () => {
-            // Reload document data to refresh hasLinks status
-            const data = await getDocumentWithRequirements(documentKey!);
-            setDocumentData(data);
-            setTransformedRequirements(
-              transformDocumentRequirementsToItems(data),
-            );
-          }}
+          onBulkApproveComplete={reloadDocumentData}
         />
       </div>
 
@@ -358,6 +371,7 @@ export default function DocumentPage({
             selectedRequirementIndex={selectedRequirementIndex}
             onRequirementSelect={handleRequirementSelect}
             combinedLoading={combinedLoading}
+            refreshingSuggestionIds={refreshingSuggestionIds}
             documentMetadata={{
               name: documentData.original_filename,
               type: documentData.type,
@@ -469,6 +483,8 @@ export default function DocumentPage({
           } else {
             await loadLinkedRequirements();
           }
+          // Reload document data after merge to refresh hasLinks
+          await reloadDocumentData();
         }}
         productId={mergeDrawerModal.data?.product_id || null}
       />

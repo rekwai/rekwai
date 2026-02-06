@@ -199,6 +199,7 @@ class SuggestedAction(BaseModel):
     target_requirement: Optional[RequirementDto] = None
     justification: str
     similarity_score: float = Field(ge=0.0, le=1.0)
+    merge_preview: Optional["MergedRequirement"] = None
 
 
 class ActionDecisionValidationResult(BaseModel):

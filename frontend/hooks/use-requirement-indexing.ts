@@ -5,6 +5,7 @@ import {
   ImplementationStatus,
   ExtractedRequirementDto,
   SuggestedAction,
+  SuggestedActionType,
 } from "@/types/requirement-types";
 import {
   getDistinctRequirementTypes,
@@ -54,9 +55,23 @@ export function useRequirementIndexing({
   const [mergingRequirementId, setMergingRequirementId] = useState<
     string | null
   >(null);
+  const [refreshingSuggestionIds, setRefreshingSuggestionIds] = useState<
+    Set<string>
+  >(new Set());
 
   const selectedRequirement = requirements[selectedRequirementIndex];
   const combinedLoading = isLoading || typesLoading;
+
+  // Shared helper to clear all suggestion fields on a requirement
+  const withClearedSuggestion = (req: RequirementItem): RequirementItem => ({
+    ...req,
+    suggestedAction: undefined,
+    suggestedTargetRequirementId: undefined,
+    suggestionJustification: undefined,
+    suggestionSimilarityScore: undefined,
+    suggestedTargetRequirement: undefined,
+    mergePreview: undefined,
+  });
 
   // Sync requirements when initialRequirements changes
   useEffect(() => {
@@ -170,24 +185,71 @@ export function useRequirementIndexing({
     setRequirements((prev) =>
       prev.map((req, idx) =>
         idx === selectedRequirementIndex
-          ? {
-              ...req,
-              suggestedAction: null,
-              suggestedTargetRequirementId: null,
-              suggestionJustification: null,
-              suggestionSimilarityScore: null,
-              suggestedTargetRequirement: null,
-              mergePreview: null,
-            }
+          ? withClearedSuggestion(req)
           : req,
       ),
     );
   }, [selectedRequirementIndex]);
 
+  // Refresh suggestions for a list of extracted requirement IDs (e.g. after merge invalidation)
+  const refreshSuggestionsForIds = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+
+      // Add IDs to refreshing set
+      setRefreshingSuggestionIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.add(id));
+        return next;
+      });
+
+      // Fire off re-suggestions in parallel
+      const results = await Promise.allSettled(
+        ids.map((id) => getSuggestedAction(id)),
+      );
+
+      // Update requirements state with fresh suggestion data
+      setRequirements((prev) =>
+        prev.map((req) => {
+          const idx = ids.indexOf(req.id.toString());
+          if (idx === -1) return req;
+
+          const result = results[idx];
+          if (result.status === "fulfilled") {
+            const suggestion = result.value;
+            return {
+              ...req,
+              suggestedAction: suggestion.action as SuggestedActionType,
+              suggestedTargetRequirementId:
+                suggestion.target_requirement_id ?? undefined,
+              suggestionJustification: suggestion.justification ?? undefined,
+              suggestionSimilarityScore:
+                suggestion.similarity_score ?? undefined,
+              suggestedTargetRequirement:
+                suggestion.target_requirement ?? undefined,
+              mergePreview: suggestion.merge_preview ?? undefined,
+            };
+          }
+          // On failure, leave suggestion cleared (already cleared by backend)
+          return req;
+        }),
+      );
+
+      // Remove IDs from refreshing set
+      setRefreshingSuggestionIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+    },
+    [],
+  );
+
   // Confirm the AI suggestion
   const confirmSuggestion = useCallback(async (): Promise<{
     action: SuggestedAction["action"];
     requirement?: Requirement;
+    invalidated_ids?: string[];
   } | null> => {
     if (!suggestedAction || !selectedRequirement?.id) return null;
 
@@ -195,8 +257,12 @@ export function useRequirementIndexing({
       suggestedAction;
 
     // Call backend accept endpoint (creates link for attach, clears suggestion)
+    let invalidated_ids: string[] = [];
     try {
-      await acceptSuggestion(selectedRequirement.id.toString());
+      const acceptResult = await acceptSuggestion(
+        selectedRequirement.id.toString(),
+      );
+      invalidated_ids = acceptResult.invalidated_ids || [];
     } catch (error) {
       console.error("Failed to accept suggestion:", error);
       return null; // Keep suggestion state intact so user can retry
@@ -209,9 +275,21 @@ export function useRequirementIndexing({
       updateSelectedRequirementHasLinks(true);
     }
 
+    // Clear local suggestion fields for invalidated siblings immediately
+    if (invalidated_ids.length > 0) {
+      setRequirements((prev) =>
+        prev.map((req) =>
+          invalidated_ids.includes(req.id.toString())
+            ? withClearedSuggestion(req)
+            : req,
+        ),
+      );
+    }
+
     const result = {
       action,
       requirement: target_requirement ?? undefined,
+      invalidated_ids,
     };
 
     setSuggestedAction(null);
@@ -423,6 +501,7 @@ export function useRequirementIndexing({
     isFetchingSuggestion,
     suggestedAction,
     mergingRequirementId,
+    refreshingSuggestionIds,
 
     // Actions
     handleRequirementSelect,
@@ -437,6 +516,7 @@ export function useRequirementIndexing({
     handleLinkExistingRequirements,
     handleUnlinkRequirement,
     handleGenerateMerge,
+    refreshSuggestionsForIds,
     goToNext,
   };
 }

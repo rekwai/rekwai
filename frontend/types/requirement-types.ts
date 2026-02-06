@@ -97,6 +97,7 @@ export interface SuggestedAction {
   target_requirement: Requirement | null;
   justification: string;
   similarity_score: number;
+  merge_preview?: MergedRequirement | null;
 }
 
 export interface MergedRequirement {

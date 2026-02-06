@@ -571,6 +571,29 @@ class RequirementRepository:
         self.db.commit()
         return db_extracted_req
 
+    def find_extracted_requirements_by_suggestion_target(
+        self,
+        target_requirement_id: str,
+        exclude_id: Optional[str] = None,
+    ) -> List[tables.ExtractedRequirementDB]:
+        """Find extracted requirements with merge suggestions targeting the given requirement.
+
+        Args:
+            target_requirement_id: The main requirement ID being targeted
+            exclude_id: An extracted requirement ID to exclude (e.g., the just-approved one)
+
+        Returns:
+            List of ExtractedRequirementDB rows with merge suggestions to this target
+        """
+        query = self.db.query(tables.ExtractedRequirementDB).filter(
+            tables.ExtractedRequirementDB.suggested_target_requirement_id
+            == target_requirement_id,
+            tables.ExtractedRequirementDB.suggested_action == "merge",
+        )
+        if exclude_id:
+            query = query.filter(tables.ExtractedRequirementDB.id != exclude_id)
+        return query.all()
+
     def set_extracted_requirement_merge_preview(
         self,
         extracted_requirement_id: str,

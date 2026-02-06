@@ -325,7 +325,44 @@ class RequirementDocumentService:
             extracted_requirement_id
         )
 
-        return {"action": action, "target_requirement_id": target_id}
+        # Invalidate sibling merge suggestions targeting the same requirement
+        invalidated_ids: list[str] = []
+        if action == "merge" and target_id:
+            invalidated_ids = self.invalidate_merge_suggestions_for_target(
+                target_id,
+                exclude_extracted_requirement_id=extracted_requirement_id,
+            )
+
+        return {
+            "action": action,
+            "target_requirement_id": target_id,
+            "invalidated_ids": invalidated_ids,
+        }
+
+    def invalidate_merge_suggestions_for_target(
+        self,
+        target_requirement_id: str,
+        exclude_extracted_requirement_id: str,
+    ) -> list[str]:
+        """Clear stale merge suggestions that target the same requirement.
+
+        After a merge is accepted, other extracted requirements that had merge
+        suggestions pointing at the same target are now stale. This clears their
+        suggestion columns and returns their IDs so the frontend can re-suggest.
+        """
+        siblings = (
+            self.requirement_repository.find_extracted_requirements_by_suggestion_target(
+                target_requirement_id,
+                exclude_id=exclude_extracted_requirement_id,
+            )
+        )
+        invalidated_ids = []
+        for sibling in siblings:
+            self.requirement_repository.set_extracted_requirement_suggestion(
+                str(sibling.id)
+            )
+            invalidated_ids.append(str(sibling.id))
+        return invalidated_ids
 
     def dismiss_suggestion(self, extracted_requirement_id: str) -> dict:
         """Dismiss the AI suggestion by clearing all suggestion columns."""

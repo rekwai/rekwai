@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Check, X, Minus, Link, Merge, Plus } from "lucide-react";
+import { Check, X, Minus, Link, Merge, Plus, Loader2 } from "lucide-react";
 import { Info } from "@phosphor-icons/react";
 import * as RadixTabs from "@radix-ui/react-tabs";
 
@@ -30,6 +30,7 @@ interface ItemListPanelProps<T> {
   getItemAnswerType?: (item: T) => AnswerTypeIndicator;
   getItemSuggestionType?: (item: T) => SuggestionType | null;
   isItemError?: (item: T) => boolean;
+  isItemRefreshingSuggestion?: (item: T) => boolean;
   renderMetadata?: () => ReactNode;
   itemTestIdPrefix?: string;
 }
@@ -140,6 +141,7 @@ export function ItemListPanel<T>({
   getItemAnswerType,
   getItemSuggestionType,
   isItemError,
+  isItemRefreshingSuggestion,
   renderMetadata,
   itemTestIdPrefix = "item",
 }: ItemListPanelProps<T>) {
@@ -217,6 +219,8 @@ export function ItemListPanel<T>({
                     const answerType = getItemAnswerType?.(item);
                     const suggestionType = getItemSuggestionType?.(item);
                     const hasError = isItemError?.(item) ?? false;
+                    const isRefreshingSuggestion =
+                      isItemRefreshingSuggestion?.(item) ?? false;
 
                     return (
                       <div
@@ -262,11 +266,18 @@ export function ItemListPanel<T>({
                             isCompleted={isCompleted}
                           />
                         )}
-                        {getItemSuggestionType && (
-                          <SuggestionTypeIcon
-                            suggestionType={suggestionType}
-                          />
-                        )}
+                        {getItemSuggestionType &&
+                          (isRefreshingSuggestion ? (
+                            <Loader2
+                              size={12}
+                              className="animate-spin text-gray-400 flex-shrink-0"
+                              data-testid="suggestion-refreshing-spinner"
+                            />
+                          ) : (
+                            <SuggestionTypeIcon
+                              suggestionType={suggestionType}
+                            />
+                          ))}
                       </div>
                     );
                   })}

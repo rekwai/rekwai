@@ -551,6 +551,7 @@ class RequirementService:
                 self.repository.set_extracted_requirement_merge_preview(
                     extracted_requirement_id, merge_preview.model_dump()
                 )
+                suggestion.merge_preview = merge_preview
             except Exception as e:
                 logger.warning(f"Failed to generate merge preview: {e}")
 

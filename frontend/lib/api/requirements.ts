@@ -384,7 +384,11 @@ export async function generateMerge(
  */
 export async function acceptSuggestion(
   extractedRequirementId: string,
-): Promise<{ action: string; target_requirement_id: string | null }> {
+): Promise<{
+  action: string;
+  target_requirement_id: string | null;
+  invalidated_ids: string[];
+}> {
   const response = await fetch(
     `${getApiUrl()}/requirements/extracted-requirement/${extractedRequirementId}/accept-suggestion`,
     { method: "POST" },
@@ -392,6 +396,7 @@ export async function acceptSuggestion(
   return handleResponse<{
     action: string;
     target_requirement_id: string | null;
+    invalidated_ids: string[];
   }>(response);
 }
 
