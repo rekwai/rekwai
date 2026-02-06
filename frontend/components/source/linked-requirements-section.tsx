@@ -79,8 +79,9 @@ export function LinkedRequirementsSection({
     [linkedRequirements],
   );
 
+  const hasSuggestion = !!(suggestedAction && onConfirmSuggestion && onDismissSuggestion);
   const showEmptyState =
-    !linkedRequirementsLoading && linkedRequirements.length === 0;
+    !linkedRequirementsLoading && linkedRequirements.length === 0 && !hasSuggestion;
 
   return (
     <>
@@ -93,7 +94,7 @@ export function LinkedRequirementsSection({
         />
 
         {/* AI Suggestion Banner */}
-        {suggestedAction && onConfirmSuggestion && onDismissSuggestion && (
+        {hasSuggestion && (
           <AISuggestionBanner
             suggestion={suggestedAction}
             onConfirm={onConfirmSuggestion}
@@ -104,7 +105,7 @@ export function LinkedRequirementsSection({
         )}
 
         {showEmptyState ? (
-          // Empty state action buttons
+          // Empty state action buttons (hidden when AI suggestion is showing)
           <div className="flex flex-row items-start p-0 gap-4 w-full h-[87px]">
             {/* Create requirement button */}
             <button
