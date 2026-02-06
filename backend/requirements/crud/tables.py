@@ -11,6 +11,7 @@ from sqlalchemy import (
     UniqueConstraint,
     REAL,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 import uuid6
 from sqlalchemy.dialects.postgresql import UUID
@@ -184,6 +185,7 @@ class ExtractedRequirementDB(Base):
     )
     suggestion_justification = Column(Text, nullable=True)
     suggestion_similarity_score = Column(REAL, nullable=True)
+    merge_preview = Column(JSONB, nullable=True)
 
     __table_args__ = (
         Index("idx_extracted_requirement_org_product", organization_id, product_id),

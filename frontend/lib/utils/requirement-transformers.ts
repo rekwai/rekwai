@@ -37,5 +37,6 @@ export function transformDocumentRequirementsToItems(
     suggestionJustification: req.suggestion_justification ?? undefined,
     suggestionSimilarityScore: req.suggestion_similarity_score ?? undefined,
     suggestedTargetRequirement: req.suggested_target_requirement ?? undefined,
+    mergePreview: req.merge_preview ?? undefined,
   }));
 }

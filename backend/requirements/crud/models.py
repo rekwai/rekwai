@@ -72,6 +72,7 @@ class ExtractedRequirementDto(BaseModel):
     suggestion_justification: Optional[str] = None
     suggestion_similarity_score: Optional[float] = None
     suggested_target_requirement: Optional["RequirementDto"] = None
+    merge_preview: Optional["MergedRequirement"] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -261,6 +262,13 @@ class MergedRequirement(BaseModel):
     implementation_status: str
     implementation_description: str
     requirement_verification: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, data: Optional[dict]) -> Optional["MergedRequirement"]:
+        """Deserialize a JSON dict to a MergedRequirement, returning None if data is None."""
+        if data is None:
+            return None
+        return cls(**data)
 
 
 class IntermediateExtractedRequirementBase(BaseModel):

@@ -128,6 +128,7 @@ class RequirementDocumentService:
                 suggestion_justification=extracted_requirement_db.suggestion_justification,
                 suggestion_similarity_score=extracted_requirement_db.suggestion_similarity_score,
                 suggested_target_requirement=suggested_target_req,
+                merge_preview=crud_models.MergedRequirement.from_json(extracted_requirement_db.merge_preview),
             )
 
             requirements_list.append(extracted_requirement_dto)

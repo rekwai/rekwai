@@ -174,6 +174,7 @@ export interface DocumentWithRequirements {
     suggestion_justification?: string | null;
     suggestion_similarity_score?: number | null;
     suggested_target_requirement?: Requirement | null;
+    merge_preview?: MergedRequirement | null;
   }>;
 }
 

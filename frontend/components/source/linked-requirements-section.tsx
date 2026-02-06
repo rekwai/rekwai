@@ -3,7 +3,11 @@
 import { useState, useMemo } from "react";
 import { Plus, Link } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Requirement, SuggestedAction } from "@/types/requirement-types";
+import {
+  Requirement,
+  SuggestedAction,
+  MergedRequirement,
+} from "@/types/requirement-types";
 import { RequirementItem } from "@/components/query/requirement-item";
 import { RequirementSelectionModal } from "@/components/query/requirement-selection-modal";
 import { LinkedRequirementsHeader } from "./linked-requirements-header";
@@ -25,6 +29,8 @@ interface LinkedRequirementsSectionProps {
   suggestedAction?: SuggestedAction | null;
   onConfirmSuggestion?: () => Promise<unknown>;
   onDismissSuggestion?: () => void;
+  onEditSuggestion?: () => Promise<unknown>;
+  mergePreview?: MergedRequirement | null;
 }
 
 export function LinkedRequirementsSection({
@@ -42,6 +48,8 @@ export function LinkedRequirementsSection({
   suggestedAction,
   onConfirmSuggestion,
   onDismissSuggestion,
+  onEditSuggestion,
+  mergePreview,
 }: LinkedRequirementsSectionProps) {
   const [unlinkingRequirementIds, setUnlinkingRequirementIds] = useState<
     Set<string>
@@ -90,6 +98,8 @@ export function LinkedRequirementsSection({
             suggestion={suggestedAction}
             onConfirm={onConfirmSuggestion}
             onDismiss={onDismissSuggestion}
+            onEdit={onEditSuggestion}
+            mergePreview={mergePreview}
           />
         )}
 

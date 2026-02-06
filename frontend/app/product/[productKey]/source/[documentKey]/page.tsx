@@ -12,12 +12,16 @@ import {
   getDocumentWithRequirements,
   DocumentWithRequirements,
   createRequirement,
+  updateRequirement as updateRequirementApi,
 } from "@/lib/api/requirements";
 import { getProductByKey } from "@/lib/api/products";
 import {
   RequirementItem,
   Requirement,
   ExtractedRequirementUpdate,
+  ImplementationStatus,
+  MergedRequirement,
+  RequirementUpdate,
 } from "@/types/requirement-types";
 import {
   PageLoadingState,
@@ -29,6 +33,21 @@ import { useRequirementModal } from "@/hooks/use-requirement-modal";
 import { getFirstNonEmpty } from "@/lib/utils/string-utils";
 import { transformDocumentRequirementsToItems } from "@/lib/utils/requirement-transformers";
 import { useResolvedParams } from "@/hooks/use-resolved-params";
+
+function mergePreviewToUpdatePayload(
+  preview: MergedRequirement,
+  productId: string,
+): RequirementUpdate {
+  return {
+    description: preview.description,
+    types: preview.types,
+    implementation_status:
+      preview.implementation_status as ImplementationStatus,
+    implementation_description: preview.implementation_description,
+    requirement_verification: preview.requirement_verification || undefined,
+    product_id: productId,
+  };
+}
 
 export default function DocumentPage({
   params,
@@ -206,13 +225,18 @@ export default function DocumentPage({
     }
   };
 
-  // Handle AI suggestion confirmation with follow-up actions
-  const handleConfirmSuggestion = async () => {
-    const result = await confirmSuggestion();
-    if (result?.action === "merge" && result.requirement) {
-      setPendingMergeLinkId(result.requirement.id.toString());
+  // Fallback: open merge drawer for manual editing
+  const openMergeDrawerFallback = async (
+    requirement: Requirement,
+    overrideValues?: Partial<Requirement>,
+  ) => {
+    setPendingMergeLinkId(requirement.id.toString());
+    if (overrideValues) {
+      mergeDrawerModal.open(requirement);
+      setDrawerOverrideValues(overrideValues);
+    } else {
       try {
-        const mergeResult = await handleGenerateMerge(result.requirement);
+        const mergeResult = await handleGenerateMerge(requirement);
         if (mergeResult) {
           mergeDrawerModal.open(mergeResult.requirement);
           setDrawerOverrideValues(mergeResult.overrideValues);
@@ -221,6 +245,33 @@ export default function DocumentPage({
         }
       } catch {
         setPendingMergeLinkId(null);
+      }
+    }
+  };
+
+  // Handle AI suggestion confirmation with follow-up actions
+  const handleConfirmSuggestion = async () => {
+    const result = await confirmSuggestion();
+    if (result?.action === "merge" && result.requirement) {
+      const mergePreviewData = selectedRequirement?.mergePreview;
+      if (mergePreviewData) {
+        // Direct apply: update the existing requirement with merge preview data
+        const payload = mergePreviewToUpdatePayload(
+          mergePreviewData,
+          result.requirement.product_id,
+        );
+        try {
+          await updateRequirementApi(
+            result.requirement.id.toString(),
+            payload,
+          );
+          await linkNewRequirement(result.requirement.id.toString());
+        } catch (error) {
+          console.error("Failed to apply merge directly, falling back to merge drawer:", error);
+          await openMergeDrawerFallback(result.requirement, payload);
+        }
+      } else {
+        await openMergeDrawerFallback(result.requirement);
       }
     } else if (result?.action === "create_new" && selectedRequirement) {
       const created = await createRequirement({
@@ -237,6 +288,21 @@ export default function DocumentPage({
         product_id: selectedRequirement.product_id,
       });
       await linkNewRequirement(created.id.toString());
+    }
+  };
+
+  // Handle edit suggestion - opens merge drawer with pre-filled data
+  const handleEditSuggestion = async () => {
+    const result = await confirmSuggestion();
+    if (result?.action === "merge" && result.requirement) {
+      const mergePreviewData = selectedRequirement?.mergePreview;
+      const overrideValues = mergePreviewData
+        ? mergePreviewToUpdatePayload(
+            mergePreviewData,
+            result.requirement.product_id,
+          )
+        : undefined;
+      await openMergeDrawerFallback(result.requirement, overrideValues);
     }
   };
 
@@ -330,6 +396,7 @@ export default function DocumentPage({
               isFetchingSuggestion,
               suggestedAction,
               mergingRequirementId,
+              mergePreview: selectedRequirement?.mergePreview,
             }}
             actionHandlers={{
               onEditRequirement: () => editExtractedModal.open(),
@@ -342,6 +409,7 @@ export default function DocumentPage({
               onFetchSuggestedAction: fetchSuggestedAction,
               onConfirmSuggestion: handleConfirmSuggestion,
               onDismissSuggestion: dismissSuggestion,
+              onEditSuggestion: handleEditSuggestion,
             }}
           />
         </div>

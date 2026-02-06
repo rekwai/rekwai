@@ -23,6 +23,7 @@ export interface RequirementItem {
   suggestionJustification?: string | null;
   suggestionSimilarityScore?: number | null;
   suggestedTargetRequirement?: Requirement | null;
+  mergePreview?: MergedRequirement | null;
 }
 
 export interface DocumentMetadata {
@@ -103,6 +104,7 @@ export interface MergedRequirement {
   types: string[];
   implementation_status: string;
   implementation_description: string;
+  requirement_verification?: string | null;
 }
 
 export interface ExtractedRequirementDto {
@@ -122,6 +124,7 @@ export interface ExtractedRequirementDto {
   suggestion_justification?: string | null;
   suggestion_similarity_score?: number | null;
   suggested_target_requirement?: Requirement | null;
+  merge_preview?: MergedRequirement | null;
 }
 
 export interface ExtractedRequirementUpdate {

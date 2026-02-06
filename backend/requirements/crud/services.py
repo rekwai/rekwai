@@ -478,6 +478,7 @@ class RequirementService:
             suggestion_justification=updated.suggestion_justification,
             suggestion_similarity_score=updated.suggestion_similarity_score,
             suggested_target_requirement=suggested_target_req,
+            merge_preview=models.MergedRequirement.from_json(updated.merge_preview),
         )
 
     async def suggest_action_for_extracted_requirement(
@@ -534,6 +535,24 @@ class RequirementService:
             justification=suggestion.justification,
             similarity_score=suggestion.similarity_score,
         )
+
+        # Pre-generate merge preview for merge suggestions
+        if (
+            suggestion.action.value == "merge"
+            and suggestion.target_requirement_id
+        ):
+            try:
+                merge_preview = (
+                    await self.requirement_document_service.generate_merge(
+                        extracted_requirement_id,
+                        suggestion.target_requirement_id,
+                    )
+                )
+                self.repository.set_extracted_requirement_merge_preview(
+                    extracted_requirement_id, merge_preview.model_dump()
+                )
+            except Exception as e:
+                logger.warning(f"Failed to generate merge preview: {e}")
 
         return suggestion
 

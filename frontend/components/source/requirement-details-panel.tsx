@@ -7,6 +7,7 @@ import {
   RequirementItem,
   Requirement,
   SuggestedAction,
+  MergedRequirement,
 } from "@/types/requirement-types";
 
 interface LinkedRequirementsProps {
@@ -15,6 +16,7 @@ interface LinkedRequirementsProps {
   mergingRequirementId: string | null;
   isFetchingSuggestion?: boolean;
   suggestedAction?: SuggestedAction | null;
+  mergePreview?: MergedRequirement | null;
 }
 
 interface ActionHandlers {
@@ -27,6 +29,7 @@ interface ActionHandlers {
   onFetchSuggestedAction?: () => Promise<void>;
   onConfirmSuggestion?: () => Promise<unknown>;
   onDismissSuggestion?: () => void;
+  onEditSuggestion?: () => Promise<unknown>;
 }
 
 interface RequirementDetailsPanelProps {
@@ -101,6 +104,8 @@ export function RequirementDetailsPanel({
         suggestedAction={linkedRequirementsProps.suggestedAction}
         onConfirmSuggestion={actionHandlers.onConfirmSuggestion}
         onDismissSuggestion={actionHandlers.onDismissSuggestion}
+        onEditSuggestion={actionHandlers.onEditSuggestion}
+        mergePreview={linkedRequirementsProps.mergePreview}
       />
     </div>
   );

@@ -177,6 +177,7 @@ export function useRequirementIndexing({
               suggestionJustification: null,
               suggestionSimilarityScore: null,
               suggestedTargetRequirement: null,
+              mergePreview: null,
             }
           : req,
       ),

@@ -562,6 +562,30 @@ class RequirementRepository:
         db_extracted_req.suggested_target_requirement_id = target_requirement_id
         db_extracted_req.suggestion_justification = justification
         db_extracted_req.suggestion_similarity_score = similarity_score
+        # Clear merge preview when clearing suggestion
+        if action is None:
+            db_extracted_req.merge_preview = None
+
+        self.db.flush()
+        self.db.refresh(db_extracted_req)
+        self.db.commit()
+        return db_extracted_req
+
+    def set_extracted_requirement_merge_preview(
+        self,
+        extracted_requirement_id: str,
+        preview_dict: dict,
+    ) -> Optional[tables.ExtractedRequirementDB]:
+        """Store the merge preview JSON on an extracted requirement."""
+        db_extracted_req = (
+            self.db.query(tables.ExtractedRequirementDB)
+            .filter(tables.ExtractedRequirementDB.id == extracted_requirement_id)
+            .first()
+        )
+        if not db_extracted_req:
+            return None
+
+        db_extracted_req.merge_preview = preview_dict
 
         self.db.flush()
         self.db.refresh(db_extracted_req)
