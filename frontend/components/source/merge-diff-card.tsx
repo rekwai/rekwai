@@ -25,13 +25,20 @@ function WordDiff({
     <span>
       {changes.map((part, i) => {
         if (part.removed) {
-          return null; // Don't show removed text - we're showing the new version
+          return (
+            <span
+              key={i}
+              className="line-through text-muted-foreground/60 px-0.5"
+            >
+              {part.value}
+            </span>
+          );
         }
         if (part.added) {
           return (
             <span
               key={i}
-              className="bg-green-100 text-green-800 rounded px-0.5"
+              className="bg-amber-50 text-amber-700 rounded px-0.5"
             >
               {part.value}
             </span>
@@ -90,7 +97,7 @@ export function MergeDiffCard({
               {newTypes.map((type, index) => (
                 <Badge
                   key={`new-${index}`}
-                  className="flex flex-row justify-center items-center px-1.5 py-0.5 gap-1.5 h-5 bg-green-100 rounded-[3px] font-inter font-medium text-xs leading-4 tracking-[0.04px] text-green-800"
+                  className="flex flex-row justify-center items-center px-1.5 py-0.5 gap-1.5 h-5 bg-amber-50 rounded-[3px] font-inter font-medium text-xs leading-4 tracking-[0.04px] text-amber-700"
                 >
                   {type}
                 </Badge>
@@ -116,7 +123,7 @@ export function MergeDiffCard({
             <Badge
               className={`px-1.5 py-0.5 text-xs font-medium rounded ${
                 statusChanged
-                  ? "bg-green-100 text-green-800"
+                  ? "bg-amber-50 text-amber-700"
                   : getStatusBadgeStyles(mergedData.implementation_status)
               }`}
             >
