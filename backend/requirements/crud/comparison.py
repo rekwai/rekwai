@@ -33,15 +33,21 @@ to or enriching existing requirements over creating new ones.
 - **attach**: An existing requirement *fully covers* the extracted one. Just link the document — \
 no content changes needed. The match is a near-duplicate: same goal, same scope, no meaningful \
 new information to add.
-- **merge**: An existing requirement covers the *same topic area* and could be enriched. Use when:
+- **merge**: An existing requirement covers the *same specific concern* and could be enriched. Use when:
   - The extracted requirement adds specifics, context, or nuance to an existing one.
+  - Both requirements address the same control mechanism or approach (not just the same broad topic).
   - Implementation and verification would stay similar between the two.
   - The new document provides an implementation status update for an existing requirement \
 (e.g., one describes the planned capability, the other confirms it's been implemented — \
 merge to update status/details).
-- **create_new**: Use *sparingly*. Only when:
+  - Do NOT merge just because two requirements fall under the same broad category (e.g., both \
+under "access control" or both under "security"). Requirements that use different control \
+mechanisms — such as procedural controls (role-based access, least privilege) vs. technology \
+controls (MFA, encryption) — should remain separate even if they share a parent topic.
+- **create_new**: Only when:
   - The topic is completely new (none of the existing requirements cover it).
-  - It doesn't fit the spirit of any existing requirement (e.g., fundamentally different perspective).
+  - The requirement addresses a different control mechanism, approach, or perspective than \
+all existing requirements — even if it falls under the same broad category.
   - Implementation would be *completely* different from all existing requirements.
   - Verification would be *completely* different from all existing requirements.
 
@@ -51,10 +57,12 @@ merge to update status/details).
 3. For merge: similarity_score should be >= 0.5. The match covers the same topic but differs in detail.
 4. For create_new: set best_match_index to null and similarity_score to the highest score among existing requirements (or 0.0 if none).
 5. When in doubt between attach and merge, prefer merge — it's safer to review than to silently link.
-6. When in doubt between merge and create_new, prefer merge — consolidation keeps the database lean. \
-Only choose create_new when you are confident the requirement is truly novel.
+6. When deciding between merge and create_new, ask: "Do these requirements use the same control \
+mechanism or approach?" If yes, prefer merge. If they address different mechanisms (e.g., procedural \
+vs. technical, preventive vs. detective), prefer create_new even if they share a broad topic.
 7. Use the provided implementation and verification details to assess merge vs create_new. \
-If implementation or verification would be similar, that strongly favors merge.
+If implementation or verification would be similar, that strongly favors merge. If they would \
+require fundamentally different processes, that favors create_new.
 """
 
 ACTION_DECISION_VALIDATION_PROMPT = """
@@ -68,12 +76,14 @@ database lean — prefer consolidation (attach/merge) over creating new entries.
 "no existing requirement covers this", the action should be 'create_new', not 'attach'.
 4. For 'attach', verify the existing requirement truly FULLY covers the extracted requirement (the justification \
 should reflect this). If the existing requirement only partially covers it, the action should be 'merge'.
-5. For 'merge', verify the existing requirement is related enough to justify merging. If implementation or \
-verification would be similar between the extracted requirement and the existing requirement, merge is correct.
+5. For 'merge', verify the existing requirement addresses the *same control mechanism or approach* — \
+not just the same broad topic. Two requirements under "access control" that use different mechanisms \
+(e.g., least-privilege vs. MFA) should NOT be merged. If implementation or verification would be \
+similar, merge is correct. If they require fundamentally different processes, suggest create_new.
 6. similarity_score should be reasonable for the action: attach >= 0.8, merge >= 0.5.
-7. For 'create_new', scrutinize the justification: does it explain why implementation AND verification \
-would be *completely* different from all existing requirements? If not, suggest merge instead. \
-create_new decisions need strong justification — the requirement must be truly novel.
+7. For 'create_new', verify the justification explains why the requirement addresses a different \
+concern or mechanism than existing requirements. create_new is appropriate when the requirement \
+uses a different control type, approach, or mechanism — even if it falls under the same broad category.
 
 Output your validation result.
 """
