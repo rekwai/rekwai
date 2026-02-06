@@ -383,19 +383,31 @@ class RequirementDocumentService:
         # Prepare the prompt
         prompt = """You are a requirements analyst merging two related requirements into one.
 
-**CRITICAL CONSTRAINT**: The output must ONLY contain information present in the two input requirements below. Do NOT add, infer, assume, or elaborate beyond what is explicitly stated. If something is not mentioned in either input, it must NOT appear in the output.
+**CRITICAL: MERGE ≠ APPEND.** Do NOT concatenate or stitch the two inputs together. A merge is a \
+REWRITE — you must synthesize both inputs into a single, cohesive requirement that reads as if it \
+was always written as one. The output should be shorter and tighter than the two inputs combined, \
+not longer. If both inputs say similar things, say it once well.
+
+**CONSTRAINT**: The output must ONLY contain information present in the two input requirements below. \
+Do NOT add, infer, assume, or elaborate beyond what is explicitly stated.
 
 **Field-by-field instructions:**
 
-1. **description**: Merge ONLY the description fields from both inputs into coherent prose. Do not pull information from implementation_description into description. Do not add details not present in either description.
+1. **description**: Rewrite into a single, unified description that covers the intent of both inputs. \
+Do NOT concatenate sentences from each input. Instead, identify the shared theme and write one \
+coherent description. Aim for conciseness — if both inputs express the same idea, state it once. \
+Do not pull information from implementation_description into description.
 
 2. **types**: Return the union of both type lists, deduplicated. Do not invent new types.
 
 3. **implementation_status**: Write an implementation status that aligns with the merged description. Valid values: "Implemented", "Planned", "To do", "Won't do".
 
-4. **implementation_description**: Write an implementation description that aligns with the merged description. Use only information from the two input implementation_description fields.
+4. **implementation_description**: Rewrite into a single, unified implementation description. \
+Do NOT append one input's text after the other. Synthesize the key points into coherent prose.
 
-5. **requirement_verification**: Write a verification method that aligns with the merged description. Use only information from the two input requirement_verification fields. Set to null if neither input has a verification method.
+5. **requirement_verification**: Rewrite into a single, unified verification method. \
+Do NOT list both inputs' verification steps back-to-back. Synthesize into a coherent approach. \
+Set to null if neither input has a verification method.
 
 **Existing Requirement:**
 - Description: {existing_description}
