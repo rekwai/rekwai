@@ -1,11 +1,12 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Check, X, Minus } from "lucide-react";
+import { Check, X, Minus, Link, Merge, Plus } from "lucide-react";
 import { Info } from "@phosphor-icons/react";
 import * as RadixTabs from "@radix-ui/react-tabs";
 
 export type AnswerTypeIndicator = "yes" | "no" | "n/a" | null;
+export type SuggestionType = "attach" | "merge" | "create_new";
 
 interface TabConfig {
   value: string;
@@ -27,6 +28,7 @@ interface ItemListPanelProps<T> {
   getItemText: (item: T) => string;
   isItemCompleted?: (item: T) => boolean;
   getItemAnswerType?: (item: T) => AnswerTypeIndicator;
+  getItemSuggestionType?: (item: T) => SuggestionType | null;
   isItemError?: (item: T) => boolean;
   renderMetadata?: () => ReactNode;
   itemTestIdPrefix?: string;
@@ -92,6 +94,35 @@ function AnswerTypeIcon({
   return <div className="w-3 h-3 flex-shrink-0" />;
 }
 
+const SUGGESTION_ICON_CONFIG: Record<
+  SuggestionType,
+  { icon: typeof Link; className: string; testId: string }
+> = {
+  attach: { icon: Link, className: "text-blue-700", testId: "suggestion-type-attach" },
+  merge: { icon: Merge, className: "text-amber-700", testId: "suggestion-type-merge" },
+  create_new: { icon: Plus, className: "text-green-700", testId: "suggestion-type-create-new" },
+};
+
+function SuggestionTypeIcon({
+  suggestionType,
+}: {
+  suggestionType?: SuggestionType | null;
+}) {
+  if (!suggestionType) {
+    return <div className="w-3 h-3 flex-shrink-0" />;
+  }
+
+  const config = SUGGESTION_ICON_CONFIG[suggestionType];
+  const Icon = config.icon;
+  return (
+    <Icon
+      size={12}
+      className={`${config.className} flex-shrink-0`}
+      data-testid={config.testId}
+    />
+  );
+}
+
 export function ItemListPanel<T>({
   activeTab,
   onTabChange,
@@ -107,6 +138,7 @@ export function ItemListPanel<T>({
   getItemText,
   isItemCompleted,
   getItemAnswerType,
+  getItemSuggestionType,
   isItemError,
   renderMetadata,
   itemTestIdPrefix = "item",
@@ -183,6 +215,7 @@ export function ItemListPanel<T>({
                     const isSelected = index === selectedIndex;
                     const isCompleted = isItemCompleted?.(item) ?? false;
                     const answerType = getItemAnswerType?.(item);
+                    const suggestionType = getItemSuggestionType?.(item);
                     const hasError = isItemError?.(item) ?? false;
 
                     return (
@@ -223,10 +256,17 @@ export function ItemListPanel<T>({
                         >
                           {getItemText(item)}
                         </span>
-                        <AnswerTypeIcon
-                          answerType={answerType}
-                          isCompleted={isCompleted}
-                        />
+                        {getItemAnswerType && (
+                          <AnswerTypeIcon
+                            answerType={answerType}
+                            isCompleted={isCompleted}
+                          />
+                        )}
+                        {getItemSuggestionType && (
+                          <SuggestionTypeIcon
+                            suggestionType={suggestionType}
+                          />
+                        )}
                       </div>
                     );
                   })}

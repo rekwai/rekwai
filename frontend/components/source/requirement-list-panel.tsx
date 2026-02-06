@@ -44,6 +44,7 @@ export function RequirementListPanel({
       getItemId={(req) => req.id}
       getItemText={(req) => req.text}
       isItemCompleted={(req) => req.hasLinks}
+      getItemSuggestionType={(req) => req.suggestedAction ?? null}
       itemTestIdPrefix="extracted-requirement"
       renderMetadata={() => (
         <div className="p-4 space-y-6">
