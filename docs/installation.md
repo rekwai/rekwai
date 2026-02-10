@@ -23,26 +23,29 @@ You'll need an API key from one of the supported AI providers:
 
 ## Installation Steps
 
-### Step 1: Download and Configure
+### Step 1: Download and Initial Configuration
 
-1. Download these two files to a folder on your computer:
-   - [docker-compose.yml](https://github.com/rekwai/rekwai/raw/main/docker-compose.yml)
-   - [.env.example](https://github.com/rekwai/rekwai/raw/main/.env.example)
-2. Rename `.env.example` to `.env` and open it in a text editor
-3. **Generate storage secrets** by running these commands and copying the output into your `.env` file:
+1. In a terminal, navigate to the location where you want the `docker-compose.yml` and `.env` file to be.
+1. Download these two files:
+   - [docker-compose.yml](https://github.com/rekwai/rekwai/raw/main/docker/docker-compose.yml)
+   - [.env.example](https://github.com/rekwai/rekwai/raw/main/docker/.env.example)
+1. Rename `.env.example` to `.env` and open it in a text editor
+1. **Generate storage secrets** by running these commands (this expects you have openssl installed). It will append the
+generated secrets at the end of the `.env` file. **Note: only execute this once, the secrets need to remain the same in
+order for the services to function after restarting.**
    ```
-   openssl rand -hex 12 | sed 's/^/S3_ACCESS_KEY_ID=GK/'
-   openssl rand -hex 32 | sed 's/^/S3_SECRET_ACCESS_KEY=/'
-   openssl rand -hex 32 | sed 's/^/GARAGE_RPC_SECRET=/'
-   openssl rand -base64 32 | sed 's/^/GARAGE_ADMIN_TOKEN=/'
-   openssl rand -base64 32 | sed 's/^/GARAGE_METRICS_TOKEN=/'
+   echo "S3_ACCESS_KEY_ID=GK$(openssl rand -hex 12)" >> .env
+   echo "S3_SECRET_ACCESS_KEY=$(openssl rand -hex 32)" >> .env
+   echo "GARAGE_RPC_SECRET=$(openssl rand -hex 32)" >> .env
+   echo "GARAGE_ADMIN_TOKEN=$(openssl rand -base64 32)" >> .env
+   echo "GARAGE_METRICS_TOKEN=$(openssl rand -base64 32)" >> .env
    ```
-4. **Configure your AI provider:**
+1. **Configure your AI provider:**
    - Set `SELECTED_PROVIDER` to your chosen provider (`openai`, `gemini`, `anthropic`, or `openrouter`)
    - Fill in the API key for that provider
    - Configure the model settings (see below)
 
-### Model Selection
+#### Model Selection
 
 Rekwai uses two models:
 - **Smart model**: A reasoning model for complex analysis tasks. Choose a model with strong reasoning capabilities.
@@ -61,26 +64,21 @@ Rekwai uses two models:
 
 ### Step 2: Start the App
 
-1. **Open a terminal and navigate to the app folder:**
+Note: these instructions assume there are no configuration changes in `.env` besides the Garage related secrets.
+
+1. **In a terminal, navigate to the same location (chosen in step 1) and download all needed docker images:**
    ```bash
-   cd path/to/your/rekwai-app
+   docker compose pull
+   ```
+   This can take some time, as docling's docker image is quite big.
+
+2. **Start the app (append ` -d` to run in the background)**
+   ```bash
+   docker compose up
    ```
 
-2. **Start the app:**
-   ```bash
-   docker compose up -d
-   ```
-
-Docker will automatically download and set up everything. The first time may take a few minutes.
+3. **Watch the logs** which will tell you when the frontend is ready to be accessed.
 
 ## Accessing the App
 
 Once Docker has finished starting all services, open your browser and go to: **http://localhost:3000**
-
-## Stopping and Restarting
-
-**To stop:** Run `docker compose down` to stop all services
-
-**To restart:** Run `docker compose up -d` again from the app folder
-
-**To view logs:** Run `docker compose logs -f` to see real-time logs from all services

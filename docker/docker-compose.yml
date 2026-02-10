@@ -2,11 +2,8 @@
 services:
 
   backend:
-    image: ghcr.io/rekwai/rekwai/backend:2-ci-release-and-image-publishing-59c8385
-#    build:
-#      context: ./backend
-#      additional_contexts:
-#        db: ./db
+    image: ghcr.io/rekwai/rekwai/backend:latest
+    restart: unless-stopped
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     environment:
@@ -24,7 +21,6 @@ services:
       OPENROUTER_FAST_MODEL: ${OPENROUTER_FAST_MODEL:-}
       BACKEND_PORT: ${BACKEND_PORT}
       UVICORN_HOST: ${UVICORN_HOST}
-      # UVICORN_LOG_LEVEL: trace
       DOCLING_HOST: ${DOCLING_HOST}
       DOCLING_PORT: ${DOCLING_PORT}
       S3_URL: ${S3_URL}
@@ -35,6 +31,13 @@ services:
       LOG_LEVEL: ${LOG_LEVEL}
       ENABLE_LOGFIRE: ${ENABLE_LOGFIRE:-false}
       LOGFIRE_TOKEN: ${LOGFIRE_TOKEN:-}
+    healthcheck:
+      test: ["CMD-SHELL", "curl 127.0.0.1:${BACKEND_PORT}/health"]
+      interval: 60s # slow interval
+      start_period: 30s
+      start_interval: 3s
+      timeout: 1s
+      retries: 10
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,22 +47,23 @@ services:
       - app-network
 
   frontend:
-    image: ghcr.io/rekwai/rekwai/frontend:2-ci-release-and-image-publishing-59c8385
-#    build:
-#      context: ./frontend
+    image: ghcr.io/rekwai/rekwai/frontend:latest
+    restart: unless-stopped
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
     environment:
       BACKEND_SERVICE_URL: ${BACKEND_SERVICE_URL}
       PORT: ${FRONTEND_PORT}
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - app-network
 
   docling-serve:
     # hardcoded the docling-serve version as a 5GB+ download every pull is not desired.
     image: quay.io/docling-project/docling-serve:v1.12.0
+    restart: unless-stopped
     ports:
       - "5001:5001"
     networks:
@@ -67,6 +71,7 @@ services:
 
   postgres:
     image: pgvector/pgvector:0.8.0-pg17
+    restart: unless-stopped
     ports:
       - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     environment:
@@ -74,7 +79,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pg-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 2s
@@ -84,16 +89,14 @@ services:
       - app-network
 
   garage:
-    # We're building this intentionally in order to hardcode the config file & ease deployment in simple environments.
-    image: ghcr.io/rekwai/rekwai/garage:2-ci-release-and-image-publishing-59c8385
-#    build:
-#      context: ./garage
+    # Built this intentionally in order to hardcode the config file & ease deployment in simple environments.
+    image: ghcr.io/rekwai/rekwai/custom-garage:latest
     container_name: garage
     restart: unless-stopped
     ports:
       - 3900:3900
     volumes:
-      - ./garage/data:/data
+      - garage-data:/data
     environment:
       - RUST_LOG=garage=info
       - GARAGE_ADMIN_TOKEN=${GARAGE_ADMIN_TOKEN}
@@ -104,12 +107,10 @@ services:
 
   garage-init:
     # The purpose of garage-init is to handle all needed configurations in order to use a most simple garage deployment.
-    image: ghcr.io/rekwai/rekwai/garage-init:2-ci-release-and-image-publishing-59c8385
-#    build:
-#      context: ./garage/cli
+    image: ghcr.io/rekwai/rekwai/custom-garage-init:latest
     container_name: garage-init
     volumes:
-      - ./garage/data:/data:ro
+      - garage-data:/data:ro
     environment:
       - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET}
       - INITIAL_BUCKET_NAME=${INITIAL_BUCKET_NAME}
@@ -124,4 +125,5 @@ networks:
   app-network:
 
 volumes:
-  pgdata:
+  pg-data:
+  garage-data:

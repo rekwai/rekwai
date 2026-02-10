@@ -3,8 +3,7 @@ name: Build and Push Docker Images
 on:
   push:
     branches:
-      #- main
-      - '**'
+      - main
 
 permissions:
   contents: read
@@ -25,11 +24,11 @@ jobs:
             context: ./frontend
             dockerfile: ./frontend/Dockerfile
             build_contexts: ""
-          - name: garage
+          - name: custom-garage
             context: ./garage
             dockerfile: ./garage/Dockerfile
             build_contexts: ""
-          - name: garage-init
+          - name: custom-garage-init
             context: ./garage/cli
             dockerfile: ./garage/cli/Dockerfile
             build_contexts: ""
