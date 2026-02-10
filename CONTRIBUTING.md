@@ -60,7 +60,7 @@ Releases are the **only** way Docker images get published to `ghcr.io`.
 We use [Conventional Commits](https://www.conventionalcommits.org/) to drive automated versioning. Commit messages must follow the format:
 
 ```
-<type>(optional scope): <description>
+<type>(optional scope): <description> (#<issue number>)
 
 [optional body]
 
@@ -71,9 +71,9 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) to drive aut
 
 | Type | SemVer | Example |
 |------|--------|---------|
-| `fix:` | PATCH | `fix(api): handle null response from docling` |
-| `feat:` | MINOR | `feat(products): add bulk import` |
-| `feat!:` / `BREAKING CHANGE:` | MAJOR | `feat!: restructure API response format` |
+| `fix:` | PATCH | `fix(api): handle null response from docling (#18)` |
+| `feat:` | MINOR | `feat(products): add bulk import (#7)` |
+| `feat!:` / `BREAKING CHANGE:` | MAJOR | `feat!: restructure API response format (#45)` |
 | `docs:`, `chore:`, `ci:`, `test:`, `refactor:`, `style:`, `perf:`, `build:` | none | `docs: update installation guide` |
 
 **Rules:**

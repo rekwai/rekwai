@@ -31,7 +31,7 @@ body:
     id: logs
     attributes:
       label: Relevant logs or screenshots
-      description: Paste any error output, logs, or attach screenshots.
+      description: "Paste any error output, logs, or attach screenshots. Do not include sensitive data (passwords, tokens, API keys, etc.)."
       render: shell
     validations:
       required: false
