@@ -1,0 +1,19 @@
+name: Task
+description: A concrete piece of work to be done
+type: Task
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What needs to be done and why?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: How do we know this is done?
+    validations:
+      required: false

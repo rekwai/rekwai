@@ -2,17 +2,9 @@
 
 Development guidelines for Claude Code when working with this repository.
 
-## Development Workflow - MANDATORY FIRST STEP
+**ALWAYS follow [CONTRIBUTING.md](CONTRIBUTING.md)** for branching, commits, PRs, and issue management.
 
-**ALWAYS open [SYSTEM_ACTIONS_REFERENCE.md](SYSTEM_ACTIONS_REFERENCE.md) FIRST** before searching for or reading any files.
-
-### File Search Protocol
-1. **FIRST**: Open and read SYSTEM_ACTIONS_REFERENCE.md
-2. **SECOND**: Search for the relevant user action or feature
-3. **THIRD**: Use the provided file paths to directly access implementation files
-4. **ONLY THEN**: Use search tools if you need additional context
-
-**Never search blindly** - use SYSTEM_ACTIONS_REFERENCE.md to identify exact files first.
+## Development Workflow
 
 ### Critical: Don't Guess
 - **NEVER assume or guess the project structure** - always read files to verify paths and organization
@@ -160,20 +152,3 @@ make test-integration                # Run integration tests via Makefile
 - **Investigation first**: Always investigate the codebase before creating an issue
 - Include relevant file paths, code references, and performance metrics
 
-## Maintaining SYSTEM_ACTIONS_REFERENCE.md
-
-**CRITICAL**: Update this file when adding features to keep it current.
-
-**When to update**:
-- New user-facing features/actions
-- New API endpoints
-- New UI components with user interactions
-- New workflows/processes
-- File location refactoring
-
-**How to update**:
-- Format: `- **Action description** → file paths`
-- Group related actions
-- Include both frontend and backend files
-- Use user-facing action names
-- if a file action fails and say the file does not exist, check where you are using pwd

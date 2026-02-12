@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "E2E tests for rekwai-app",
   "devDependencies": {
+    "@commitlint/cli": "^20.4.0",
+    "@commitlint/config-conventional": "^20.4.0",
     "@playwright/test": "^1.55.1",
     "@types/node": "^24.6.2",
     "dotenv": "^17.2.3"
