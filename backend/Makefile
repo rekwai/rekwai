@@ -14,4 +14,4 @@ test-integration:
 	uv run pytest tests/test_product_api.py tests/test_requirements_crud.py -v -s
 
 build-docker:
-	docker build -t backend .
+	docker build --build-context db=./db -t backend .

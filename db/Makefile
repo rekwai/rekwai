@@ -12,8 +12,8 @@ help:
 	@echo "  start                - Start the PostgreSQL container"
 	@echo "  connect              - Connect to the PostgreSQL database"
 	@echo "  clear-database       - Drop and recreate the database"
-	@echo "  migrate              - Run Flyway migrations"
-	@echo "  info                 - Show Flyway migration information"
+	@echo "  migrate              - Run golang-migrate migrations"
+	@echo "  info                 - Show golang-migrate migration information"
 	@echo "  clear-data-folder    - Remove and recreate the data folder"
 	@echo "  nuke-it              - Complete reset: delete image, clear data, recreate image, start, and migrate"
 
@@ -53,7 +53,7 @@ clear-database:
 	PGPASSWORD=rekwai psql -h 127.0.0.1 -U rekwai -d postgres -c "DROP DATABASE IF EXISTS rekwai;"
 	PGPASSWORD=rekwai psql -h 127.0.0.1 -U rekwai -d postgres -c "CREATE DATABASE rekwai;"
 
-# Run Flyway migrations
+# Run golang-migrate migrations
 # Usage: make migrate [DATABASE=database_name]
 # Default database is 'rekwai' if DATABASE is not specified
 DATABASE ?= rekwai
@@ -61,24 +61,22 @@ migrate:
 	docker run \
 	    --rm \
 	    --network=rekwai-network \
-	    -v $(CURDIR)/migrations:/flyway/sql \
-	    flyway/flyway \
-	    -user=rekwai \
-	    -password=rekwai \
-	    -url=jdbc:postgresql://postgres-rekwai:5432/$(DATABASE) \
-	    migrate
+	    -v $(CURDIR)/migrations:/migrations \
+	    migrate/migrate \
+	    -path=/migrations \
+	    -database="postgresql://rekwai:rekwai@postgres-rekwai:5432/$(DATABASE)?sslmode=disable" \
+	    up
 
-# Show Flyway migration information
+# Show golang-migrate migration information
 info:
 	docker run \
 	    --rm \
 	    --network=rekwai-network \
-	    -v $(CURDIR)/migrations:/flyway/sql \
-	    flyway/flyway \
-	    -user=rekwai \
-	    -password=rekwai \
-	    -url=jdbc:postgresql://postgres-rekwai:5432/rekwai \
-	    info
+	    -v $(CURDIR)/migrations:/migrations \
+	    migrate/migrate \
+	    -path=/migrations \
+	    -database="postgresql://rekwai:rekwai@postgres-rekwai:5432/rekwai?sslmode=disable" \
+	    version
 
 # Stop and remove the PostgreSQL container and image
 delete-docker-image:

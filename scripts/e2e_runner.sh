@@ -130,20 +130,19 @@ create_test_database() {
     fi
 }
 
-# Function to run Flyway migrations
-run_flyway_migration() {
-    log "Running Flyway migrations..."
+# Function to run golang-migrate migrations
+run_golang_migrate_migration() {
+    log "Running golang-migrate migrations..."
     if docker run --rm --network=rekwai-app_app-network \
-        -v "$(pwd)/db/migrations:/flyway/sql" \
-        flyway/flyway \
-        -user=$POSTGRES_USER \
-        -password=$POSTGRES_PASSWORD \
-        -url=jdbc:postgresql://rekwai-app-postgres-1:5432/$TEST_DB_NAME \
-        migrate; then
-        log "✅ Flyway migrations completed successfully"
+        -v "$(pwd)/db/migrations:/migrations" \
+        migrate/migrate \
+        -path=/migrations \
+        -database="postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@rekwai-app-postgres-1:5432/$TEST_DB_NAME?sslmode=disable" \
+        up; then
+        log "✅ golang-migrate migrations completed successfully"
         return 0
     else
-        log "❌ Flyway migrations failed"
+        log "❌ golang-migrate migrations failed"
         return 1
     fi
 }
@@ -394,7 +393,7 @@ main() {
 
     # Setup test environment
     create_test_database || return 1
-    run_flyway_migration || { cleanup; return 1; }
+    run_golang_migrate_migration || { cleanup; return 1; }
     start_backend || { cleanup; return 1; }
     start_frontend || { cleanup; return 1; }
 

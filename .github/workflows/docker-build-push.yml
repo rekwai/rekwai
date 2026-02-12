@@ -1,0 +1,69 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: backend
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+            build_contexts: |
+              db=./db
+          - name: frontend
+            context: ./frontend
+            dockerfile: ./frontend/Dockerfile
+            build_contexts: ""
+          - name: custom-garage
+            context: ./garage
+            dockerfile: ./garage/Dockerfile
+            build_contexts: ""
+          - name: custom-garage-init
+            context: ./garage/cli
+            dockerfile: ./garage/cli/Dockerfile
+            build_contexts: ""
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/rekwai/rekwai/${{ matrix.name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-contexts: ${{ matrix.build_contexts }}
+          cache-from: type=registry,ref=ghcr.io/rekwai/rekwai/${{ matrix.name }}:buildcache
+          cache-to: type=registry,ref=ghcr.io/rekwai/rekwai/${{ matrix.name }}:buildcache,mode=max

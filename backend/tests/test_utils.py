@@ -51,33 +51,32 @@ test_engine = create_engine(TEST_DB_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 
-# Function to run Flyway migrations using Docker
-def run_flyway_migrations():
+# Function to run golang-migrate migrations using Docker
+def run_golang_migrate_migrations():
     """
-    Run Flyway migrations using Docker to set up the database schema.
+    Run golang-migrate migrations using Docker to set up the database schema.
     """
     # Get the absolute path to the migrations directory
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
     migrations_dir = os.path.join(project_root, "db/migrations")
 
-    # Run Flyway migrations using Docker
+    # Run golang-migrate migrations using Docker
     command = [
         "docker",
         "run",
         "--rm",
         "--network=host",
         "-v",
-        f"{migrations_dir}:/flyway/sql",
-        "flyway/flyway",
-        "-user=rekwai",
-        "-password=changeme",
-        f"-url=jdbc:postgresql://localhost:5432/{TEST_DB_NAME}",
-        "migrate",
+        f"{migrations_dir}:/migrations",
+        "migrate/migrate",
+        "-path=/migrations",
+        f"-database=postgresql://rekwai:changeme@localhost:5432/{TEST_DB_NAME}?sslmode=disable",
+        "up",
     ]
 
     # Print the command being executed for better debugging
     print("\n" + "=" * 80)
-    print("EXECUTING FLYWAY MIGRATION COMMAND:")
+    print("EXECUTING GOLANG-MIGRATE MIGRATION COMMAND:")
     print(" ".join(command))
     print("=" * 80 + "\n")
 
@@ -86,7 +85,7 @@ def run_flyway_migrations():
 
     # Print the command output regardless of success or failure
     print("\n" + "=" * 80)
-    print("FLYWAY MIGRATION COMMAND OUTPUT:")
+    print("GOLANG-MIGRATE MIGRATION COMMAND OUTPUT:")
     print("=" * 80)
 
     if result.stdout:
@@ -103,10 +102,10 @@ def run_flyway_migrations():
 
     # Check if the command was successful
     if result.returncode != 0:
-        print(f"Flyway migration failed with return code: {result.returncode}")
-        raise Exception(f"Flyway migration failed: {result.stderr}")
+        print(f"golang-migrate migration failed with return code: {result.returncode}")
+        raise Exception(f"golang-migrate migration failed: {result.stderr}")
 
-    print(f"Flyway migration successful with return code: {result.returncode}")
+    print(f"golang-migrate migration successful with return code: {result.returncode}")
 
 
 # Function to delete test databases older than 1 day
@@ -181,8 +180,8 @@ def test_db():
     if not database_exists(TEST_DB_URL):
         create_database(TEST_DB_URL)
 
-    # Run Flyway migrations to create all tables
-    run_flyway_migrations()
+    # Run golang-migrate migrations to create all tables
+    run_golang_migrate_migrations()
 
     # Delete old test databases
     delete_old_test_databases()
