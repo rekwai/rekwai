@@ -139,6 +139,7 @@ export default function QueryPage({
             requirements={requirementActions.requirements}
             onIndexChange={setSelectedIndex}
             onTabChange={setSelectedTab}
+            onQuestionsUpdate={setQuestions}
           />
         </div>
 

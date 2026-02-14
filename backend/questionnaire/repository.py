@@ -249,10 +249,24 @@ class QuestionnaireRepository:
     def create_question(
         self, question: models.QuestionnaireQuestionCreate
     ) -> tables.QuestionnaireQuestionDB:
+        # If order is not provided, find the max order and increment
+        if question.order is None:
+            max_order = (
+                self.db.query(func.max(tables.QuestionnaireQuestionDB.order))
+                .filter(
+                    tables.QuestionnaireQuestionDB.questionnaire_id
+                    == question.questionnaire_id
+                )
+                .scalar()
+            )
+            order = (max_order or 0) + 1.0
+        else:
+            order = question.order
+
         db_question = tables.QuestionnaireQuestionDB(
             questionnaire_id=question.questionnaire_id,
             question_text=question.question_text,
-            order=question.order,
+            order=order,
         )
 
         # Set answer and status if answer was generated
@@ -266,6 +280,31 @@ class QuestionnaireRepository:
             db_question.answer_type = question.answer_type
 
         self.db.add(db_question)
+        self.db.commit()
+        self.db.refresh(db_question)
+        return db_question
+
+    def update_question(
+        self, question_id: str, update_data: models.QuestionnaireQuestionUpdate
+    ) -> Optional[tables.QuestionnaireQuestionDB]:
+        db_question = self.get_question_by_id(question_id)
+        if not db_question:
+            return None
+
+        if update_data.question_text is not None:
+            db_question.question_text = update_data.question_text
+
+        # Only update answer if provided (allows clearing if we pass empty string, but None means no change)
+        if update_data.answer is not None:
+            db_question.generated_answer = update_data.answer
+            # If we are updating the answer, we should probably update the status and timestamp
+            if update_data.answer:
+                db_question.status = "answered"
+                db_question.generation_timestamp = func.now()
+
+        if update_data.answer_type is not None:
+            db_question.answer_type = update_data.answer_type
+
         self.db.commit()
         self.db.refresh(db_question)
         return db_question
@@ -307,7 +346,7 @@ class QuestionnaireRepository:
     def update_question_review(
         self, question_id: UUID, review_data: models.QuestionReviewInput
     ) -> Optional[tables.QuestionnaireQuestionDB]:
-        db_question = self.get_question_by_id(question_id)
+        db_question = self.get_question_by_id(str(question_id))
         if not db_question:
             return None
 
@@ -331,7 +370,7 @@ class QuestionnaireRepository:
     def delete_question(
         self, question_id: UUID
     ) -> Optional[tables.QuestionnaireQuestionDB]:
-        db_question = self.get_question_by_id(question_id)
+        db_question = self.get_question_by_id(str(question_id))
         if db_question:
             self.db.delete(db_question)
             self.db.commit()

@@ -28,7 +28,17 @@ class QuestionnaireQuestionCreate(BaseModel):
     question_text: str
     answer: Optional[str] = None
     answer_type: Optional[Literal["yes", "no", "n/a"]] = None
-    order: float  # Sequential order within questionnaire for frontend sorting
+    order: Optional[float] = None  # Make optional, will be calculated if not provided
+
+
+class QuestionnaireQuestionUpdate(BaseModel):
+    """
+    Model for updating a questionnaire question.
+    """
+
+    question_text: Optional[str] = None
+    answer: Optional[str] = None
+    answer_type: Optional[Literal["yes", "no", "n/a"]] = None
 
 
 class QuestionnaireQuestion(BaseModel):

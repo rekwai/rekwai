@@ -32,12 +32,48 @@ from ..crud.models import (
     MergedRequirement,
     ExtractedRequirementDto,
     ExtractedRequirementUpdate,
+    ExtractedRequirementCreate,
 )
 from .services import RequirementDocumentService
 from async_tasks.models import TaskCreateResponse
 from async_tasks.services import AsyncTasksService, TaskType
 
 router = APIRouter()
+
+
+@router.post(
+    "/document/{document_id}/extracted-requirements",
+    response_model=ExtractedRequirementDto,
+    status_code=status.HTTP_201_CREATED,
+    tags=["requirements_document"],
+)
+async def create_extracted_requirement(
+    document_id: str,
+    requirement_create: ExtractedRequirementCreate,
+    service: RequirementDocumentService = Depends(get_requirement_document_service),
+):
+    """
+    Create a new extracted requirement for a specific document.
+    """
+    return service.create_extracted_requirement(document_id, requirement_create)
+
+
+@router.delete(
+    "/extracted-requirement/{extracted_requirement_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["requirements_document"],
+)
+async def delete_extracted_requirement(
+    extracted_requirement_id: str,
+    service: RequirementDocumentService = Depends(get_requirement_document_service),
+):
+    """
+    Delete an extracted requirement.
+    """
+    success = service.delete_extracted_requirement(extracted_requirement_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Extracted requirement not found")
+    return None
 
 
 @router.put(

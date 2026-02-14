@@ -55,16 +55,16 @@ export function EditExtractedRequirementModal({
   const [requirementVerification, setRequirementVerification] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Initialize form when requirement changes
+  // Initialize form when requirement changes or modal opens
   useEffect(() => {
-    if (requirement) {
-      setDescription(requirement.text || requirement.description || "");
+    if (requirement && open) {
+      setDescription(requirement.description || requirement.text || "");
       setSelectedTypes(requirement.types || []);
       setImplementationStatus(requirement.implementation || "To do");
       setImplementationDescription(requirement.implementationDescription || "");
       setRequirementVerification(requirement.requirementVerification || "");
     }
-  }, [requirement]);
+  }, [requirement, open]);
 
   const handleSave = async () => {
     if (!requirement) return;
@@ -87,8 +87,7 @@ export function EditExtractedRequirementModal({
     }
   };
 
-  const isValid =
-    description.trim() !== "" && implementationDescription.trim() !== "";
+  const isValid = description.trim() !== "";
 
   if (!requirement) return null;
 
@@ -204,7 +203,7 @@ export function EditExtractedRequirementModal({
               htmlFor="impl-description"
               className="text-sm font-medium text-label-text"
             >
-              Implementation Description*
+              Implementation Description
             </label>
             <div className="relative">
               <Textarea
@@ -213,10 +212,8 @@ export function EditExtractedRequirementModal({
                 onChange={(e) => setImplementationDescription(e.target.value)}
                 className="text-xs resize-none h-[52px] bg-input-white border-input-light shadow-input-inset rounded"
                 placeholder="Describe how this requirement will be implemented..."
-                required
                 data-testid="implementation-description"
                 aria-label="Implementation Description"
-                aria-required="true"
               />
               <FieldCheckmark show={!!implementationDescription} />
             </div>

@@ -396,3 +396,54 @@ export async function updateExtractedRequirement(
   );
   return handleResponse<ExtractedRequirementDto>(response);
 }
+
+/**
+ * Creates a new extracted requirement for a document.
+ * @param documentId - The document ID.
+ * @param requirement - The requirement data.
+ * @returns Promise resolving to the created extracted requirement.
+ */
+export async function addExtractedRequirement(
+  documentId: string,
+  requirement: {
+    description: string;
+    types: string[];
+    product_id: string;
+    document_name: string;
+    requirement_verification?: string;
+    implementation_status?: string;
+    implementation_description?: string;
+  },
+): Promise<ExtractedRequirementDto> {
+  const response = await fetch(
+    `${getApiUrl()}/requirements/document/${documentId}/extracted-requirements`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requirement),
+    },
+  );
+  return handleResponse<ExtractedRequirementDto>(response);
+}
+
+/**
+ * Deletes an extracted requirement.
+ * @param extractedRequirementId - The ID of the extracted requirement.
+ * @returns Promise resolving when complete.
+ */
+export async function deleteExtractedRequirement(
+  extractedRequirementId: string,
+): Promise<void> {
+  const response = await fetch(
+    `${getApiUrl()}/requirements/extracted-requirement/${extractedRequirementId}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  if (response.status === 204) {
+    return;
+  }
+
+  return handleResponse<void>(response);
+}

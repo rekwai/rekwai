@@ -44,6 +44,78 @@ class RequirementDocumentService:
         self.extraction_link_repository = extraction_link_repository
         self.s3_service = s3_service
 
+    def create_extracted_requirement(
+        self,
+        document_id: str,
+        requirement_create: crud_models.ExtractedRequirementCreate,
+    ) -> crud_models.ExtractedRequirementDto:
+        """Create a new extracted requirement."""
+        # Validate document exists
+        document = self.repository.get_by_id(document_id)
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        # Get max order to append at the end
+        existing_reqs = (
+            self.requirement_repository.get_extracted_requirements_by_document_id(
+                document_id
+            )
+        )
+        max_order = max(
+            [r.order for r in existing_reqs if r.order is not None], default=0
+        )
+        new_order = max_order + 1.0
+
+        # Create ExtractedRequirement model (which includes order)
+        # Note: ExtractedRequirementCreate doesn't have order, but repository expects ExtractedRequirement object
+        # which has optional ID and order. We construct it here.
+
+        extracted_req_data = crud_models.ExtractedRequirement(
+            **requirement_create.model_dump(),
+            extraction_timestamp=crud_models.datetime.now(),
+            order=new_order,
+        )
+
+        db_req = self.requirement_repository.create_extracted_requirement(
+            extracted_req_data,
+            document_id,
+            get_organization_id(),
+            new_order,
+        )
+
+        # Transform to DTO
+        types = self.requirement_repository.get_extracted_requirement_types(
+            str(db_req.id)
+        )
+
+        return crud_models.ExtractedRequirementDto(
+            id=str(db_req.id),
+            document_name=db_req.document_name,
+            description=db_req.description,
+            product_id=db_req.product_id,
+            types=types,
+            requirement_verification=db_req.requirement_verification,
+            implementation_status=db_req.implementation_status,
+            implementation_description=db_req.implementation_description,
+            extraction_timestamp=db_req.extraction_timestamp,
+            order=db_req.order,
+            has_links=False,
+        )
+
+    def delete_extracted_requirement(self, extracted_requirement_id: str) -> bool:
+        """
+        Delete an extracted requirement and its links.
+        """
+        # Delete links first
+        self.extraction_link_repository.delete_links_for_extracted_requirement(
+            extracted_requirement_id
+        )
+
+        # Delete the requirement
+        return self.requirement_repository.delete_extracted_requirement(
+            extracted_requirement_id
+        )
+
     def create(
         self, document_data: models.RequirementDocumentCreate
     ) -> models.RequirementDocument:
@@ -119,6 +191,7 @@ class RequirementDocumentService:
 
         # Combine document and requirements data
         return {
+            "id": str(document.id),
             "product_id": str(document.product_id),
             "original_filename": document.original_filename,
             "file_extension": document.file_extension,

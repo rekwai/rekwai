@@ -80,12 +80,15 @@ export function AnswerGenerationSection({
 
     if (hasNoRequirements) {
       return (
-        <div 
+        <div
           className="flex flex-row items-center py-3 px-3 gap-2 bg-[#FFF7ED] rounded-md border border-[#FFC7B0] w-full"
           role="status"
           aria-live="polite"
         >
-          <div className="flex flex-row items-center p-0 gap-2" aria-hidden="true">
+          <div
+            className="flex flex-row items-center p-0 gap-2"
+            aria-hidden="true"
+          >
             <Info size={16} className="text-[#F97316]" weight="fill" />
           </div>
           <span className="font-inter font-normal text-sm leading-[130%] text-black">
