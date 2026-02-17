@@ -2,8 +2,8 @@ name: Build and Push Docker Images
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
@@ -53,8 +53,10 @@ jobs:
         with:
           images: ghcr.io/rekwai/rekwai/${{ matrix.name }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
