@@ -1,5 +1,8 @@
 # Rekwai App
 
+<img width="236" height="33" alt="rekwai logo" src="https://github.com/user-attachments/assets/08ae9903-76eb-4323-b54a-3a93dbd3cbb6" />
+
+
 Rekwai is a smart document processing system that helps organizations manage requirements and answer questionnaires efficiently. Whether you're dealing with business requirements, compliance standards, project specifications, or any type of organizational requirements, the app uses AI to automate these tasks while keeping humans in control of important decisions.
 
 ## What Can You Do With Rekwai?
