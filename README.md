@@ -1,4 +1,3 @@
-# Rekwai App
 
 <img width="236" height="33" alt="rekwai logo" src="https://github.com/user-attachments/assets/08ae9903-76eb-4323-b54a-3a93dbd3cbb6" />
 
