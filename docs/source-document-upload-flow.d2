@@ -1,0 +1,268 @@
+direction: right
+
+# Styles
+classes: {
+  user-action: {
+    style.fill: "#E3F2FD"
+    style.stroke: "#1565C0"
+    style.border-radius: 8
+    style.font-size: 15
+  }
+  processing: {
+    style.fill: "#F3E5F5"
+    style.stroke: "#6A1B9A"
+    style.border-radius: 8
+    style.font-size: 15
+  }
+  ai: {
+    style.fill: "#FCE4EC"
+    style.stroke: "#C62828"
+    style.border-radius: 8
+    style.font-size: 15
+  }
+  outcome: {
+    style.fill: "#E8F5E9"
+    style.stroke: "#2E7D32"
+    style.border-radius: 8
+    style.font-size: 15
+  }
+  decision: {
+    style.fill: "#FFF8E1"
+    style.stroke: "#F9A825"
+    style.font-size: 15
+  }
+}
+
+# ── Upload ────────────────────────────────────────────────
+
+user: User {
+  shape: person
+}
+
+upload: Upload Document {
+  class: user-action
+}
+
+user -> upload: "Selects file\n(PDF, Word, Excel, text)"
+
+# ── Document Processing ──────────────────────────────────
+
+parse: Parse Document {
+  class: processing
+}
+
+upload -> parse: "Starts background\nprocessing"
+
+# ── AI Processing ─────────────────────────────────────────
+
+ai_processing: AI Processing {
+  style.fill: "#FFF5F5"
+  style.stroke: "#E0E0E0"
+  style.border-radius: 12
+
+  extract: Extract\nRequirements {
+    class: ai
+  }
+
+  review: Review Quality\n& Remove Duplicates {
+    class: ai
+  }
+
+  analyze: Analyze\nImplementation Status {
+    class: ai
+  }
+
+  verify: Generate\nVerification Methods {
+    class: ai
+  }
+
+  extract -> review
+  review -> analyze
+  analyze -> verify
+}
+
+parse -> ai_processing.extract: "Document text"
+
+# ── Progress Shown to User ────────────────────────────────
+
+progress: Progress Bar {
+  class: user-action
+}
+
+upload -> progress: "User sees\nprogress updates"
+
+# ── Matching ──────────────────────────────────────────────
+
+match: Find Similar\nExisting Requirements {
+  class: ai
+}
+
+ai_processing.verify -> match: "For each\nextracted requirement"
+
+# ── AI Suggestion ─────────────────────────────────────────
+
+suggest: AI Suggests Action {
+  shape: diamond
+  class: decision
+}
+
+match -> suggest
+
+# ── Three Outcomes ────────────────────────────────────────
+
+attach: Attach {
+  class: outcome
+}
+
+merge: Merge {
+  class: outcome
+}
+
+create_new: Create New {
+  class: outcome
+}
+
+suggest -> attach: "Already\ncovered"
+suggest -> merge: "Partially\noverlaps"
+suggest -> create_new: "No match\nfound"
+
+# ── Merge gets a preview ─────────────────────────────────
+
+merge_preview: Generate\nMerge Preview {
+  class: ai
+}
+
+merge -> merge_preview
+
+# ── Document Ready ────────────────────────────────────────
+
+ready: Document Ready\nfor Review {
+  class: user-action
+  style.font-size: 16
+  style.bold: true
+}
+
+attach -> ready
+merge_preview -> ready
+create_new -> ready
+progress -> ready: "Redirects\non completion"
+
+# ══════════════════════════════════════════════════════════
+# ── Review Phase (per extracted requirement) ──────────────
+# ══════════════════════════════════════════════════════════
+
+review_loop: "For each extracted requirement (one-by-one or bulk approve)" {
+  style.fill: "#F5F5F5"
+  style.stroke: "#9E9E9E"
+  style.border-radius: 12
+
+  # ── Review Suggestion ─────────────────────────────────
+
+  review_choice: Review\nSuggestion {
+    shape: diamond
+    class: decision
+  }
+
+  # ── Attach Path ───────────────────────────────────────
+
+  confirm_attach: Confirm {
+    class: user-action
+  }
+
+  link_existing: Link to\nExisting Requirement {
+    class: outcome
+  }
+
+  review_choice -> confirm_attach: Attach
+  confirm_attach -> link_existing
+
+  # ── Merge Path ────────────────────────────────────────
+
+  merge_choice: "" {
+    shape: diamond
+    class: decision
+  }
+
+  review_choice -> merge_choice: Merge
+
+  confirm_merge: Confirm {
+    class: user-action
+  }
+
+  edit_merge: Edit in Drawer {
+    class: user-action
+  }
+
+  merge_choice -> confirm_merge: "Accept as-is"
+  merge_choice -> edit_merge: "Adjust first"
+
+  update_existing: Update Existing\nRequirement {
+    class: outcome
+  }
+
+  confirm_merge -> update_existing
+  edit_merge -> update_existing
+
+  # ── Create New Path ───────────────────────────────────
+
+  confirm_create: Confirm {
+    class: user-action
+  }
+
+  create_requirement: Create New\nRequirement {
+    class: outcome
+  }
+
+  review_choice -> confirm_create: Create New
+  confirm_create -> create_requirement
+
+  # ── Dismiss ───────────────────────────────────────────
+
+  dismiss: Dismiss {
+    class: user-action
+  }
+
+  review_choice -> dismiss: Reject
+
+  # ── After action: check for stale suggestions ─────────
+
+  stale_check: Requirement\nChanged? {
+    shape: diamond
+    class: decision
+  }
+
+  link_existing -> stale_check
+  update_existing -> stale_check
+  create_requirement -> stale_check
+  dismiss -> stale_check
+
+  invalidate: Invalidate Stale\nMerge Suggestions\nTargeting This Requirement {
+    class: processing
+  }
+
+  stale_check -> invalidate: "Yes — other merge\nsuggestions target\nthis requirement"
+
+  next: Next\nRequirement {
+    class: processing
+  }
+
+  stale_check -> next: No
+  invalidate -> next
+}
+
+ready -> review_loop.review_choice
+
+# ── Invalidated suggestions re-enter the suggestion flow ──
+
+review_loop.invalidate -> match: "Re-runs suggestion\nflow for affected\nextracted requirements" {style.stroke-dash: 3}
+
+# ── Done ──────────────────────────────────────────────────
+
+done: All Requirements\nProcessed {
+  class: user-action
+  style.font-size: 16
+  style.bold: true
+}
+
+review_loop.next -> done: "No more\nrequirements"
+review_loop.next -> review_loop.review_choice: "More to review" {style.stroke-dash: 3}

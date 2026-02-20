@@ -1,0 +1,237 @@
+grid-rows: 5
+grid-gap: 40
+
+# Styles
+classes: {
+  user-action: {
+    style.fill: "#E3F2FD"
+    style.stroke: "#1565C0"
+    style.border-radius: 8
+    style.font-size: 15
+  }
+  processing: {
+    style.fill: "#F3E5F5"
+    style.stroke: "#6A1B9A"
+    style.border-radius: 8
+    style.font-size: 15
+  }
+  ai: {
+    style.fill: "#FCE4EC"
+    style.stroke: "#C62828"
+    style.border-radius: 8
+    style.font-size: 15
+  }
+  outcome: {
+    style.fill: "#E8F5E9"
+    style.stroke: "#2E7D32"
+    style.border-radius: 8
+    style.font-size: 15
+  }
+  decision: {
+    style.fill: "#FFF8E1"
+    style.stroke: "#F9A825"
+    style.font-size: 15
+  }
+  repo: {
+    style.fill: "#E8F5E9"
+    style.stroke: "#2E7D32"
+    style.border-radius: 8
+    style.font-size: 18
+    style.bold: true
+    style.double-border: true
+  }
+}
+
+# ══════════════════════════════════════════════════════════
+# Row 1: Source Document Path
+# ══════════════════════════════════════════════════════════
+
+row1: Upload Source Document {
+  direction: right
+  style.fill: "#FAFAFA"
+  style.stroke: "#BDBDBD"
+  style.border-radius: 12
+
+  upload: Upload\nDocument {class: user-action}
+  parse: Parse\nDocument {class: processing}
+
+  extract: Extract\nRequirements {class: ai}
+  quality: Review Quality\n& Deduplicate {class: ai}
+  impl: Analyze\nImplementation {class: ai}
+  verify: Generate\nVerification {class: ai}
+
+  match: Find Similar\nExisting Reqs {class: ai}
+  suggest: AI Suggests {shape: diamond; class: decision}
+
+  s_attach: Attach {class: outcome}
+  s_merge: Merge {class: outcome}
+  s_create: Create New {class: outcome}
+  gen_preview: Generate\nMerge Preview {class: ai}
+
+  ready: Ready for\nReview {class: user-action; style.bold: true}
+
+  upload -> parse -> extract -> quality -> impl -> verify
+  verify -> match: "Per requirement"
+  match -> suggest
+  suggest -> s_attach: "Already covered"
+  suggest -> s_merge: "Overlaps"
+  suggest -> s_create: "No match"
+  s_merge -> gen_preview
+  s_attach -> ready
+  gen_preview -> ready
+  s_create -> ready
+}
+
+# ══════════════════════════════════════════════════════════
+# Row 2: Source Review Loop
+# ══════════════════════════════════════════════════════════
+
+row2: "For each extracted requirement (one-by-one or bulk)" {
+  direction: right
+  style.fill: "#F5F5F5"
+  style.stroke: "#9E9E9E"
+  style.border-radius: 12
+
+  review: Review\nSuggestion {shape: diamond; class: decision}
+
+  do_attach: Link to Existing\nRequirement {class: outcome}
+
+  merge_choice: "" {shape: diamond; class: decision}
+  do_merge: Update Existing\nRequirement {class: outcome}
+  do_edit_merge: Edit in Drawer →\nUpdate Requirement {class: outcome}
+
+  do_create: Create New\nRequirement {class: outcome}
+  dismiss: Dismiss {class: user-action}
+
+  next: Next Requirement {class: processing}
+
+  review -> do_attach: Attach
+  review -> merge_choice: Merge
+  merge_choice -> do_merge: "Accept as-is"
+  merge_choice -> do_edit_merge: "Adjust first"
+  review -> do_create: Create New
+  review -> dismiss: Reject
+
+  do_attach -> next
+  do_merge -> next
+  do_edit_merge -> next
+  do_create -> next
+  dismiss -> next
+}
+
+row1.ready -> row2.review
+row2.next -> row2.review: "More to review" {style.stroke-dash: 3}
+
+# ══════════════════════════════════════════════════════════
+# Row 3: Central Hub (Entry + Repo + Management)
+# ══════════════════════════════════════════════════════════
+
+row3: "" {
+  direction: right
+  style.stroke: transparent
+  style.fill: transparent
+
+  user: User {shape: person}
+  product: Select or Create\nProduct {class: user-action}
+
+  manual: Create Requirement\nManually {class: user-action}
+
+  repo: Requirement\nRepository {class: repo}
+
+  manage: Browse, Search\n& Filter {class: user-action}
+  edit: Edit\nRequirement {class: user-action}
+  delete: Delete\nRequirement {class: user-action}
+
+  user -> product
+  product -> manual
+  manual -> repo
+  repo -> manage
+  manage -> edit
+  manage -> delete
+  edit -> repo {style.stroke-dash: 3}
+}
+
+# Connect paths to entry
+row3.product -> row1.upload: "Upload Source Document"
+row3.product -> row4.upload: "Upload Questionnaire"
+
+# Connect review outcomes to repo
+row2.next -> row3.repo: "Saves to repo" {style.stroke-dash: 3}
+
+# ══════════════════════════════════════════════════════════
+# Row 4: Questionnaire Path
+# ══════════════════════════════════════════════════════════
+
+row4: Upload Questionnaire {
+  direction: right
+  style.fill: "#FAFAFA"
+  style.stroke: "#BDBDBD"
+  style.border-radius: 12
+
+  upload: Upload\nQuestionnaire {class: user-action}
+  parse: Parse\nDocument {class: processing}
+
+  extract: Extract\nQuestions {class: ai}
+  complete: Check\nCompleteness {class: ai}
+  dedup: Remove\nDuplicates {class: ai}
+
+  auto_answer: Generate Answers\nUsing Existing Reqs {class: ai}
+  link_sources: Link Referenced\nRequirements {class: outcome}
+
+  ready: Ready for\nReview {class: user-action; style.bold: true}
+
+  upload -> parse -> extract -> complete -> dedup
+  dedup -> auto_answer: "Per question (parallel)"
+  auto_answer -> link_sources -> ready
+}
+
+# ══════════════════════════════════════════════════════════
+# Row 5: Question Review Loop + Invalidation
+# ══════════════════════════════════════════════════════════
+
+row5: "" {
+  direction: right
+  style.stroke: transparent
+  style.fill: transparent
+
+  query_loop: "For each question" {
+    direction: right
+    style.fill: "#F5F5F5"
+    style.stroke: "#9E9E9E"
+    style.border-radius: 12
+
+    view: View Question\n& Generated Answer {class: user-action}
+    review: Review or\nRewrite Answer {class: user-action}
+    link_req: Link or Create\nRequirement {class: user-action}
+    reviewed: Mark as\nReviewed {class: user-action}
+    next: Next\nQuestion {class: processing}
+
+    view -> review -> link_req -> reviewed -> next
+  }
+
+  export: Export\nQuestionnaire {class: user-action}
+
+  invalidation: Suggestion Invalidation {
+    direction: right
+    style.fill: "#FFF8E1"
+    style.stroke: "#F9A825"
+    style.border-radius: 12
+
+    trigger: Requirement\nChanges {class: processing}
+    check: Merge Suggestions\nTarget This Req? {shape: diamond; class: decision}
+    re_suggest: Invalidate &\nRe-suggest {class: ai}
+
+    trigger -> check -> re_suggest: Yes
+  }
+}
+
+row4.ready -> row5.query_loop.view
+row5.query_loop.next -> row5.query_loop.view: "More questions" {style.stroke-dash: 3}
+row5.query_loop.next -> row5.export: "All done"
+row5.query_loop.link_req -> row3.repo {style.stroke-dash: 3}
+
+# Invalidation connections
+row3.edit -> row5.invalidation.trigger: "Any requirement change" {style.stroke-dash: 3}
+row2.do_merge -> row5.invalidation.trigger {style.stroke-dash: 3}
+row2.do_edit_merge -> row5.invalidation.trigger {style.stroke-dash: 3}
+row5.invalidation.re_suggest -> row1.match: "Re-runs suggestion flow" {style.stroke-dash: 3}
