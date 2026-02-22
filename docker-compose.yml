@@ -2,7 +2,7 @@
 services:
 
   backend:
-    image: ghcr.io/rekwai/rekwai/backend:2-ci-release-and-image-publishing-59c8385
+    image: ghcr.io/rekwai/rekwai/backend:latest
 #    build:
 #      context: ./backend
 #      additional_contexts:
@@ -44,7 +44,7 @@ services:
       - app-network
 
   frontend:
-    image: ghcr.io/rekwai/rekwai/frontend:2-ci-release-and-image-publishing-59c8385
+    image: ghcr.io/rekwai/rekwai/frontend:latest
 #    build:
 #      context: ./frontend
     ports:
@@ -85,7 +85,7 @@ services:
 
   garage:
     # We're building this intentionally in order to hardcode the config file & ease deployment in simple environments.
-    image: ghcr.io/rekwai/rekwai/garage:2-ci-release-and-image-publishing-59c8385
+    image: ghcr.io/rekwai/rekwai/custom-garage:latest
 #    build:
 #      context: ./garage
     container_name: garage
@@ -104,7 +104,7 @@ services:
 
   garage-init:
     # The purpose of garage-init is to handle all needed configurations in order to use a most simple garage deployment.
-    image: ghcr.io/rekwai/rekwai/garage-init:2-ci-release-and-image-publishing-59c8385
+    image: ghcr.io/rekwai/rekwai/custom-garage-init:latest
 #    build:
 #      context: ./garage/cli
     container_name: garage-init
