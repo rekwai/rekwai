@@ -38,22 +38,16 @@ For complete installation instructions, see the **[Installation Guide](docs/inst
 
 ### Installation Steps
 
-1. **Configure your environment:**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit the `.env` file:
+1. **Download** [docker-compose.yml](https://github.com/rekwai/rekwai/raw/main/docker/docker-compose.yml) and [.env.example](https://github.com/rekwai/rekwai/raw/main/docker/.env.example) into the same directory
+2. **Rename** `.env.example` to `.env` and configure it:
    - Generate storage secrets (see [Installation Guide](docs/installation.md#step-1-download-and-configure))
    - Set `SELECTED_PROVIDER` to your chosen AI provider
    - Add your API key for the selected provider
-
-2. **Start the application:**
+3. **Start the application:**
    ```bash
    docker compose up -d
    ```
-
-3. **Access the app:**
-   Open your browser to `http://localhost:3000`
+4. **Access the app** at `http://localhost:3000`
 
 
 ## How It Works

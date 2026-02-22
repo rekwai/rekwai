@@ -71,13 +71,13 @@ The entire application stack can be run using Docker Compose for easy deployment
 
 ```bash
 # Start all services (backend, frontend, database, Garage, Docling)
-docker compose -f docker/docker-compose.dev.yml --env-file .env up --build
+docker compose -f docker/docker-compose.dev.yml up --build
 
 # Start services in detached mode
-docker compose -f docker/docker-compose.dev.yml --env-file .env up --build -d
+docker compose -f docker/docker-compose.dev.yml up --build -d
 
 # Stop all services
-docker compose -f docker/docker-compose.dev.yml --env-file .env down
+docker compose -f docker/docker-compose.dev.yml down
 ```
 
 Services will be available at:

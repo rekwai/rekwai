@@ -1,6 +1,6 @@
 # Makefile for Rekwai application
 
-DC = docker compose -f docker/docker-compose.dev.yml --env-file .env
+DC = docker compose -f docker/docker-compose.dev.yml
 
 init-e2e:
 	npm install
