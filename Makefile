@@ -1,6 +1,6 @@
 # Makefile for Rekwai application
 
-DC = docker compose -f docker/docker-compose.dev.yml
+DOCKER_COMPOSE = docker compose -f docker/docker-compose.dev.yml
 
 init-e2e:
 	npm install
@@ -16,19 +16,19 @@ create-network:
 .PHONY: docling-start docling-stop docling-remove docling-logs docling-status docling-reset
 
 docling-start:
-	$(DC) up -d docling-serve
+	$(DOCKER_COMPOSE) up -d docling-serve
 
 docling-stop:
-	$(DC) down docling-serve
+	$(DOCKER_COMPOSE) down docling-serve
 
 docling-remove:
-	$(DC) down -v docling-serve
+	$(DOCKER_COMPOSE) down -v docling-serve
 
 docling-logs:
-	$(DC) logs docling-serve --since 1h
+	$(DOCKER_COMPOSE) logs docling-serve --since 1h
 
 docling-status:
-	$(DC) ps -a docling-serve
+	$(DOCKER_COMPOSE) ps -a docling-serve
 
 docling-reset: docling-remove docling-start
 
@@ -36,31 +36,31 @@ docling-reset: docling-remove docling-start
 .PHONY: garage-start garage-stop garage-remove garage-logs garage-status garage-reset
 
 garage-start:
-	$(DC) up -d garage garage-init
+	$(DOCKER_COMPOSE) up -d garage garage-init
 
 garage-stop:
-	$(DC) down garage garage-init
+	$(DOCKER_COMPOSE) down garage garage-init
 
 garage-remove:
-	$(DC) down -v garage garage-init
+	$(DOCKER_COMPOSE) down -v garage garage-init
 	@echo "Command to execute: \"sudo rm -Rf ${PWD}/garage/data/data/ ${PWD}/garage/data/meta/\" ..."
 	@echo "Continuing will execute the above command. Are you sure? [y/N]" && read ans && [ $${ans:-N} = y ]
 	@sudo rm -Rf ${PWD}/garage/data/data/ ${PWD}/garage/data/meta/
 
 garage-logs:
-	$(DC) logs garage garage-init --since 1h
+	$(DOCKER_COMPOSE) logs garage garage-init --since 1h
 
 garage-status:
-	$(DC) ps -a garage garage-init
+	$(DOCKER_COMPOSE) ps -a garage garage-init
 
 garage-reset: garage-remove garage-start
 
 # Common commands
 status:
-	$(DC) ps -a
+	$(DOCKER_COMPOSE) ps -a
 
 logs:
-	$(DC) logs --since 1h
+	$(DOCKER_COMPOSE) logs --since 1h
 
 # Help target
 help:
