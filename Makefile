@@ -1,5 +1,7 @@
 # Makefile for Rekwai application
 
+DC = docker compose -f docker/docker-compose.dev.yml --env-file .env
+
 init-e2e:
 	npm install
 
@@ -14,19 +16,19 @@ create-network:
 .PHONY: docling-start docling-stop docling-remove docling-logs docling-status docling-reset
 
 docling-start:
-	docker compose up -d docling-serve
+	$(DC) up -d docling-serve
 
 docling-stop:
-	docker compose down docling-serve
+	$(DC) down docling-serve
 
 docling-remove:
-	docker compose down -v docling-serve
+	$(DC) down -v docling-serve
 
 docling-logs:
-	docker compose logs docling-serve --since 1h
+	$(DC) logs docling-serve --since 1h
 
 docling-status:
-	docker compose ps -a docling-serve
+	$(DC) ps -a docling-serve
 
 docling-reset: docling-remove docling-start
 
@@ -34,36 +36,35 @@ docling-reset: docling-remove docling-start
 .PHONY: garage-start garage-stop garage-remove garage-logs garage-status garage-reset
 
 garage-start:
-	docker compose up -d garage garage-init
+	$(DC) up -d garage garage-init
 
 garage-stop:
-	docker compose down garage garage-init
+	$(DC) down garage garage-init
 
 garage-remove:
-	docker compose down -v garage garage-init
+	$(DC) down -v garage garage-init
 	@echo "Command to execute: \"sudo rm -Rf ${PWD}/garage/data/data/ ${PWD}/garage/data/meta/\" ..."
 	@echo "Continuing will execute the above command. Are you sure? [y/N]" && read ans && [ $${ans:-N} = y ]
 	@sudo rm -Rf ${PWD}/garage/data/data/ ${PWD}/garage/data/meta/
 
 garage-logs:
-	docker compose logs garage garage-init --since 1h
+	$(DC) logs garage garage-init --since 1h
 
 garage-status:
-	docker compose ps -a garage garage-init
+	$(DC) ps -a garage garage-init
 
 garage-reset: garage-remove garage-start
 
 # Common commands
 status:
-	docker compose ps -a
+	$(DC) ps -a
 
 logs:
-	docker compose logs --since 1h
+	$(DC) logs --since 1h
 
 # Help target
 help:
-	@echo "This Makefile relies on a correctly configured docker-compose.yml file"
-	@echo "and a .env file that is configured accordingly."
+	@echo "This Makefile relies on docker/docker-compose.dev.yml and a .env file."
 	@echo
 	@echo "Available targets:"
 	@echo "  init-e2e       - Install Playwright library and its dependencies"

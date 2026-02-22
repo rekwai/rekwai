@@ -2,11 +2,10 @@
 services:
 
   backend:
-    image: ghcr.io/rekwai/rekwai/backend:latest
-#    build:
-#      context: ./backend
-#      additional_contexts:
-#        db: ./db
+    build:
+      context: ../backend
+      additional_contexts:
+        db: ../db
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     environment:
@@ -44,9 +43,8 @@ services:
       - app-network
 
   frontend:
-    image: ghcr.io/rekwai/rekwai/frontend:latest
-#    build:
-#      context: ./frontend
+    build:
+      context: ../frontend
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
     environment:
@@ -85,15 +83,14 @@ services:
 
   garage:
     # We're building this intentionally in order to hardcode the config file & ease deployment in simple environments.
-    image: ghcr.io/rekwai/rekwai/custom-garage:latest
-#    build:
-#      context: ./garage
+    build:
+      context: ../garage
     container_name: garage
     restart: unless-stopped
     ports:
       - 3900:3900
     volumes:
-      - ./garage/data:/data
+      - ../garage/data:/data
     environment:
       - RUST_LOG=garage=info
       - GARAGE_ADMIN_TOKEN=${GARAGE_ADMIN_TOKEN}
@@ -104,12 +101,11 @@ services:
 
   garage-init:
     # The purpose of garage-init is to handle all needed configurations in order to use a most simple garage deployment.
-    image: ghcr.io/rekwai/rekwai/custom-garage-init:latest
-#    build:
-#      context: ./garage/cli
+    build:
+      context: ../garage/cli
     container_name: garage-init
     volumes:
-      - ./garage/data:/data:ro
+      - ../garage/data:/data:ro
     environment:
       - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET}
       - INITIAL_BUCKET_NAME=${INITIAL_BUCKET_NAME}
