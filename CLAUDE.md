@@ -37,13 +37,13 @@ Development guidelines for Claude Code when working with this repository.
 ### Quick Start (Docker Compose - Recommended)
 ```bash
 # Build and start all services (ALWAYS build after code changes)
-docker compose up --build
+docker compose -f docker/docker-compose.dev.yml up --build
 
 # Detached mode
-docker compose up --build -d
+docker compose -f docker/docker-compose.dev.yml up --build -d
 
 # Stop services
-docker compose down
+docker compose -f docker/docker-compose.dev.yml down
 ```
 
 Services available at:
