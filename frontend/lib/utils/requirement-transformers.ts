@@ -7,6 +7,7 @@ import {
   RequirementItem,
   ImplementationStatus,
   SuggestedActionType,
+  LinkType,
   MergedRequirement,
   RequirementUpdate,
 } from "@/types/requirement-types";
@@ -30,6 +31,7 @@ export function transformDocumentRequirementsToItems(
     implementationDescription: req.implementation_description ?? undefined,
     requirementVerification: req.requirement_verification ?? undefined,
     hasLinks: req.has_links,
+    linkType: (req.link_type as LinkType) ?? undefined,
     createdAt: req.extraction_timestamp,
     updatedAt: req.extraction_timestamp,
     decisionType: "",

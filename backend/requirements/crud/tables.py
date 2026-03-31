@@ -119,6 +119,16 @@ class RequirementHistoryDB(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     user_id = Column(String, nullable=True)  # Optional: ID of user making the change
+    source_extracted_requirement_id = Column(
+        UUID(as_uuid=False),
+        ForeignKey("extracted_requirement.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    source_document_id = Column(
+        UUID(as_uuid=False),
+        ForeignKey("requirement_document.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     def __repr__(self):
         """Return a string representation of the RequirementHistoryDB instance."""

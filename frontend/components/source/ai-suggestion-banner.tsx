@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Check, ExternalLink, Sparkles, Merge } from "lucide-react";
+import { X, Check, ExternalLink, Sparkles, Merge, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RequirementCard } from "@/components/common/requirement-card";
@@ -10,6 +10,7 @@ import {
   SuggestedAction,
   SuggestedActionType,
   MergedRequirement,
+  RequirementItem as RequirementItemType,
 } from "@/types/requirement-types";
 
 interface AISuggestionBannerProps {
@@ -18,6 +19,8 @@ interface AISuggestionBannerProps {
   onDismiss: () => void;
   onEdit?: () => Promise<unknown>;
   mergePreview?: MergedRequirement | null;
+  extractedRequirement?: RequirementItemType | null;
+  onEditExtraction?: () => void;
 }
 
 const ACTION_CONFIG: Record<
@@ -51,9 +54,11 @@ const ACTION_CONFIG: Record<
   create_new: {
     badgeLabel: "Create Requirement",
     badgeBg: "bg-[#A2CFCA] text-[#080705]",
+    badgeIcon: Plus,
     confirmLabel: "Create Requirement",
     confirmingLabel: "Creating requirement",
     confirmBg: "bg-[#080705] text-white hover:bg-[#2a2a2a]",
+    confirmIcon: Plus,
   },
 };
 
@@ -63,6 +68,8 @@ export function AISuggestionBanner({
   onDismiss,
   onEdit,
   mergePreview,
+  extractedRequirement,
+  onEditExtraction,
 }: AISuggestionBannerProps) {
   const [isConfirming, setIsConfirming] = useState(false);
 
@@ -103,7 +110,7 @@ export function AISuggestionBanner({
       </p>
 
       {/* Action buttons — between justification and preview */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center justify-end gap-4">
         <Button
           variant="ghost"
           size="sm"
@@ -115,7 +122,6 @@ export function AISuggestionBanner({
           Dismiss Suggestion
           <X size={12} />
         </Button>
-        <div className="flex-1" />
         <Button
           size="sm"
           onClick={handleConfirm}
@@ -128,32 +134,64 @@ export function AISuggestionBanner({
         </Button>
       </div>
 
-      {/* Target requirement preview */}
-      {suggestion.target_requirement &&
-        (isMerge && mergePreview ? (
-          <MergeDiffCard
-            mergedData={mergePreview}
-            targetRequirement={suggestion.target_requirement}
-            onEdit={onEdit}
-          />
-        ) : (
-          <RequirementCard
-            description={suggestion.target_requirement.description}
-            types={suggestion.target_requirement.types}
-            implementationStatus={
-              suggestion.target_requirement.implementation_status
-            }
-            implementationDescription={
-              suggestion.target_requirement.implementation_description
-            }
-            showVerification={false}
-            header={
-              <span className="font-inter font-semibold text-xs leading-5 text-[#080705]">
-                {suggestion.target_requirement.requirement_key}
+      {/* Preview */}
+      {isMerge && mergePreview && suggestion.target_requirement ? (
+        <MergeDiffCard
+          mergedData={mergePreview}
+          targetRequirement={suggestion.target_requirement}
+          onEdit={onEdit}
+        />
+      ) : suggestion.action === "create_new" && extractedRequirement ? (
+        <div
+          className="flex flex-col items-start p-0 border border-[#E6E6E6] rounded-lg flex-none self-stretch flex-grow-0 bg-[#F6F6F6]"
+          data-testid="create-preview-card"
+        >
+          <div className="flex items-center px-3 w-full h-[52px] bg-white border-b border-[#E6E6E6] rounded-t-lg">
+            <div className="flex items-center gap-4">
+              <span className="font-inter font-semibold text-base text-[#080705]">
+                Preview
               </span>
-            }
-          />
-        ))}
+              {onEditExtraction && (
+                <button
+                  type="button"
+                  onClick={onEditExtraction}
+                  className="flex items-center gap-1 font-inter text-xs bg-[#F6F6F6] px-2.5 py-1 h-7 rounded-[12px] text-[#080705] hover:bg-[#E6E6E6]"
+                  data-testid="edit-create-preview-button"
+                >
+                  Edit
+                  <Pencil size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="p-6">
+            <RequirementCard
+              description={extractedRequirement.text || extractedRequirement.description}
+              types={extractedRequirement.types}
+              implementationStatus={extractedRequirement.implementation}
+              implementationDescription={extractedRequirement.implementationDescription || ""}
+              verificationDescription={extractedRequirement.requirementVerification || ""}
+            />
+          </div>
+        </div>
+      ) : suggestion.target_requirement ? (
+        <RequirementCard
+          description={suggestion.target_requirement.description}
+          types={suggestion.target_requirement.types}
+          implementationStatus={
+            suggestion.target_requirement.implementation_status
+          }
+          implementationDescription={
+            suggestion.target_requirement.implementation_description
+          }
+          showVerification={false}
+          header={
+            <span className="font-inter font-semibold text-xs leading-5 text-[#080705]">
+              {suggestion.target_requirement.requirement_key}
+            </span>
+          }
+        />
+      ) : null}
     </div>
   );
 }

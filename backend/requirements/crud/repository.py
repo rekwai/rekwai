@@ -24,6 +24,8 @@ class RequirementRepository:
         product_id: str,
         previous_data: Optional[models.RequirementDto] = None,
         new_data: Optional[models.RequirementDto] = None,
+        source_extracted_requirement_id: Optional[str] = None,
+        source_document_id: Optional[str] = None,
     ):
         history_entry = tables.RequirementHistoryDB(
             requirement_id=requirement_id,
@@ -51,8 +53,38 @@ class RequirementRepository:
             new_implementation_status=new_data.implementation_status
             if new_data
             else None,
+            source_extracted_requirement_id=source_extracted_requirement_id,
+            source_document_id=source_document_id,
         )
         self.db.add(history_entry)
+
+    def log_extraction_action(
+        self,
+        requirement_id: str,
+        product_id: str,
+        link_type: str,
+        extracted_requirement_id: str,
+        document_id: str,
+        previous_data: Optional[models.RequirementDto] = None,
+        new_data: Optional[models.RequirementDto] = None,
+    ):
+        """Log a history entry for an extraction-related action (attach, merge, create)."""
+        change_type_map = {
+            "attach": "LINK_FROM_EXTRACTION",
+            "merge": "MERGE_FROM_EXTRACTION",
+            "create": "CREATE_FROM_EXTRACTION",
+        }
+        change_type = change_type_map.get(link_type, f"EXTRACTION_{link_type.upper()}")
+        self._log_history(
+            change_type=change_type,
+            requirement_id=requirement_id,
+            product_id=product_id,
+            previous_data=previous_data,
+            new_data=new_data,
+            source_extracted_requirement_id=extracted_requirement_id,
+            source_document_id=document_id,
+        )
+        self.db.commit()
 
     def _get_requirement_by_filters(self, **filters) -> Optional[tables.RequirementDB]:
         """Generic method to get a single requirement by any filters."""

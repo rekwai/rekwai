@@ -6,8 +6,9 @@ from fastapi import APIRouter, status, Depends, HTTPException
 from pydantic import BaseModel
 
 from .repository import RequirementExtractionLinkRepository
-from .models import RequirementExtractionLinkCreate
-from dependencies import get_requirement_extraction_link_repository
+from .models import RequirementExtractionLinkCreate, LinkType
+from requirements.crud.repository import RequirementRepository
+from dependencies import get_requirement_extraction_link_repository, get_requirement_repository
 
 router = APIRouter()
 
@@ -16,6 +17,7 @@ class ExtractionLinkRequest(BaseModel):
     """Request model for adding an extraction link."""
 
     extracted_requirement_id: str
+    link_type: LinkType | None = None
 
 
 @router.get(
@@ -44,13 +46,35 @@ def add_extraction_link(
     repository: RequirementExtractionLinkRepository = Depends(
         get_requirement_extraction_link_repository
     ),
+    requirement_repository: RequirementRepository = Depends(
+        get_requirement_repository
+    ),
 ):
     """Add an extraction link to a requirement."""
     link_create = RequirementExtractionLinkCreate(
         requirement_id=requirement_id,
         extracted_requirement_id=request.extracted_requirement_id,
+        link_type=request.link_type,
     )
-    return repository.create_link(link_create)
+    result = repository.create_link(link_create)
+
+    # Record history on the main requirement
+    if request.link_type:
+        db_extracted_req = requirement_repository.get_extracted_requirement_by_id(
+            request.extracted_requirement_id
+        )
+        if db_extracted_req:
+            main_req = requirement_repository.get(requirement_id)
+            requirement_repository.log_extraction_action(
+                requirement_id=requirement_id,
+                product_id=str(db_extracted_req.product_id),
+                link_type=request.link_type,
+                extracted_requirement_id=request.extracted_requirement_id,
+                document_id=str(db_extracted_req.document_id),
+                new_data=main_req,
+            )
+
+    return result
 
 
 @router.delete(

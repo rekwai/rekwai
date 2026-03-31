@@ -169,6 +169,7 @@ export interface DocumentWithRequirements {
     requirement_verification: string | null;
     order: number;
     has_links: boolean;
+    link_type?: string | null;
     suggested_action?: SuggestedActionType | null;
     suggested_target_requirement_id?: string | null;
     suggestion_justification?: string | null;
@@ -311,6 +312,7 @@ export async function deleteQuestionLink(
 export async function createExtractionLink(
   requirementId: string,
   extractedRequirementId: string,
+  linkType?: string,
 ): Promise<void> {
   const response = await fetch(
     `${getApiUrl()}/requirements/${requirementId}/extraction-links`,
@@ -321,6 +323,7 @@ export async function createExtractionLink(
       },
       body: JSON.stringify({
         extracted_requirement_id: extractedRequirementId,
+        link_type: linkType,
       }),
     },
   );

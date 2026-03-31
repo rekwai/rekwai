@@ -12,6 +12,7 @@ export interface RequirementItem {
   implementationDescription?: string;
   requirementVerification?: string;
   hasLinks: boolean;
+  linkType?: LinkType | null;
   createdAt: string;
   updatedAt: string;
   created?: string;
@@ -65,7 +66,7 @@ export interface RequirementHistory {
   requirement_id: string;
   product_id: string;
   change_timestamp: string;
-  change_type: "CREATE" | "UPDATE" | "DELETE";
+  change_type: "CREATE" | "UPDATE" | "DELETE" | "LINK_FROM_EXTRACTION" | "MERGE_FROM_EXTRACTION" | "CREATE_FROM_EXTRACTION";
   user_id: string | null;
   previous_description: string | null;
   previous_types: string[] | null;
@@ -88,6 +89,8 @@ export interface LLMSimilarityResult {
 export interface SimilarRequirementWithLLM extends Requirement {
   llm_result: LLMSimilarityResult | null;
 }
+
+export type LinkType = "attach" | "merge" | "create";
 
 export type SuggestedActionType = "attach" | "merge" | "create_new";
 
@@ -126,6 +129,7 @@ export interface ExtractedRequirementDto {
   implementation_status?: string | null;
   implementation_description?: string | null;
   has_links: boolean;
+  link_type?: string | null;
   extraction_timestamp: string;
   order: number;
   suggested_action?: SuggestedActionType | null;

@@ -146,12 +146,13 @@ export function useRequirementIndexing({
     setLinkedRequirementsLoading(false);
   }, [open, fetchAndSetLinkedRequirements]);
 
-  // Helper to update hasLinks on the selected requirement
-  const updateSelectedRequirementHasLinks = useCallback(
-    (hasLinks: boolean) => {
+  const updateSelectedRequirementLink = useCallback(
+    (hasLinks: boolean, linkType?: RequirementItem["linkType"]) => {
       setRequirements((prev) =>
         prev.map((req, idx) =>
-          idx === selectedRequirementIndex ? { ...req, hasLinks } : req,
+          idx === selectedRequirementIndex
+            ? { ...req, hasLinks, ...(linkType !== undefined && { linkType }) }
+            : req,
         ),
       );
     },
@@ -270,7 +271,7 @@ export function useRequirementIndexing({
     // For merge, the link is created later after the user completes the merge drawer.
     if (action === "attach" && target_requirement_id) {
       await fetchAndSetLinkedRequirements();
-      updateSelectedRequirementHasLinks(true);
+      updateSelectedRequirementLink(true, "attach");
     }
 
     // Clear local suggestion fields for invalidated siblings immediately
@@ -293,7 +294,7 @@ export function useRequirementIndexing({
     setSuggestedAction(null);
     clearSelectedRequirementSuggestion();
     return result;
-  }, [suggestedAction, selectedRequirement, fetchAndSetLinkedRequirements, updateSelectedRequirementHasLinks, clearSelectedRequirementSuggestion]);
+  }, [suggestedAction, selectedRequirement, fetchAndSetLinkedRequirements, updateSelectedRequirementLink, clearSelectedRequirementSuggestion]);
 
   // Dismiss the AI suggestion
   const dismissSuggestion = useCallback(async () => {
@@ -366,7 +367,7 @@ export function useRequirementIndexing({
       const linkedIds = await listExtractedRequirementLinks(
         info.extractedReqId,
       );
-      updateSelectedRequirementHasLinks(linkedIds.length > 0);
+      updateSelectedRequirementLink(linkedIds.length > 0);
 
       if (info.previousSuggestion) {
         restoreSuggestionState(info.previousSuggestion);
@@ -377,7 +378,7 @@ export function useRequirementIndexing({
       console.error("Failed to undo merge:", error);
       throw error;
     }
-  }, [lastMergeInfo, fetchAndSetLinkedRequirements, updateSelectedRequirementHasLinks, restoreSuggestionState]);
+  }, [lastMergeInfo, fetchAndSetLinkedRequirements, updateSelectedRequirementLink, restoreSuggestionState]);
 
   // Auto-populate suggestion from stored data when selected requirement changes
   useEffect(() => {
@@ -412,18 +413,17 @@ export function useRequirementIndexing({
 
   // Generic helper to create links and reload (DRY principle)
   const createLinksAndReload = useCallback(
-    async (requirementIds: string[]) => {
+    async (requirementIds: string[], linkType?: string) => {
       if (!selectedRequirement?.id || requirementIds.length === 0) return;
 
       try {
         await Promise.all(
           requirementIds.map((reqId) =>
-            createExtractionLink(reqId, selectedRequirement.id.toString()),
+            createExtractionLink(reqId, selectedRequirement.id.toString(), linkType),
           ),
         );
         await fetchAndSetLinkedRequirements();
-        // Update hasLinks since we just created a link
-        updateSelectedRequirementHasLinks(true);
+        updateSelectedRequirementLink(true, linkType as RequirementItem["linkType"]);
       } catch (error) {
         console.error("Failed to create extraction link(s):", error);
         throw error;
@@ -432,7 +432,7 @@ export function useRequirementIndexing({
     [
       selectedRequirement,
       fetchAndSetLinkedRequirements,
-      updateSelectedRequirementHasLinks,
+      updateSelectedRequirementLink,
     ],
   );
 
@@ -492,13 +492,13 @@ export function useRequirementIndexing({
   };
 
   // Handle linking a single newly created requirement
-  const linkNewRequirement = async (requirementId: string) => {
-    await createLinksAndReload([requirementId]);
+  const linkNewRequirement = async (requirementId: string, linkType?: string) => {
+    await createLinksAndReload([requirementId], linkType);
   };
 
   // Handle linking multiple existing requirements
   const handleLinkExistingRequirements = async (reqs: Requirement[]) => {
-    await createLinksAndReload(reqs.map((req) => req.id.toString()));
+    await createLinksAndReload(reqs.map((req) => req.id.toString()), "attach");
   };
 
   // Handle unlinking requirement
@@ -514,7 +514,7 @@ export function useRequirementIndexing({
       await fetchAndSetLinkedRequirements();
       // Update hasLinks based on remaining linked requirements (minus the one we just unlinked)
       const remainingCount = linkedRequirements.length - 1;
-      updateSelectedRequirementHasLinks(remainingCount > 0);
+      updateSelectedRequirementLink(remainingCount > 0);
     } catch (error) {
       console.error("Failed to delete extraction link:", error);
       throw error;

@@ -1,6 +1,6 @@
 """SQLAlchemy models for requirement-extraction linking table."""
 
-from sqlalchemy import Column, ForeignKey, Index
+from sqlalchemy import Column, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import UUID
 
 from database import Base
@@ -19,10 +19,11 @@ class RequirementExtractionLinkDB(Base):
     )
     extracted_requirement_id = Column(
         UUID(as_uuid=False),
-        ForeignKey("requirement.id", ondelete="CASCADE"),
+        ForeignKey("extracted_requirement.id", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
     )
+    link_type = Column(String(20), nullable=True)  # attach, merge, create
 
     # Add indexes for better query performance
     __table_args__ = (

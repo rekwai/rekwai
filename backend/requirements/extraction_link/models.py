@@ -1,6 +1,9 @@
 """Pydantic models for requirement-extraction links."""
 
+from typing import Literal, Optional
 from pydantic import BaseModel
+
+LinkType = Literal["attach", "merge", "create"]
 
 
 class RequirementExtractionLinkCreate(BaseModel):
@@ -8,6 +11,7 @@ class RequirementExtractionLinkCreate(BaseModel):
 
     requirement_id: str
     extracted_requirement_id: str
+    link_type: Optional[LinkType] = None
 
 
 class RequirementExtractionLink(BaseModel):
@@ -15,6 +19,7 @@ class RequirementExtractionLink(BaseModel):
 
     requirement_id: str
     extracted_requirement_id: str
+    link_type: Optional[LinkType] = None
 
     class Config:
         from_attributes = True

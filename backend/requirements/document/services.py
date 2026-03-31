@@ -142,9 +142,11 @@ class RequirementDocumentService:
         for extracted_requirement_db in extracted_requirements_db:
             req_id = str(extracted_requirement_db.id)
             types = self.requirement_repository.get_extracted_requirement_types(req_id)
-            linked_req_ids = self.extraction_link_repository.get_requirement_ids_for_extracted_requirement(
+            links = self.extraction_link_repository.get_links_for_extracted_requirement(
                 req_id
             )
+            linked_req_ids = [link.requirement_id for link in links]
+            link_type = links[0].link_type if links else None
 
             # Resolve suggested target requirement if set
             suggested_target_req = None
@@ -165,6 +167,7 @@ class RequirementDocumentService:
                 extraction_timestamp=extracted_requirement_db.extraction_timestamp,
                 order=extracted_requirement_db.order,
                 has_links=len(linked_req_ids) > 0,
+                link_type=link_type,
                 suggested_action=extracted_requirement_db.suggested_action,
                 suggested_target_requirement_id=str(extracted_requirement_db.suggested_target_requirement_id)
                 if extracted_requirement_db.suggested_target_requirement_id
@@ -356,8 +359,19 @@ class RequirementDocumentService:
                 link_data = RequirementExtractionLinkCreate(
                     requirement_id=target_id,
                     extracted_requirement_id=extracted_requirement_id,
+                    link_type="attach",
                 )
                 self.extraction_link_repository.create_link(link_data)
+                # Record history on the target requirement
+                main_req = self.requirement_repository.get(target_id)
+                self.requirement_repository.log_extraction_action(
+                    requirement_id=target_id,
+                    product_id=str(db_req.product_id),
+                    link_type="attach",
+                    extracted_requirement_id=extracted_requirement_id,
+                    document_id=str(db_req.document_id),
+                    new_data=main_req,
+                )
             except ValueError:
                 log.info(
                     f"Link already exists for requirement {target_id} "

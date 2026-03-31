@@ -46,6 +46,7 @@ export function RequirementListPanel({
       getItemId={(req) => req.id}
       getItemText={(req) => req.text}
       isItemCompleted={(req) => req.hasLinks}
+      getItemLinkType={(req) => req.linkType ?? null}
       getItemSuggestionType={(req) => req.suggestedAction ?? null}
       isItemRefreshingSuggestion={
         refreshingSuggestionIds

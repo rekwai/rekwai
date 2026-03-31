@@ -1,7 +1,7 @@
 """Pydantic models for requirements and related data structures."""
 
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List
+from typing import Literal, Optional, List
 from datetime import datetime
 import enum
 
@@ -67,6 +67,7 @@ class ExtractedRequirementDto(BaseModel):
     extraction_timestamp: datetime
     order: float  # Sequential order within document for frontend sorting
     has_links: bool = False  # Whether this requirement has any linked main requirements
+    link_type: Optional[Literal["attach", "merge", "create"]] = None
     suggested_action: Optional[str] = None
     suggested_target_requirement_id: Optional[str] = None
     suggestion_justification: Optional[str] = None
@@ -240,6 +241,8 @@ class RequirementHistoryBase(BaseModel):
     previous_requirement_verification: Optional[str] = None
     previous_implementation_description: Optional[str] = None
     previous_implementation_status: Optional[str] = None
+    source_extracted_requirement_id: Optional[str] = None
+    source_document_id: Optional[str] = None
     new_description: Optional[str] = None
     new_types: Optional[List[str]] = None
     new_requirement_verification: Optional[str] = None

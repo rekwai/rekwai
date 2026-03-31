@@ -5,6 +5,8 @@ import { Check, X, Minus, Link, Merge, Plus, Loader2 } from "lucide-react";
 import { Info } from "@phosphor-icons/react";
 import * as RadixTabs from "@radix-ui/react-tabs";
 
+import { LinkType } from "@/types/requirement-types";
+
 export type AnswerTypeIndicator = "yes" | "no" | "n/a" | null;
 export type SuggestionType = "attach" | "merge" | "create_new";
 
@@ -29,6 +31,7 @@ interface ItemListPanelProps<T> {
   isItemCompleted?: (item: T) => boolean;
   getItemAnswerType?: (item: T) => AnswerTypeIndicator;
   getItemSuggestionType?: (item: T) => SuggestionType | null;
+  getItemLinkType?: (item: T) => LinkType | null;
   isItemError?: (item: T) => boolean;
   isItemRefreshingSuggestion?: (item: T) => boolean;
   renderMetadata?: () => ReactNode;
@@ -95,59 +98,133 @@ function AnswerTypeIcon({
   return <div className="w-3 h-3 flex-shrink-0" />;
 }
 
-const SUGGESTION_BADGE_CONFIG: Record<
+/** Maps link_type values to the same icon config as suggestion types */
+function linkTypeToIconKey(linkType: LinkType): SuggestionType {
+  if (linkType === "create") return "create_new";
+  return linkType; // "attach" and "merge" map directly
+}
+
+const ICON_CONFIG: Record<
   SuggestionType,
-  { icon: typeof Link; badgeBg: string; iconClass: string; selectedBadgeBg: string; selectedIconClass: string; testId: string }
+  {
+    icon: typeof Link;
+    // Full color (completed action)
+    fullBg: string;
+    fullIcon: string;
+    selectedFullBg: string;
+    selectedFullIcon: string;
+    // Muted color (just a suggestion)
+    mutedBg: string;
+    mutedIcon: string;
+    selectedMutedBg: string;
+    selectedMutedIcon: string;
+    testId: string;
+  }
 > = {
   attach: {
     icon: Link,
-    badgeBg: "bg-[#E8F2FC]",
-    iconClass: "text-[#0E309F]",
-    selectedBadgeBg: "bg-[#0C35BB]",
-    selectedIconClass: "text-[#FAFFFD]",
+    fullBg: "bg-[#E8F2FC]",
+    fullIcon: "text-[#0E309F]",
+    selectedFullBg: "bg-[#0C35BB]",
+    selectedFullIcon: "text-[#FAFFFD]",
+    mutedBg: "bg-[#F0F0F2]",
+    mutedIcon: "text-[#8E99B0]",
+    selectedMutedBg: "bg-[rgba(255,255,255,0.15)]",
+    selectedMutedIcon: "text-[rgba(255,255,255,0.5)]",
     testId: "suggestion-type-attach",
   },
   merge: {
     icon: Merge,
-    badgeBg: "bg-[rgba(235,81,16,0.2)]",
-    iconClass: "text-[#000000]",
-    selectedBadgeBg: "bg-[#F4D5C8]",
-    selectedIconClass: "text-[#000000]",
+    fullBg: "bg-[rgba(235,81,16,0.2)]",
+    fullIcon: "text-[#EB5110]",
+    selectedFullBg: "bg-[#F4D5C8]",
+    selectedFullIcon: "text-[#000000]",
+    mutedBg: "bg-[#F2EFED]",
+    mutedIcon: "text-[#B0A099]",
+    selectedMutedBg: "bg-[rgba(255,255,255,0.15)]",
+    selectedMutedIcon: "text-[rgba(255,255,255,0.5)]",
     testId: "suggestion-type-merge",
   },
   create_new: {
     icon: Plus,
-    badgeBg: "bg-[#A2CFCA]",
-    iconClass: "text-[#000000]",
-    selectedBadgeBg: "bg-[#A2CFCA]",
-    selectedIconClass: "text-[#000000]",
+    fullBg: "bg-[#A2CFCA]",
+    fullIcon: "text-[#000000]",
+    selectedFullBg: "bg-[#A2CFCA]",
+    selectedFullIcon: "text-[#000000]",
+    mutedBg: "bg-[#E0EDEB]",
+    mutedIcon: "text-[#7A9994]",
+    selectedMutedBg: "bg-[rgba(255,255,255,0.15)]",
+    selectedMutedIcon: "text-[rgba(255,255,255,0.5)]",
     testId: "suggestion-type-create-new",
   },
 };
 
-function SuggestionTypeBadge({
+/**
+ * Unified status icon shown to the left of each item.
+ * Priority: error > link type (full color) > suggestion type (muted) > completed check > empty.
+ */
+function StatusIcon({
+  linkType,
   suggestionType,
+  isCompleted,
   isSelected,
+  hasError,
+  testIdPrefix,
 }: {
+  linkType?: LinkType | null;
   suggestionType?: SuggestionType | null;
+  isCompleted: boolean;
   isSelected: boolean;
+  hasError: boolean;
+  testIdPrefix: string;
 }) {
-  if (!suggestionType) {
-    return <div className="w-5 h-5 flex-shrink-0" />;
+  if (hasError) {
+    return (
+      <Info
+        size={16}
+        weight="fill"
+        className="text-[#F97316] flex-shrink-0"
+        data-testid={`${testIdPrefix}-error-indicator`}
+      />
+    );
   }
 
-  const config = SUGGESTION_BADGE_CONFIG[suggestionType];
-  const Icon = config.icon;
-  const bg = isSelected ? config.selectedBadgeBg : config.badgeBg;
-  const iconColor = isSelected ? config.selectedIconClass : config.iconClass;
-  return (
-    <div
-      className={`flex items-center justify-center w-5 h-5 rounded-[3px] flex-shrink-0 ${bg}`}
-      data-testid={config.testId}
-    >
-      <Icon size={16} className={iconColor} />
-    </div>
-  );
+  // Determine icon type: link type takes priority (actual action), then suggestion
+  const iconKey = linkType ? linkTypeToIconKey(linkType) : suggestionType;
+  const isFullColor = isCompleted && !!linkType;
+
+  if (iconKey) {
+    const config = ICON_CONFIG[iconKey];
+    const Icon = config.icon;
+    const bg = isFullColor
+      ? (isSelected ? config.selectedFullBg : config.fullBg)
+      : (isSelected ? config.selectedMutedBg : config.mutedBg);
+    const iconColor = isFullColor
+      ? (isSelected ? config.selectedFullIcon : config.fullIcon)
+      : (isSelected ? config.selectedMutedIcon : config.mutedIcon);
+
+    return (
+      <div
+        className={`flex items-center justify-center w-5 h-5 rounded-[3px] flex-shrink-0 ${bg}`}
+        data-testid={config.testId}
+      >
+        <Icon size={16} className={iconColor} />
+      </div>
+    );
+  }
+
+  // Completed but no link type or suggestion — show check (e.g. questionnaire items)
+  if (isCompleted) {
+    return (
+      <Check
+        className="text-[#15786A] flex-shrink-0 w-5 h-[18px]"
+        data-testid={`${testIdPrefix}-completed-indicator`}
+      />
+    );
+  }
+
+  // Empty placeholder
+  return <div className="w-5 h-5 flex-shrink-0" />;
 }
 
 export function ItemListPanel<T>({
@@ -166,6 +243,7 @@ export function ItemListPanel<T>({
   isItemCompleted,
   getItemAnswerType,
   getItemSuggestionType,
+  getItemLinkType,
   isItemError,
   isItemRefreshingSuggestion,
   renderMetadata,
@@ -178,9 +256,9 @@ export function ItemListPanel<T>({
     <div className="bg-[#F6F6F6] dark:bg-[#1a1a1a] h-full">
       <RadixTabs.Root value={activeTab} onValueChange={onTabChange}>
         {/* Segmented Control Tabs */}
-        <div 
+        <div
           className="sticky top-0 z-10 flex flex-col items-start px-3 pt-3 pb-3 gap-2.5 flex-shrink-0 bg-[#F6F6F6] dark:bg-[#1a1a1a]"
-          style={{ 
+          style={{
             borderTop: 'none',
             borderRight: 'none',
             borderLeft: 'none',
@@ -244,6 +322,7 @@ export function ItemListPanel<T>({
                     const isCompleted = isItemCompleted?.(item) ?? false;
                     const answerType = getItemAnswerType?.(item);
                     const suggestionType = getItemSuggestionType?.(item);
+                    const linkType = getItemLinkType?.(item);
                     const hasError = isItemError?.(item) ?? false;
                     const isRefreshingSuggestion =
                       isItemRefreshingSuggestion?.(item) ?? false;
@@ -259,20 +338,21 @@ export function ItemListPanel<T>({
                         }`}
                         onClick={() => onItemSelect(index)}
                       >
-                        {isCompleted ? (
-                          <Check
-                            className="text-[#15786A] flex-shrink-0 w-5 h-[18px]"
-                            data-testid={`${itemTestIdPrefix}-completed-indicator`}
-                          />
-                        ) : hasError ? (
-                          <Info
+                        {isRefreshingSuggestion ? (
+                          <Loader2
                             size={16}
-                            weight="fill"
-                            className="text-[#F97316] flex-shrink-0"
-                            data-testid={`${itemTestIdPrefix}-error-indicator`}
+                            className="animate-spin text-gray-400 flex-shrink-0 w-5 h-5"
+                            data-testid="suggestion-refreshing-spinner"
                           />
                         ) : (
-                          <div className="w-4 h-6 flex-shrink-0" />
+                          <StatusIcon
+                            linkType={linkType}
+                            suggestionType={suggestionType}
+                            isCompleted={isCompleted}
+                            isSelected={isSelected}
+                            hasError={hasError}
+                            testIdPrefix={itemTestIdPrefix}
+                          />
                         )}
                         <span
                           className={`text-xs leading-[150%] flex-1 ${
@@ -292,19 +372,6 @@ export function ItemListPanel<T>({
                             isCompleted={isCompleted}
                           />
                         )}
-                        {getItemSuggestionType &&
-                          (isRefreshingSuggestion ? (
-                            <Loader2
-                              size={12}
-                              className="animate-spin text-gray-400 flex-shrink-0"
-                              data-testid="suggestion-refreshing-spinner"
-                            />
-                          ) : (
-                            <SuggestionTypeBadge
-                              suggestionType={suggestionType}
-                              isSelected={isSelected}
-                            />
-                          ))}
                       </div>
                     );
                   })}

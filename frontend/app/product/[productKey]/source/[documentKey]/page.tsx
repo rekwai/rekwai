@@ -113,12 +113,9 @@ export default function DocumentPage({
     selectedRequirementIndex,
     combinedLoading,
     availableTypes,
-    linkedRequirements,
-    linkedRequirementsLoading,
     isFetchingSuggestion,
     suggestedAction,
     isSuggestionDismissed,
-    mergingRequirementId,
     handleRequirementSelect,
     updateRequirement,
     persistField,
@@ -129,7 +126,6 @@ export default function DocumentPage({
     dismissSuggestion,
     linkNewRequirement,
     handleLinkExistingRequirements,
-    handleUnlinkRequirement,
     handleGenerateMerge,
     refreshSuggestionsForIds,
     refreshingSuggestionIds,
@@ -167,7 +163,7 @@ export default function DocumentPage({
   ) => {
     if (createdRequirement) {
       try {
-        await linkNewRequirement(createdRequirement.id.toString());
+        await linkNewRequirement(createdRequirement.id.toString(), "create");
         createRequirementModal.close();
       } catch (error) {
         console.error(
@@ -288,7 +284,7 @@ export default function DocumentPage({
     );
     try {
       await updateRequirementApi(requirement.id.toString(), payload);
-      await linkNewRequirement(requirement.id.toString());
+      await linkNewRequirement(requirement.id.toString(), "merge");
       const updatedReq = await getRequirement(requirement.id.toString());
       setLastMergeInfo({
         extractedReqId: selectedRequirement!.id.toString(),
@@ -332,7 +328,7 @@ export default function DocumentPage({
         selectedRequirement.requirementVerification || "",
       product_id: selectedRequirement.product_id,
     });
-    await linkNewRequirement(created.id.toString());
+    await linkNewRequirement(created.id.toString(), "create");
   };
 
   // Handle AI suggestion confirmation with follow-up actions
@@ -368,15 +364,6 @@ export default function DocumentPage({
           )
         : undefined;
       await openMergeDrawerFallback(result.requirement, overrideValues);
-    }
-  };
-
-  // Handle merge generation with modal
-  const handleGenerateMergeWithModal = async (linkedReq: Requirement) => {
-    const result = await handleGenerateMerge(linkedReq);
-    if (result) {
-      mergeDrawerModal.open(result.requirement);
-      setDrawerOverrideValues(result.overrideValues);
     }
   };
 
@@ -450,13 +437,10 @@ export default function DocumentPage({
             combinedLoading={combinedLoading}
             productId={documentData.product_id}
             linkedRequirementsProps={{
-              linkedRequirements,
-              linkedRequirementsLoading,
               isFetchingSuggestion,
               suggestedAction,
               isSuggestionDismissed,
               lastMergeInfo,
-              mergingRequirementId,
               mergePreview: selectedRequirement?.mergePreview,
             }}
             actionHandlers={{
@@ -464,8 +448,6 @@ export default function DocumentPage({
               onEditLinkedRequirement: (requirement: Requirement) =>
                 editLinkedModal.open(requirement),
               onLinkExistingRequirements: handleLinkExistingRequirements,
-              onUnlinkRequirement: handleUnlinkRequirement,
-              onGenerateMerge: handleGenerateMergeWithModal,
               onCreateNewRequirement: () => createRequirementModal.open(),
               onFetchSuggestedAction: fetchSuggestedAction,
               onConfirmSuggestion: handleConfirmSuggestion,
@@ -541,7 +523,7 @@ export default function DocumentPage({
 
           // Create the extraction link now that merge is complete
           if (pendingMergeLinkId) {
-            await linkNewRequirement(pendingMergeLinkId);
+            await linkNewRequirement(pendingMergeLinkId, "merge");
             setPendingMergeLinkId(null);
           } else {
             await loadLinkedRequirements();

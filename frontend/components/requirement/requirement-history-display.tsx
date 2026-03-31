@@ -16,6 +16,21 @@ const BADGE_CONFIG = {
     label: "Deleted",
     className: "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400",
   },
+  LINK_FROM_EXTRACTION: {
+    label: "Linked from extraction",
+    className:
+      "bg-indigo-100 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-400",
+  },
+  MERGE_FROM_EXTRACTION: {
+    label: "Merged from extraction",
+    className:
+      "bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-400",
+  },
+  CREATE_FROM_EXTRACTION: {
+    label: "Created from extraction",
+    className:
+      "bg-teal-100 dark:bg-teal-900/20 text-teal-800 dark:text-teal-400",
+  },
 } as const;
 
 function ChangeTypeBadge({

@@ -1,7 +1,6 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { RequirementDisplayCard } from "./requirement-display-card";
 import { LinkedRequirementsSection } from "./linked-requirements-section";
 import {
   RequirementItem,
@@ -12,9 +11,6 @@ import {
 } from "@/types/requirement-types";
 
 interface LinkedRequirementsProps {
-  linkedRequirements: Requirement[];
-  linkedRequirementsLoading: boolean;
-  mergingRequirementId: string | null;
   isFetchingSuggestion?: boolean;
   suggestedAction?: SuggestedAction | null;
   isSuggestionDismissed?: boolean;
@@ -26,8 +22,6 @@ interface ActionHandlers {
   onEditRequirement: () => void;
   onEditLinkedRequirement: (requirement: Requirement) => void;
   onLinkExistingRequirements: (requirements: Requirement[]) => Promise<void>;
-  onUnlinkRequirement: (requirement: Requirement) => Promise<void>;
-  onGenerateMerge: (requirement: Requirement) => void;
   onCreateNewRequirement: () => void;
   onFetchSuggestedAction?: () => Promise<void>;
   onConfirmSuggestion?: () => Promise<unknown>;
@@ -84,25 +78,11 @@ export function RequirementDetailsPanel({
 
   return (
     <div className="p-8 space-y-6" data-testid="requirement-details-panel">
-      {/* Requirement Display Card */}
-      <RequirementDisplayCard
-        requirement={selectedRequirement}
-        onEdit={actionHandlers.onEditRequirement}
-      />
-
-      {/* Linked Requirements Section */}
       <LinkedRequirementsSection
-        linkedRequirements={linkedRequirementsProps.linkedRequirements}
-        linkedRequirementsLoading={
-          linkedRequirementsProps.linkedRequirementsLoading
-        }
-        mergingRequirementId={linkedRequirementsProps.mergingRequirementId}
         productId={productId}
-        onLinkExistingRequirements={actionHandlers.onLinkExistingRequirements}
-        onUnlinkRequirement={actionHandlers.onUnlinkRequirement}
-        onGenerateMerge={actionHandlers.onGenerateMerge}
         onCreateNewRequirement={actionHandlers.onCreateNewRequirement}
         onEditLinkedRequirement={actionHandlers.onEditLinkedRequirement}
+        onLinkExistingRequirements={actionHandlers.onLinkExistingRequirements}
         suggestion={{
           isFetchingSuggestion: linkedRequirementsProps.isFetchingSuggestion,
           suggestedAction: linkedRequirementsProps.suggestedAction,
