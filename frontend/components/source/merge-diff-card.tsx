@@ -11,7 +11,7 @@ type ViewMode = "suggestion" | "original";
 interface MergeDiffCardProps {
   mergedData: MergedRequirement;
   targetRequirement: Requirement;
-  onEdit?: () => void;
+  onEdit?: () => void | Promise<unknown>;
 }
 
 function WordDiff({
@@ -124,10 +124,6 @@ export function MergeDiffCard({
   const newTypes = mergedData.types.filter((t) => !existingTypes.has(t));
   const unchangedTypes = mergedData.types.filter((t) => existingTypes.has(t));
 
-  const statusChanged =
-    mergedData.implementation_status !==
-    targetRequirement.implementation_status;
-
   const isOriginal = viewMode === "original";
 
   const displayStatus = isOriginal
@@ -192,7 +188,7 @@ export function MergeDiffCard({
             </div>
           </div>
           <div className="flex flex-row items-center py-2 px-0 w-full rounded">
-            <div className="w-full font-inter font-normal text-sm leading-[150%] text-[#080705]">
+            <div className="w-full font-inter font-normal text-sm leading-[17px] text-[#080705]">
               {isOriginal ? (
                 targetRequirement.description
               ) : (
@@ -214,17 +210,13 @@ export function MergeDiffCard({
               Implementation
             </span>
             <Badge
-              className={`px-1.5 py-0.5 text-xs font-medium rounded-[3px] ${
-                !isOriginal && statusChanged
-                  ? "bg-[#A2CFCA] text-[#080705]"
-                  : "bg-[#A2CFCA] text-[#080705]"
-              }`}
+              className="px-1.5 py-0.5 text-xs font-medium rounded-[3px] bg-[#A2CFCA] text-[#080705]"
             >
               {displayStatus}
             </Badge>
           </div>
           <div className="flex flex-row items-center py-2 px-0 w-full rounded">
-            <div className="w-full font-inter font-normal text-sm leading-[150%] text-[#080705]">
+            <div className="w-full font-inter font-normal text-sm leading-[17px] text-[#080705]">
               {isOriginal ? (
                 targetRequirement.implementation_description
               ) : (

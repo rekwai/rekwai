@@ -252,9 +252,9 @@ export function ItemListPanel<T>({
                       <div
                         key={itemId}
                         data-testid={`${itemTestIdPrefix}-${itemId}`}
-                        className={`flex items-center gap-4 px-4 py-4 cursor-pointer transition-colors ${
+                        className={`flex items-center gap-4 px-3 py-3 cursor-pointer transition-colors ${
                           isSelected
-                            ? "bg-[#080705] dark:bg-[#121212] text-white dark:text-[#FAFFFD]"
+                            ? "bg-[#080705] dark:bg-[#121212] text-[#FAFFFD]"
                             : "bg-transparent hover:bg-gray-50 dark:hover:bg-[#1a1a1a]"
                         }`}
                         onClick={() => onItemSelect(index)}
@@ -275,10 +275,10 @@ export function ItemListPanel<T>({
                           <div className="w-4 h-6 flex-shrink-0" />
                         )}
                         <span
-                          className={`text-base leading-[1.5] flex-1 ${
+                          className={`text-xs leading-[150%] flex-1 ${
                             isSelected
-                              ? "text-white dark:text-[#FAFFFD] font-medium"
-                              : "text-black dark:text-[#FAFFFD] font-normal"
+                              ? "text-[#FAFFFD] font-medium"
+                              : "text-[#080705] dark:text-[#FAFFFD] font-normal"
                           }`}
                           data-testid={
                             isSelected ? "current-item-text" : undefined

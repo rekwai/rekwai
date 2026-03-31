@@ -34,7 +34,7 @@ const ACTION_CONFIG: Record<
 > = {
   attach: {
     badgeLabel: "Attach to Requirement",
-    badgeBg: "bg-blue-50 border-blue-200 text-blue-700",
+    badgeBg: "bg-[#E8F2FC] text-[#0E309F]",
     confirmLabel: "Attach to requirement",
     confirmingLabel: "Attaching to requirement",
     confirmBg: "bg-[#080705] text-white hover:bg-[#2a2a2a]",
@@ -50,7 +50,7 @@ const ACTION_CONFIG: Record<
   },
   create_new: {
     badgeLabel: "Create Requirement",
-    badgeBg: "bg-green-50 border-green-200 text-green-700",
+    badgeBg: "bg-[#A2CFCA] text-[#080705]",
     confirmLabel: "Create Requirement",
     confirmingLabel: "Creating requirement",
     confirmBg: "bg-[#080705] text-white hover:bg-[#2a2a2a]",
@@ -98,7 +98,7 @@ export function AISuggestionBanner({
       </div>
 
       {/* Justification */}
-      <p className="font-inter text-sm text-[#1C2024] leading-[150%]">
+      <p className="font-inter font-medium text-sm text-[#000000] leading-5">
         {suggestion.justification}
       </p>
 
