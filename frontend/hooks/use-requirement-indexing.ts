@@ -6,6 +6,7 @@ import {
   ExtractedRequirementDto,
   SuggestedAction,
   SuggestedActionType,
+  MergeInfo,
 } from "@/types/requirement-types";
 import {
   getDistinctRequirementTypes,
@@ -18,6 +19,7 @@ import {
   updateExtractedRequirement,
   acceptSuggestion,
   dismissSuggestion as dismissSuggestionApi,
+  undoMerge as undoMergeApi,
 } from "@/lib/api/requirements";
 import { updateRequirementInList } from "@/lib/utils/requirement-indexing-utils";
 
@@ -58,6 +60,8 @@ export function useRequirementIndexing({
   const [refreshingSuggestionIds, setRefreshingSuggestionIds] = useState<
     Set<string>
   >(new Set());
+  const [isSuggestionDismissed, setIsSuggestionDismissed] = useState(false);
+  const [lastMergeInfo, setLastMergeInfo] = useState<MergeInfo | null>(null);
 
   const selectedRequirement = requirements[selectedRequirementIndex];
   const combinedLoading = isLoading || typesLoading;
@@ -173,6 +177,7 @@ export function useRequirementIndexing({
       );
 
       setSuggestedAction(result);
+      setIsSuggestionDismissed(false);
     } catch (error) {
       console.error("Failed to fetch suggested action:", error);
     } finally {
@@ -196,51 +201,44 @@ export function useRequirementIndexing({
     async (ids: string[]) => {
       if (ids.length === 0) return;
 
-      // Add IDs to refreshing set
-      setRefreshingSuggestionIds((prev) => {
-        const next = new Set(prev);
-        ids.forEach((id) => next.add(id));
-        return next;
-      });
+      setRefreshingSuggestionIds((prev) => new Set([...prev, ...ids]));
 
-      // Fire off re-suggestions in parallel
-      const results = await Promise.allSettled(
-        ids.map((id) => getSuggestedAction(id)),
-      );
+      try {
+        const results = await Promise.allSettled(
+          ids.map((id) => getSuggestedAction(id)),
+        );
 
-      // Update requirements state with fresh suggestion data
-      setRequirements((prev) =>
-        prev.map((req) => {
-          const idx = ids.indexOf(req.id.toString());
-          if (idx === -1) return req;
+        setRequirements((prev) =>
+          prev.map((req) => {
+            const idx = ids.indexOf(req.id.toString());
+            if (idx === -1) return req;
 
-          const result = results[idx];
-          if (result.status === "fulfilled") {
-            const suggestion = result.value;
-            return {
-              ...req,
-              suggestedAction: suggestion.action as SuggestedActionType,
-              suggestedTargetRequirementId:
-                suggestion.target_requirement_id ?? undefined,
-              suggestionJustification: suggestion.justification ?? undefined,
-              suggestionSimilarityScore:
-                suggestion.similarity_score ?? undefined,
-              suggestedTargetRequirement:
-                suggestion.target_requirement ?? undefined,
-              mergePreview: suggestion.merge_preview ?? undefined,
-            };
-          }
-          // On failure, leave suggestion cleared (already cleared by backend)
-          return req;
-        }),
-      );
-
-      // Remove IDs from refreshing set
-      setRefreshingSuggestionIds((prev) => {
-        const next = new Set(prev);
-        ids.forEach((id) => next.delete(id));
-        return next;
-      });
+            const result = results[idx];
+            if (result.status === "fulfilled") {
+              const suggestion = result.value;
+              return {
+                ...req,
+                suggestedAction: suggestion.action as SuggestedActionType,
+                suggestedTargetRequirementId:
+                  suggestion.target_requirement_id ?? undefined,
+                suggestionJustification: suggestion.justification ?? undefined,
+                suggestionSimilarityScore:
+                  suggestion.similarity_score ?? undefined,
+                suggestedTargetRequirement:
+                  suggestion.target_requirement ?? undefined,
+                mergePreview: suggestion.merge_preview ?? undefined,
+              };
+            }
+            return req;
+          }),
+        );
+      } finally {
+        setRefreshingSuggestionIds((prev) => {
+          const next = new Set(prev);
+          ids.forEach((id) => next.delete(id));
+          return next;
+        });
+      }
     },
     [],
   );
@@ -308,7 +306,78 @@ export function useRequirementIndexing({
     }
     setSuggestedAction(null);
     clearSelectedRequirementSuggestion();
+    setIsSuggestionDismissed(true);
   }, [selectedRequirement, clearSelectedRequirementSuggestion]);
+
+  // Restore suggestion state locally after undo
+  const restoreSuggestionState = useCallback(
+    (suggestion: SuggestedAction) => {
+      setSuggestedAction(suggestion);
+      setIsSuggestionDismissed(false);
+      setRequirements((prev) =>
+        prev.map((req, idx) =>
+          idx === selectedRequirementIndex
+            ? {
+                ...req,
+                suggestedAction: suggestion.action,
+                suggestedTargetRequirementId:
+                  suggestion.target_requirement_id ?? undefined,
+                suggestionJustification:
+                  suggestion.justification ?? undefined,
+                suggestionSimilarityScore:
+                  suggestion.similarity_score ?? undefined,
+                suggestedTargetRequirement:
+                  suggestion.target_requirement ?? undefined,
+                mergePreview: suggestion.merge_preview ?? undefined,
+              }
+            : req,
+        ),
+      );
+    },
+    [selectedRequirementIndex],
+  );
+
+  // Undo a merge (restore requirement to pre-merge state)
+  const undoMerge = useCallback(async (): Promise<string[]> => {
+    const info = lastMergeInfo;
+    if (!info) return [];
+
+    const suggestionRestore = info.previousSuggestion
+      ? {
+          suggested_action: info.previousSuggestion.action,
+          suggested_target_requirement_id:
+            info.previousSuggestion.target_requirement_id,
+          suggestion_justification: info.previousSuggestion.justification,
+          suggestion_similarity_score:
+            info.previousSuggestion.similarity_score,
+          merge_preview: info.previousSuggestion.merge_preview ?? null,
+        }
+      : undefined;
+
+    try {
+      const result = await undoMergeApi(
+        info.extractedReqId,
+        info.targetReqId,
+        suggestionRestore,
+      );
+
+      setLastMergeInfo(null);
+      await fetchAndSetLinkedRequirements();
+      const linkedIds = await listExtractedRequirementLinks(
+        info.extractedReqId,
+      );
+      updateSelectedRequirementHasLinks(linkedIds.length > 0);
+
+      if (info.previousSuggestion) {
+        restoreSuggestionState(info.previousSuggestion);
+      }
+
+      return result.invalidated_ids || [];
+    } catch (error) {
+      console.error("Failed to undo merge:", error);
+      throw error;
+    }
+  }, [lastMergeInfo, fetchAndSetLinkedRequirements, updateSelectedRequirementHasLinks, restoreSuggestionState]);
 
   // Auto-populate suggestion from stored data when selected requirement changes
   useEffect(() => {
@@ -328,6 +397,8 @@ export function useRequirementIndexing({
     } else {
       setSuggestedAction(null);
     }
+    setIsSuggestionDismissed(false);
+    setLastMergeInfo(null);
   }, [selectedRequirement?.id]);
 
   // Load linked requirements when selectedRequirement changes
@@ -500,6 +571,8 @@ export function useRequirementIndexing({
     linkedRequirementsLoading,
     isFetchingSuggestion,
     suggestedAction,
+    isSuggestionDismissed,
+    lastMergeInfo,
     mergingRequirementId,
     refreshingSuggestionIds,
 
@@ -512,6 +585,8 @@ export function useRequirementIndexing({
     fetchSuggestedAction,
     confirmSuggestion,
     dismissSuggestion,
+    undoMerge,
+    setLastMergeInfo,
     linkNewRequirement,
     handleLinkExistingRequirements,
     handleUnlinkRequirement,

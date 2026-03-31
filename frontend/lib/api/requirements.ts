@@ -413,6 +413,38 @@ export async function dismissSuggestion(
   return handleResponse<{ status: string }>(response);
 }
 
+export async function undoMerge(
+  extractedRequirementId: string,
+  requirementId: string,
+  suggestionRestore?: {
+    suggested_action?: string;
+    suggested_target_requirement_id?: string | null;
+    suggestion_justification?: string | null;
+    suggestion_similarity_score?: number | null;
+    merge_preview?: MergedRequirement | null;
+  },
+): Promise<{
+  status: string;
+  restored_requirement: Record<string, unknown>;
+  invalidated_ids: string[];
+}> {
+  const response = await fetch(
+    `${getApiUrl()}/requirements/extracted-requirement/${extractedRequirementId}/undo-merge/${requirementId}`,
+    {
+      method: "POST",
+      headers: suggestionRestore
+        ? { "Content-Type": "application/json" }
+        : {},
+      body: suggestionRestore ? JSON.stringify(suggestionRestore) : undefined,
+    },
+  );
+  return handleResponse<{
+    status: string;
+    restored_requirement: Record<string, unknown>;
+    invalidated_ids: string[];
+  }>(response);
+}
+
 /**
  * Updates an extracted requirement by ID
  * @param extractedRequirementId - The extracted requirement ID

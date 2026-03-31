@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { RequirementHeader } from "@/components/source/requirement-header";
 import { RequirementListPanel } from "@/components/source/requirement-list-panel";
@@ -13,12 +13,14 @@ import {
   DocumentWithRequirements,
   createRequirement,
   updateRequirement as updateRequirementApi,
+  getRequirement,
 } from "@/lib/api/requirements";
 import { getProductByKey } from "@/lib/api/products";
 import {
   RequirementItem,
   Requirement,
   ExtractedRequirementUpdate,
+  SuggestedAction,
 } from "@/types/requirement-types";
 import {
   PageLoadingState,
@@ -33,6 +35,8 @@ import {
   mergePreviewToUpdatePayload,
 } from "@/lib/utils/requirement-transformers";
 import { useResolvedParams } from "@/hooks/use-resolved-params";
+import { useToast } from "@/components/ui/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 
 export default function DocumentPage({
   params,
@@ -40,6 +44,7 @@ export default function DocumentPage({
   params: Promise<{ productKey: string; documentKey: string }>;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const resolvedParams = useResolvedParams(params);
   const productKey = resolvedParams?.productKey ?? null;
   const documentKey = resolvedParams?.documentKey ?? null;
@@ -112,6 +117,7 @@ export default function DocumentPage({
     linkedRequirementsLoading,
     isFetchingSuggestion,
     suggestedAction,
+    isSuggestionDismissed,
     mergingRequirementId,
     handleRequirementSelect,
     updateRequirement,
@@ -127,10 +133,13 @@ export default function DocumentPage({
     handleGenerateMerge,
     refreshSuggestionsForIds,
     refreshingSuggestionIds,
+    lastMergeInfo,
+    setLastMergeInfo,
+    undoMerge,
   } = hook;
 
   // Helper to reload document data after merges
-  const reloadDocumentData = async () => {
+  const reloadDocumentData = useCallback(async () => {
     if (!documentKey) return;
     try {
       const data = await getDocumentWithRequirements(documentKey);
@@ -139,7 +148,7 @@ export default function DocumentPage({
     } catch (error) {
       console.error("Failed to reload document data:", error);
     }
-  };
+  }, [documentKey]);
 
   // Compute whether we're on the last requirement
   const isOnLastItem = selectedRequirementIndex === requirements.length - 1;
@@ -248,51 +257,102 @@ export default function DocumentPage({
     }
   };
 
+  // Shared undo handler for both merge status banner and toast action.
+  // Wrapped in a ref so the toast action closure always calls the latest version.
+  const handleUndoMerge = useCallback(async () => {
+    const invalidatedIds = await undoMerge();
+    await reloadDocumentData();
+    if (invalidatedIds && invalidatedIds.length > 0) {
+      refreshSuggestionsForIds(invalidatedIds);
+    }
+  }, [undoMerge, reloadDocumentData, refreshSuggestionsForIds]);
+
+  const handleUndoMergeRef = useRef(handleUndoMerge);
+  handleUndoMergeRef.current = handleUndoMerge;
+
+  // Apply merge preview directly, with fallback to merge drawer on failure
+  const handleMergeWithPreview = async (
+    requirement: Requirement,
+    suggestionSnapshot: SuggestedAction | null,
+    invalidatedIds: string[],
+  ) => {
+    const mergePreviewData = selectedRequirement?.mergePreview;
+    if (!mergePreviewData) {
+      await openMergeDrawerFallback(requirement);
+      return;
+    }
+
+    const payload = mergePreviewToUpdatePayload(
+      mergePreviewData,
+      requirement.product_id,
+    );
+    try {
+      await updateRequirementApi(requirement.id.toString(), payload);
+      await linkNewRequirement(requirement.id.toString());
+      const updatedReq = await getRequirement(requirement.id.toString());
+      setLastMergeInfo({
+        extractedReqId: selectedRequirement!.id.toString(),
+        targetReqId: requirement.id.toString(),
+        targetReqKey: requirement.requirement_key,
+        mergedRequirement: updatedReq,
+        previousSuggestion: suggestionSnapshot ?? undefined,
+      });
+      toast({
+        title: "Requirements successfully merged",
+        description: `Merged into ${requirement.requirement_key}`,
+        action: (
+          <ToastAction altText="Undo" onClick={() => handleUndoMergeRef.current()}>
+            Undo
+          </ToastAction>
+        ),
+      });
+      await reloadDocumentData();
+      if (invalidatedIds.length > 0) {
+        refreshSuggestionsForIds(invalidatedIds);
+      }
+    } catch (error) {
+      console.error("Failed to apply merge directly, falling back to merge drawer:", error);
+      await openMergeDrawerFallback(requirement, payload);
+    }
+  };
+
+  // Create a new requirement from the selected extracted requirement
+  const handleCreateNewFromSuggestion = async () => {
+    if (!selectedRequirement) return;
+    const created = await createRequirement({
+      description: getFirstNonEmpty(
+        selectedRequirement.text,
+        selectedRequirement.description,
+      ),
+      types: selectedRequirement.types || [],
+      implementation_status: selectedRequirement.implementation || "To do",
+      implementation_description:
+        selectedRequirement.implementationDescription || "",
+      requirement_verification:
+        selectedRequirement.requirementVerification || "",
+      product_id: selectedRequirement.product_id,
+    });
+    await linkNewRequirement(created.id.toString());
+  };
+
   // Handle AI suggestion confirmation with follow-up actions
   const handleConfirmSuggestion = async () => {
+    const suggestionSnapshot = suggestedAction
+      ? {
+          ...suggestedAction,
+          merge_preview: selectedRequirement?.mergePreview ?? null,
+        }
+      : null;
+
     const result = await confirmSuggestion();
     if (result?.action === "merge" && result.requirement) {
-      const mergePreviewData = selectedRequirement?.mergePreview;
-      if (mergePreviewData) {
-        // Direct apply: update the existing requirement with merge preview data
-        const payload = mergePreviewToUpdatePayload(
-          mergePreviewData,
-          result.requirement.product_id,
-        );
-        try {
-          await updateRequirementApi(
-            result.requirement.id.toString(),
-            payload,
-          );
-          await linkNewRequirement(result.requirement.id.toString());
-          // Reload document data after merge to refresh hasLinks
-          await reloadDocumentData();
-          // Trigger re-suggestion for invalidated siblings
-          if (result.invalidated_ids && result.invalidated_ids.length > 0) {
-            refreshSuggestionsForIds(result.invalidated_ids);
-          }
-        } catch (error) {
-          console.error("Failed to apply merge directly, falling back to merge drawer:", error);
-          await openMergeDrawerFallback(result.requirement, payload);
-        }
-      } else {
-        await openMergeDrawerFallback(result.requirement);
-      }
-    } else if (result?.action === "create_new" && selectedRequirement) {
-      const created = await createRequirement({
-        description: getFirstNonEmpty(
-          selectedRequirement.text,
-          selectedRequirement.description,
-        ),
-        types: selectedRequirement.types || [],
-        implementation_status: selectedRequirement.implementation || "To do",
-        implementation_description:
-          selectedRequirement.implementationDescription || "",
-        requirement_verification:
-          selectedRequirement.requirementVerification || "",
-        product_id: selectedRequirement.product_id,
-      });
-      await linkNewRequirement(created.id.toString());
+      await handleMergeWithPreview(
+        result.requirement,
+        suggestionSnapshot,
+        result.invalidated_ids || [],
+      );
+    } else if (result?.action === "create_new") {
+      await handleCreateNewFromSuggestion();
     }
   };
 
@@ -394,6 +454,8 @@ export default function DocumentPage({
               linkedRequirementsLoading,
               isFetchingSuggestion,
               suggestedAction,
+              isSuggestionDismissed,
+              lastMergeInfo,
               mergingRequirementId,
               mergePreview: selectedRequirement?.mergePreview,
             }}
@@ -409,6 +471,7 @@ export default function DocumentPage({
               onConfirmSuggestion: handleConfirmSuggestion,
               onDismissSuggestion: dismissSuggestion,
               onEditSuggestion: handleEditSuggestion,
+              onUndoMerge: handleUndoMerge,
             }}
           />
         </div>

@@ -100,6 +100,14 @@ export interface SuggestedAction {
   merge_preview?: MergedRequirement | null;
 }
 
+export interface MergeInfo {
+  extractedReqId: string;
+  targetReqId: string;
+  targetReqKey: string;
+  mergedRequirement?: Requirement;
+  previousSuggestion?: SuggestedAction;
+}
+
 export interface MergedRequirement {
   description: string;
   types: string[];

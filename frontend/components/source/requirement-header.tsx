@@ -16,14 +16,14 @@ import { useBulkApproveSuggestions } from "@/hooks/use-bulk-approve-suggestions"
 import { PageHeader } from "@/components/common/page-header";
 import { BulkApproveDialog } from "@/components/source/bulk-approve-dialog";
 import { RequirementItem } from "@/types/requirement-types";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check } from "lucide-react";
 
 const BASE_BUTTON_STYLES =
   "font-inter flex flex-row justify-center items-center px-2.5 py-1 gap-1.5 h-7 border-none rounded-[12px] text-xs leading-[15px] font-normal";
 
 const DELETE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-[#FBDBDD] dark:bg-[#8B2635] text-[#080705] dark:text-[#FAFFFD] hover:bg-[#FBDBDD]/90 dark:hover:bg-[#8B2635]/90`;
 
-const BULK_CREATE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-primary text-primary-foreground hover:bg-primary/90`;
+const BULK_CREATE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-[#15786A] text-[#FAFFFD] hover:bg-[#15786A]/90`;
 
 interface RequirementHeaderProps {
   productKey: string;
@@ -98,7 +98,10 @@ export function RequirementHeader({
                   Approving...
                 </>
               ) : (
-                `Approve ${breakdown.total} Rekwai suggestions`
+                <>
+                  {`Approve ${breakdown.total} Rekwai suggestions`}
+                  <Check className="h-3 w-3" />
+                </>
               )}
             </Button>
             <Button

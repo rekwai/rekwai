@@ -5,7 +5,7 @@ This router handles HTTP routing concerns only, delegating business logic
 to the requirements service module.
 """
 
-from typing import List
+from typing import List, Optional
 
 from fastapi import (
     APIRouter,
@@ -252,6 +252,22 @@ def dismiss_suggestion(
 ):
     """Dismiss the AI suggestion for an extracted requirement."""
     return service.dismiss_suggestion(extracted_requirement_id)
+
+
+@router.post(
+    "/extracted-requirement/{extracted_requirement_id}/undo-merge/{requirement_id}",
+    tags=["requirements_document"],
+)
+def undo_merge(
+    extracted_requirement_id: str,
+    requirement_id: str,
+    suggestion_restore: Optional[dict] = None,
+    service: RequirementDocumentService = Depends(get_requirement_document_service),
+):
+    """Undo a merge by restoring the target requirement to its pre-merge state."""
+    return service.undo_merge(
+        extracted_requirement_id, requirement_id, suggestion_restore
+    )
 
 
 @router.get(

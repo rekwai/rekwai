@@ -406,6 +406,78 @@ class RequirementRepository:
         )
         return [models.RequirementHistory.model_validate(h) for h in history_db]
 
+    def restore_from_latest_history(
+        self, requirement_id: str
+    ) -> Optional[models.RequirementDto]:
+        """Restore a requirement to its state before the most recent UPDATE.
+
+        Uses the previous_* fields from the latest history entry to revert.
+        Returns the restored requirement DTO, or None if no history found.
+        """
+        # Get the latest UPDATE history entry
+        history_entry = (
+            self.db.query(tables.RequirementHistoryDB)
+            .filter(
+                tables.RequirementHistoryDB.requirement_id == requirement_id,
+                tables.RequirementHistoryDB.change_type == "UPDATE",
+            )
+            .order_by(tables.RequirementHistoryDB.change_timestamp.desc())
+            .first()
+        )
+        if not history_entry or history_entry.previous_description is None:
+            return None
+
+        db_req = (
+            self.db.query(tables.RequirementDB)
+            .filter(tables.RequirementDB.id == requirement_id)
+            .first()
+        )
+        if not db_req:
+            return None
+
+        # Capture current state before reverting
+        current_data = self.transform_to_dto(db_req)
+
+        # Restore previous fields
+        db_req.description = history_entry.previous_description
+        db_req.implementation_status = history_entry.previous_implementation_status
+        db_req.implementation_description = (
+            history_entry.previous_implementation_description
+        )
+        db_req.requirement_verification = (
+            history_entry.previous_requirement_verification
+        )
+
+        # Restore previous types
+        if history_entry.previous_types is not None:
+            self.db.query(tables.RequirementTypeDB).filter(
+                tables.RequirementTypeDB.requirement_id == requirement_id
+            ).delete()
+            for req_type in set(history_entry.previous_types):
+                type_entry = tables.RequirementTypeDB(
+                    requirement_id=requirement_id, type=req_type
+                )
+                self.db.add(type_entry)
+
+        self.db.flush()
+        self.db.refresh(db_req)
+
+        restored_types = history_entry.previous_types if history_entry.previous_types is not None else current_data.types
+        restored_data = self.transform_to_dto(db_req, restored_types)
+
+        # Log the revert as a new history entry
+        self._log_history(
+            "UPDATE",
+            requirement_id,
+            db_req.product_id,
+            previous_data=current_data,
+            new_data=restored_data,
+        )
+        # Flush only — caller is responsible for committing the transaction
+        # so that undo_merge can atomically restore + delete link in one commit
+        self.db.flush()
+        return restored_data
+
     def create_extracted_requirement(
         self,
         extracted_requirement_data: models.ExtractedRequirement,
@@ -545,10 +617,13 @@ class RequirementRepository:
         target_requirement_id: Optional[str] = None,
         justification: Optional[str] = None,
         similarity_score: Optional[float] = None,
+        merge_preview: Optional[dict] = None,
     ) -> Optional[tables.ExtractedRequirementDB]:
         """Set or clear the AI suggestion on an extracted requirement row.
 
         Pass values to store a suggestion, or call with no arguments to clear.
+        When action is None, all suggestion fields including merge_preview are cleared.
+        When action is set, merge_preview is explicitly set to the provided value.
         """
         db_extracted_req = (
             self.db.query(tables.ExtractedRequirementDB)
@@ -562,9 +637,7 @@ class RequirementRepository:
         db_extracted_req.suggested_target_requirement_id = target_requirement_id
         db_extracted_req.suggestion_justification = justification
         db_extracted_req.suggestion_similarity_score = similarity_score
-        # Clear merge preview when clearing suggestion
-        if action is None:
-            db_extracted_req.merge_preview = None
+        db_extracted_req.merge_preview = merge_preview
 
         self.db.flush()
         self.db.refresh(db_extracted_req)

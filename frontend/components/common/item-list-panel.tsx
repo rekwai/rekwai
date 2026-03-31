@@ -95,32 +95,58 @@ function AnswerTypeIcon({
   return <div className="w-3 h-3 flex-shrink-0" />;
 }
 
-const SUGGESTION_ICON_CONFIG: Record<
+const SUGGESTION_BADGE_CONFIG: Record<
   SuggestionType,
-  { icon: typeof Link; className: string; testId: string }
+  { icon: typeof Link; badgeBg: string; iconClass: string; selectedBadgeBg: string; selectedIconClass: string; testId: string }
 > = {
-  attach: { icon: Link, className: "text-blue-700", testId: "suggestion-type-attach" },
-  merge: { icon: Merge, className: "text-amber-700", testId: "suggestion-type-merge" },
-  create_new: { icon: Plus, className: "text-green-700", testId: "suggestion-type-create-new" },
+  attach: {
+    icon: Link,
+    badgeBg: "bg-[#E8F2FC]",
+    iconClass: "text-[#0E309F]",
+    selectedBadgeBg: "bg-[#0C35BB]",
+    selectedIconClass: "text-[#FAFFFD]",
+    testId: "suggestion-type-attach",
+  },
+  merge: {
+    icon: Merge,
+    badgeBg: "bg-[rgba(235,81,16,0.2)]",
+    iconClass: "text-[#000000]",
+    selectedBadgeBg: "bg-[#F4D5C8]",
+    selectedIconClass: "text-[#000000]",
+    testId: "suggestion-type-merge",
+  },
+  create_new: {
+    icon: Plus,
+    badgeBg: "bg-[#A2CFCA]",
+    iconClass: "text-[#000000]",
+    selectedBadgeBg: "bg-[#A2CFCA]",
+    selectedIconClass: "text-[#000000]",
+    testId: "suggestion-type-create-new",
+  },
 };
 
-function SuggestionTypeIcon({
+function SuggestionTypeBadge({
   suggestionType,
+  isSelected,
 }: {
   suggestionType?: SuggestionType | null;
+  isSelected: boolean;
 }) {
   if (!suggestionType) {
-    return <div className="w-3 h-3 flex-shrink-0" />;
+    return <div className="w-5 h-5 flex-shrink-0" />;
   }
 
-  const config = SUGGESTION_ICON_CONFIG[suggestionType];
+  const config = SUGGESTION_BADGE_CONFIG[suggestionType];
   const Icon = config.icon;
+  const bg = isSelected ? config.selectedBadgeBg : config.badgeBg;
+  const iconColor = isSelected ? config.selectedIconClass : config.iconClass;
   return (
-    <Icon
-      size={12}
-      className={`${config.className} flex-shrink-0`}
+    <div
+      className={`flex items-center justify-center w-5 h-5 rounded-[3px] flex-shrink-0 ${bg}`}
       data-testid={config.testId}
-    />
+    >
+      <Icon size={16} className={iconColor} />
+    </div>
   );
 }
 
@@ -274,8 +300,9 @@ export function ItemListPanel<T>({
                               data-testid="suggestion-refreshing-spinner"
                             />
                           ) : (
-                            <SuggestionTypeIcon
+                            <SuggestionTypeBadge
                               suggestionType={suggestionType}
+                              isSelected={isSelected}
                             />
                           ))}
                       </div>

@@ -5,14 +5,36 @@ import { Plus, Link } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Requirement,
+  RequirementItem as RequirementItemType,
   SuggestedAction,
   MergedRequirement,
+  MergeInfo,
 } from "@/types/requirement-types";
 import { RequirementItem } from "@/components/query/requirement-item";
 import { RequirementSelectionModal } from "@/components/query/requirement-selection-modal";
 import { LinkedRequirementsHeader } from "./linked-requirements-header";
 import { AISuggestionBanner } from "./ai-suggestion-banner";
+import { DismissedSuggestionBanner } from "./dismissed-suggestion-banner";
+import { MergeStatusBanner } from "./merge-status-banner";
 import { withLoadingState } from "@/lib/utils/loading-state";
+
+interface SuggestionProps {
+  isFetchingSuggestion?: boolean;
+  suggestedAction?: SuggestedAction | null;
+  isSuggestionDismissed?: boolean;
+  lastMergeInfo?: MergeInfo | null;
+  mergePreview?: MergedRequirement | null;
+  selectedRequirement?: RequirementItemType | null;
+}
+
+interface SuggestionHandlers {
+  onFetchSuggestedAction?: () => Promise<void>;
+  onConfirmSuggestion?: () => Promise<unknown>;
+  onDismissSuggestion?: () => void;
+  onEditSuggestion?: () => Promise<unknown>;
+  onUndoMerge?: () => Promise<void>;
+  onEditRequirement?: () => void;
+}
 
 interface LinkedRequirementsSectionProps {
   linkedRequirements: Requirement[];
@@ -24,13 +46,8 @@ interface LinkedRequirementsSectionProps {
   onGenerateMerge: (requirement: Requirement) => void;
   onCreateNewRequirement: () => void;
   onEditLinkedRequirement: (requirement: Requirement) => void;
-  onFetchSuggestedAction?: () => Promise<void>;
-  isFetchingSuggestion?: boolean;
-  suggestedAction?: SuggestedAction | null;
-  onConfirmSuggestion?: () => Promise<unknown>;
-  onDismissSuggestion?: () => void;
-  onEditSuggestion?: () => Promise<unknown>;
-  mergePreview?: MergedRequirement | null;
+  suggestion?: SuggestionProps;
+  suggestionHandlers?: SuggestionHandlers;
 }
 
 export function LinkedRequirementsSection({
@@ -43,14 +60,25 @@ export function LinkedRequirementsSection({
   onGenerateMerge,
   onCreateNewRequirement,
   onEditLinkedRequirement,
-  onFetchSuggestedAction,
-  isFetchingSuggestion = false,
-  suggestedAction,
-  onConfirmSuggestion,
-  onDismissSuggestion,
-  onEditSuggestion,
-  mergePreview,
+  suggestion = {},
+  suggestionHandlers = {},
 }: LinkedRequirementsSectionProps) {
+  const {
+    isFetchingSuggestion = false,
+    suggestedAction,
+    isSuggestionDismissed = false,
+    lastMergeInfo,
+    mergePreview,
+    selectedRequirement,
+  } = suggestion;
+  const {
+    onFetchSuggestedAction,
+    onConfirmSuggestion,
+    onDismissSuggestion,
+    onEditSuggestion,
+    onUndoMerge,
+    onEditRequirement,
+  } = suggestionHandlers;
   const [unlinkingRequirementIds, setUnlinkingRequirementIds] = useState<
     Set<string>
   >(new Set());
@@ -81,7 +109,7 @@ export function LinkedRequirementsSection({
 
   const hasSuggestion = !!(suggestedAction && onConfirmSuggestion && onDismissSuggestion);
   const showEmptyState =
-    !linkedRequirementsLoading && linkedRequirements.length === 0 && !hasSuggestion;
+    !linkedRequirementsLoading && linkedRequirements.length === 0 && !hasSuggestion && !isSuggestionDismissed;
 
   return (
     <>
@@ -93,14 +121,36 @@ export function LinkedRequirementsSection({
           isFetchingSuggestion={isFetchingSuggestion}
         />
 
+        {/* Merge Status Banner (post-merge with undo) */}
+        {lastMergeInfo && onUndoMerge && (
+          <MergeStatusBanner
+            targetRequirementKey={lastMergeInfo.targetReqKey}
+            mergedRequirement={lastMergeInfo.mergedRequirement}
+            onUndo={onUndoMerge}
+            onEdit={onEditLinkedRequirement}
+          />
+        )}
+
         {/* AI Suggestion Banner */}
-        {hasSuggestion && (
+        {hasSuggestion && !lastMergeInfo && (
           <AISuggestionBanner
             suggestion={suggestedAction}
             onConfirm={onConfirmSuggestion}
             onDismiss={onDismissSuggestion}
             onEdit={onEditSuggestion}
             mergePreview={mergePreview}
+          />
+        )}
+
+        {/* Dismissed Suggestion Banner */}
+        {!hasSuggestion && isSuggestionDismissed && onFetchSuggestedAction && (
+          <DismissedSuggestionBanner
+            onRerun={onFetchSuggestedAction}
+            onAttachToRequirement={() => setIsSelectionModalOpen(true)}
+            onAddRequirement={onCreateNewRequirement}
+            isRerunning={isFetchingSuggestion}
+            extractedRequirement={selectedRequirement ?? undefined}
+            onEditExtraction={onEditRequirement}
           />
         )}
 

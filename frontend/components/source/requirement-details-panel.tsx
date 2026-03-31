@@ -8,6 +8,7 @@ import {
   Requirement,
   SuggestedAction,
   MergedRequirement,
+  MergeInfo,
 } from "@/types/requirement-types";
 
 interface LinkedRequirementsProps {
@@ -16,6 +17,8 @@ interface LinkedRequirementsProps {
   mergingRequirementId: string | null;
   isFetchingSuggestion?: boolean;
   suggestedAction?: SuggestedAction | null;
+  isSuggestionDismissed?: boolean;
+  lastMergeInfo?: MergeInfo | null;
   mergePreview?: MergedRequirement | null;
 }
 
@@ -30,6 +33,7 @@ interface ActionHandlers {
   onConfirmSuggestion?: () => Promise<unknown>;
   onDismissSuggestion?: () => void;
   onEditSuggestion?: () => Promise<unknown>;
+  onUndoMerge?: () => Promise<void>;
 }
 
 interface RequirementDetailsPanelProps {
@@ -99,13 +103,22 @@ export function RequirementDetailsPanel({
         onGenerateMerge={actionHandlers.onGenerateMerge}
         onCreateNewRequirement={actionHandlers.onCreateNewRequirement}
         onEditLinkedRequirement={actionHandlers.onEditLinkedRequirement}
-        onFetchSuggestedAction={actionHandlers.onFetchSuggestedAction}
-        isFetchingSuggestion={linkedRequirementsProps.isFetchingSuggestion}
-        suggestedAction={linkedRequirementsProps.suggestedAction}
-        onConfirmSuggestion={actionHandlers.onConfirmSuggestion}
-        onDismissSuggestion={actionHandlers.onDismissSuggestion}
-        onEditSuggestion={actionHandlers.onEditSuggestion}
-        mergePreview={linkedRequirementsProps.mergePreview}
+        suggestion={{
+          isFetchingSuggestion: linkedRequirementsProps.isFetchingSuggestion,
+          suggestedAction: linkedRequirementsProps.suggestedAction,
+          isSuggestionDismissed: linkedRequirementsProps.isSuggestionDismissed,
+          lastMergeInfo: linkedRequirementsProps.lastMergeInfo,
+          mergePreview: linkedRequirementsProps.mergePreview,
+          selectedRequirement,
+        }}
+        suggestionHandlers={{
+          onFetchSuggestedAction: actionHandlers.onFetchSuggestedAction,
+          onConfirmSuggestion: actionHandlers.onConfirmSuggestion,
+          onDismissSuggestion: actionHandlers.onDismissSuggestion,
+          onEditSuggestion: actionHandlers.onEditSuggestion,
+          onUndoMerge: actionHandlers.onUndoMerge,
+          onEditRequirement: actionHandlers.onEditRequirement,
+        }}
       />
     </div>
   );

@@ -29,6 +29,50 @@ from ai_framework.workflow.requirement.extraction.validators import (
 
 log = logging.getLogger(__name__)
 
+MERGE_PROMPT = """You are a requirements analyst merging two related requirements into one.
+
+**CRITICAL: MERGE ≠ APPEND.** Do NOT concatenate or stitch the two inputs together. A merge is a \
+REWRITE — you must synthesize both inputs into a single, cohesive requirement that reads as if it \
+was always written as one. The output should be shorter and tighter than the two inputs combined, \
+not longer. If both inputs say similar things, say it once well.
+
+**CONSTRAINT**: The output must ONLY contain information present in the two input requirements below. \
+Do NOT add, infer, assume, or elaborate beyond what is explicitly stated.
+
+**Field-by-field instructions:**
+
+1. **description**: Rewrite into a single, unified description that covers the intent of both inputs. \
+Do NOT concatenate sentences from each input. Instead, identify the shared theme and write one \
+coherent description. Aim for conciseness — if both inputs express the same idea, state it once. \
+Do not pull information from implementation_description into description.
+
+2. **types**: Return the union of both type lists, deduplicated. Do not invent new types.
+
+3. **implementation_status**: Write an implementation status that aligns with the merged description. Valid values: "Implemented", "Planned", "To do", "Won't do".
+
+4. **implementation_description**: Rewrite into a single, unified implementation description. \
+Do NOT append one input's text after the other. Synthesize the key points into coherent prose.
+
+5. **requirement_verification**: Rewrite into a single, unified verification method. \
+Do NOT list both inputs' verification steps back-to-back. Synthesize into a coherent approach. \
+Set to null if neither input has a verification method.
+
+**Existing Requirement:**
+- Description: {existing_description}
+- Types: {existing_types}
+- Implementation status: {existing_status}
+- Implementation description: {existing_impl_desc}
+- Requirement verification: {existing_verification}
+
+**New Requirement to Integrate:**
+- Description: {extracted_description}
+- Types: {extracted_types}
+- Implementation status: {extracted_status}
+- Implementation description: {extracted_impl_desc}
+- Requirement verification: {extracted_verification}
+
+Return the merged requirement."""
+
 
 class RequirementDocumentService:
     """Service for handling requirement document-related business logic."""
@@ -327,7 +371,7 @@ class RequirementDocumentService:
 
         # Invalidate sibling merge suggestions targeting the same requirement
         invalidated_ids: list[str] = []
-        if action == "merge" and target_id:
+        if action in ("merge", "attach") and target_id:
             invalidated_ids = self.invalidate_merge_suggestions_for_target(
                 target_id,
                 exclude_extracted_requirement_id=extracted_requirement_id,
@@ -363,6 +407,71 @@ class RequirementDocumentService:
             )
             invalidated_ids.append(str(sibling.id))
         return invalidated_ids
+
+    def undo_merge(
+        self,
+        extracted_requirement_id: str,
+        requirement_id: str,
+        suggestion_restore: dict | None = None,
+    ) -> dict:
+        """Undo a merge by restoring the requirement to its previous state.
+
+        1. Restores the target requirement from its latest history entry
+        2. Deletes the extraction link
+        3. Optionally restores the AI suggestion on the extracted requirement
+        4. Invalidates stale merge suggestions targeting the restored requirement
+        5. Returns the restored requirement data and invalidated IDs
+        """
+        # Validate extracted requirement exists
+        db_req = self.requirement_repository.get_extracted_requirement_by_id(
+            extracted_requirement_id
+        )
+        if not db_req:
+            raise HTTPException(
+                status_code=404, detail="Extracted requirement not found"
+            )
+
+        # Restore the requirement from history
+        restored = self.requirement_repository.restore_from_latest_history(
+            requirement_id
+        )
+        if not restored:
+            raise HTTPException(
+                status_code=400,
+                detail="No history available to restore from",
+            )
+
+        # Delete the extraction link
+        self.extraction_link_repository.delete_link(
+            requirement_id, extracted_requirement_id
+        )
+
+        # Restore the AI suggestion if snapshot provided
+        if suggestion_restore and suggestion_restore.get("suggested_action"):
+            self.requirement_repository.set_extracted_requirement_suggestion(
+                extracted_requirement_id,
+                action=suggestion_restore.get("suggested_action"),
+                target_requirement_id=suggestion_restore.get(
+                    "suggested_target_requirement_id"
+                ),
+                justification=suggestion_restore.get("suggestion_justification"),
+                similarity_score=suggestion_restore.get(
+                    "suggestion_similarity_score"
+                ),
+                merge_preview=suggestion_restore.get("merge_preview"),
+            )
+
+        # Invalidate stale merge suggestions targeting the restored requirement
+        invalidated_ids = self.invalidate_merge_suggestions_for_target(
+            requirement_id,
+            exclude_extracted_requirement_id=extracted_requirement_id,
+        )
+
+        return {
+            "status": "undone",
+            "restored_requirement": restored.model_dump(),
+            "invalidated_ids": invalidated_ids,
+        }
 
     def dismiss_suggestion(self, extracted_requirement_id: str) -> dict:
         """Dismiss the AI suggestion by clearing all suggestion columns."""
@@ -417,52 +526,7 @@ class RequirementDocumentService:
         if not requirement:
             raise HTTPException(status_code=404, detail="Requirement not found")
 
-        # Prepare the prompt
-        prompt = """You are a requirements analyst merging two related requirements into one.
-
-**CRITICAL: MERGE ≠ APPEND.** Do NOT concatenate or stitch the two inputs together. A merge is a \
-REWRITE — you must synthesize both inputs into a single, cohesive requirement that reads as if it \
-was always written as one. The output should be shorter and tighter than the two inputs combined, \
-not longer. If both inputs say similar things, say it once well.
-
-**CONSTRAINT**: The output must ONLY contain information present in the two input requirements below. \
-Do NOT add, infer, assume, or elaborate beyond what is explicitly stated.
-
-**Field-by-field instructions:**
-
-1. **description**: Rewrite into a single, unified description that covers the intent of both inputs. \
-Do NOT concatenate sentences from each input. Instead, identify the shared theme and write one \
-coherent description. Aim for conciseness — if both inputs express the same idea, state it once. \
-Do not pull information from implementation_description into description.
-
-2. **types**: Return the union of both type lists, deduplicated. Do not invent new types.
-
-3. **implementation_status**: Write an implementation status that aligns with the merged description. Valid values: "Implemented", "Planned", "To do", "Won't do".
-
-4. **implementation_description**: Rewrite into a single, unified implementation description. \
-Do NOT append one input's text after the other. Synthesize the key points into coherent prose.
-
-5. **requirement_verification**: Rewrite into a single, unified verification method. \
-Do NOT list both inputs' verification steps back-to-back. Synthesize into a coherent approach. \
-Set to null if neither input has a verification method.
-
-**Existing Requirement:**
-- Description: {existing_description}
-- Types: {existing_types}
-- Implementation status: {existing_status}
-- Implementation description: {existing_impl_desc}
-- Requirement verification: {existing_verification}
-
-**New Requirement to Integrate:**
-- Description: {extracted_description}
-- Types: {extracted_types}
-- Implementation status: {extracted_status}
-- Implementation description: {extracted_impl_desc}
-- Requirement verification: {extracted_verification}
-
-Return the merged requirement."""
-
-        formatted_prompt = prompt.format(
+        formatted_prompt = MERGE_PROMPT.format(
             existing_description=requirement.description,
             existing_types=", ".join(requirement.types),
             existing_status=requirement.implementation_status,
@@ -498,6 +562,19 @@ Return the merged requirement."""
             merged, requirement, extracted_requirement_db
         )
 
+    async def _run_merge_validation(self, label: str, coro):
+        """Run a validation coroutine with standardised error handling for merges."""
+        try:
+            return await coro
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.error(f"{label} failed during merge: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"{label} failed during merge",
+            )
+
     async def _validate_merged_requirement(
         self,
         merged: crud_models.MergedRequirement,
@@ -515,7 +592,7 @@ Return the merged requirement."""
         organization_id = get_organization_id()
 
         # 1. Quality check — validate merged description is clear and self-contained
-        try:
+        async def _quality_check():
             quality_agent = create_quality_check_agent()
             quality_result = (
                 await run_agent_with_retry(
@@ -550,17 +627,11 @@ Return the merged requirement."""
                 merged.description = quality_fix_result.value
             else:
                 merged.description = quality_result.value
-        except HTTPException:
-            raise
-        except Exception as e:
-            log.error(f"Quality validation failed during merge: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail="Quality validation failed during merge",
-            )
+
+        await self._run_merge_validation("Quality validation", _quality_check())
 
         # 2. Type consistency — auto-correct merged types
-        try:
+        async def _type_consistency():
             existing_types = self.requirement_repository.get_distinct_types(
                 organization_id
             )
@@ -573,15 +644,11 @@ Return the merged requirement."""
                 )
             ).output
             merged.types = type_result.value
-        except Exception as e:
-            log.error(f"Type consistency validation failed during merge: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail="Type consistency validation failed during merge",
-            )
+
+        await self._run_merge_validation("Type consistency validation", _type_consistency())
 
         # 3. Implementation validation — auto-correct status and description
-        try:
+        async def _implementation():
             (
                 corrected_status,
                 corrected_impl_desc,
@@ -596,12 +663,8 @@ Return the merged requirement."""
             )
             merged.implementation_status = corrected_status
             merged.implementation_description = corrected_impl_desc
-        except Exception as e:
-            log.error(f"Implementation validation failed during merge: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail="Implementation validation failed during merge",
-            )
+
+        await self._run_merge_validation("Implementation validation", _implementation())
 
         # 4. Verification validation — auto-correct verification method
         has_input_verification = (
@@ -609,7 +672,7 @@ Return the merged requirement."""
             or extracted_requirement_db.requirement_verification
         )
         if has_input_verification:
-            try:
+            async def _verification():
                 (
                     corrected_verification,
                     _changes,
@@ -622,11 +685,7 @@ Return the merged requirement."""
                     requirement_verification=merged.requirement_verification or "",
                 )
                 merged.requirement_verification = corrected_verification
-            except Exception as e:
-                log.error(f"Verification validation failed during merge: {e}")
-                raise HTTPException(
-                    status_code=500,
-                    detail="Verification validation failed during merge",
-                )
+
+            await self._run_merge_validation("Verification validation", _verification())
 
         return merged

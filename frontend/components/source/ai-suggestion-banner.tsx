@@ -1,16 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Check,
-  X,
-  Loader2,
-  Sparkles,
-  Link,
-  Merge,
-  Plus,
-  Pencil,
-} from "lucide-react";
+import { X, Check, ExternalLink, Sparkles, Merge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RequirementCard } from "@/components/common/requirement-card";
@@ -31,25 +22,38 @@ interface AISuggestionBannerProps {
 
 const ACTION_CONFIG: Record<
   SuggestedActionType,
-  { label: string; icon: typeof Link; color: string; badgeBg: string }
+  {
+    badgeLabel: string;
+    badgeBg: string;
+    badgeIcon?: typeof Merge;
+    confirmLabel: string;
+    confirmingLabel: string;
+    confirmBg: string;
+    confirmIcon?: typeof Merge;
+  }
 > = {
   attach: {
-    label: "Attach",
-    icon: Link,
-    color: "text-blue-700",
+    badgeLabel: "Attach to Requirement",
     badgeBg: "bg-blue-50 border-blue-200 text-blue-700",
+    confirmLabel: "Attach to requirement",
+    confirmingLabel: "Attaching to requirement",
+    confirmBg: "bg-[#080705] text-white hover:bg-[#2a2a2a]",
   },
   merge: {
-    label: "Merge",
-    icon: Merge,
-    color: "text-amber-700",
-    badgeBg: "bg-amber-50 border-amber-200 text-amber-700",
+    badgeLabel: "Merge Requirements",
+    badgeBg: "bg-[#F4D5C8] text-[#080705]",
+    badgeIcon: Merge,
+    confirmLabel: "Merge Requirements",
+    confirmingLabel: "Merging requirements",
+    confirmBg: "bg-[#EB5110] text-[#FAFFFD] hover:bg-[#EB5110]/90",
+    confirmIcon: Merge,
   },
   create_new: {
-    label: "Create new",
-    icon: Plus,
-    color: "text-green-700",
+    badgeLabel: "Create Requirement",
     badgeBg: "bg-green-50 border-green-200 text-green-700",
+    confirmLabel: "Create Requirement",
+    confirmingLabel: "Creating requirement",
+    confirmBg: "bg-[#080705] text-white hover:bg-[#2a2a2a]",
   },
 };
 
@@ -61,12 +65,9 @@ export function AISuggestionBanner({
   mergePreview,
 }: AISuggestionBannerProps) {
   const [isConfirming, setIsConfirming] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
 
   const config = ACTION_CONFIG[suggestion.action];
-  const ActionIcon = config.icon;
   const isMerge = suggestion.action === "merge";
-  const isActing = isConfirming || isEditing;
 
   const handleConfirm = async () => {
     setIsConfirming(true);
@@ -77,32 +78,22 @@ export function AISuggestionBanner({
     }
   };
 
-  const handleEdit = async () => {
-    if (!onEdit) return;
-    setIsEditing(true);
-    try {
-      await onEdit();
-    } finally {
-      setIsEditing(false);
-    }
-  };
-
   return (
     <div
-      className="flex flex-col gap-3 p-4 border border-[#E6E6E6] rounded-lg bg-[#FAFAFA]"
+      className="flex flex-col gap-3"
       data-testid="ai-suggestion-banner"
     >
       {/* Header row */}
       <div className="flex items-center gap-2">
-        <Sparkles size={14} className="text-[#080705] flex-none" />
-        <span className="font-inter font-semibold text-sm text-[#080705]">
-          Rekwai Suggestion
+        <Sparkles size={16} className="text-[#080705]" />
+        <span className="font-inter font-semibold text-base text-[#080705]">
+          Suggestion
         </span>
         <Badge
-          className={`flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded border ${config.badgeBg}`}
+          className={`flex items-center gap-1.5 px-1.5 py-0.5 text-xs font-medium rounded-[3px] ${config.badgeBg}`}
         >
-          <ActionIcon size={10} />
-          {config.label}
+          {config.badgeLabel}
+          {config.badgeIcon ? <config.badgeIcon size={12} /> : <ExternalLink size={10} />}
         </Badge>
       </div>
 
@@ -111,17 +102,39 @@ export function AISuggestionBanner({
         {suggestion.justification}
       </p>
 
+      {/* Action buttons — between justification and preview */}
+      <div className="flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onDismiss}
+          disabled={isConfirming}
+          className="flex items-center gap-1.5 text-xs px-2.5 py-1 h-7 rounded-[12px] bg-[#F6F6F6] hover:bg-[#E6E6E6] text-[#080705]"
+          data-testid="dismiss-suggestion-button"
+        >
+          Dismiss Suggestion
+          <X size={12} />
+        </Button>
+        <div className="flex-1" />
+        <Button
+          size="sm"
+          onClick={handleConfirm}
+          disabled={isConfirming}
+          className={`flex items-center gap-1.5 text-xs px-2.5 py-1 h-7 rounded-[12px] ${config.confirmBg}`}
+          data-testid="confirm-suggestion-button"
+        >
+          {isConfirming ? config.confirmingLabel : config.confirmLabel}
+          {config.confirmIcon ? <config.confirmIcon size={12} /> : isConfirming ? <Check size={12} /> : null}
+        </Button>
+      </div>
+
       {/* Target requirement preview */}
       {suggestion.target_requirement &&
         (isMerge && mergePreview ? (
           <MergeDiffCard
             mergedData={mergePreview}
             targetRequirement={suggestion.target_requirement}
-            header={
-              <span className="font-inter font-semibold text-xs leading-5 text-[#080705]">
-                {suggestion.target_requirement.requirement_key}
-              </span>
-            }
+            onEdit={onEdit}
           />
         ) : (
           <RequirementCard
@@ -141,52 +154,6 @@ export function AISuggestionBanner({
             }
           />
         ))}
-
-      {/* Action buttons */}
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          onClick={handleConfirm}
-          disabled={isActing}
-          className="flex items-center gap-1.5 bg-[#080705] text-white hover:bg-[#2a2a2a] text-xs px-3 py-1.5 h-7 rounded-md"
-          data-testid="confirm-suggestion-button"
-        >
-          {isConfirming ? (
-            <Loader2 size={12} className="animate-spin" />
-          ) : (
-            <Check size={12} />
-          )}
-          Confirm
-        </Button>
-        {isMerge && onEdit && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleEdit}
-            disabled={isActing}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 h-7 rounded-md border-[#E6E6E6] text-[#080705] hover:bg-[#E6E6E6]"
-            data-testid="edit-suggestion-button"
-          >
-            {isEditing ? (
-              <Loader2 size={12} className="animate-spin" />
-            ) : (
-              <Pencil size={12} />
-            )}
-            Edit
-          </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onDismiss}
-          disabled={isActing}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 h-7 rounded-md text-[#080705] hover:bg-[#E6E6E6]"
-          data-testid="dismiss-suggestion-button"
-        >
-          <X size={12} />
-          Dismiss
-        </Button>
-      </div>
     </div>
   );
 }

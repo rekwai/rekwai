@@ -12,6 +12,7 @@ type ToasterToast = ToastProps & {
   id: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
+  action?: React.ReactNode;
 };
 
 let count = 0;
