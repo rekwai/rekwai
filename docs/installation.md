@@ -37,7 +37,7 @@ You'll need an API key from one of the supported AI providers:
    echo "S3_ACCESS_KEY_ID=GK$(openssl rand -hex 12)" >> .env
    echo "S3_SECRET_ACCESS_KEY=$(openssl rand -hex 32)" >> .env
    echo "GARAGE_RPC_SECRET=$(openssl rand -hex 32)" >> .env
-   echo "GARAGE_ADMIN_TOKEN=$(openssl rand -hex 32)" >> .env
+   echo "GARAGE_ADMIN_TOKEN=$(openssl rand -base64 32)" >> .env
    echo "GARAGE_METRICS_TOKEN=$(openssl rand -base64 32)" >> .env
    ```
 5. **Configure your AI provider:**
