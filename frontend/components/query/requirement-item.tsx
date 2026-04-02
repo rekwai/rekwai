@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Requirement } from "@/types/requirement-types";
 import { buttonStyles } from "@/lib/utils/question-modal";
 import { RequirementCard } from "@/components/common/requirement-card";
+import { TypeBadges, StatusBadge } from "@/components/common/requirement-badges";
 
 interface RequirementItemProps {
   requirement: Requirement;
@@ -24,8 +25,8 @@ export function RequirementItem({
   return (
     <RequirementCard
       description={requirement.description}
-      types={requirement.types}
-      implementationStatus={requirement.implementation_status}
+      typeBadges={<TypeBadges types={requirement.types} />}
+      statusBadge={<StatusBadge status={requirement.implementation_status} />}
       implementationDescription={requirement.implementation_description}
       showVerification={false}
       header={

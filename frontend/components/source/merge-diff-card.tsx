@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Check } from "lucide-react";
-import { diffWords } from "diff";
+import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { RequirementCard } from "@/components/common/requirement-card";
+import { PreviewCard } from "@/components/common/preview-card";
+import { WordDiff } from "@/components/common/word-diff";
 import { MergedRequirement, Requirement } from "@/types/requirement-types";
 
 type ViewMode = "suggestion" | "original";
@@ -12,44 +14,6 @@ interface MergeDiffCardProps {
   mergedData: MergedRequirement;
   targetRequirement: Requirement;
   onEdit?: () => void | Promise<unknown>;
-}
-
-function WordDiff({
-  oldText,
-  newText,
-}: {
-  oldText: string;
-  newText: string;
-}) {
-  const changes = diffWords(oldText, newText);
-
-  return (
-    <span>
-      {changes.map((part, i) => {
-        if (part.removed) {
-          return (
-            <span
-              key={i}
-              className="line-through text-muted-foreground/60 px-0.5"
-            >
-              {part.value}
-            </span>
-          );
-        }
-        if (part.added) {
-          return (
-            <span
-              key={i}
-              className="bg-amber-50 text-amber-700 rounded px-0.5"
-            >
-              {part.value}
-            </span>
-          );
-        }
-        return <span key={i}>{part.value}</span>;
-      })}
-    </span>
-  );
 }
 
 function CheckboxToggle({
@@ -71,9 +35,7 @@ function CheckboxToggle({
         }`}
         onClick={() => onChange(!checked)}
       >
-        {checked && (
-          <Check size={10} className="text-white" />
-        )}
+        {checked && <Check size={10} className="text-white" />}
       </div>
       <span className="font-inter font-normal text-sm text-[#080705]">
         {label}
@@ -130,126 +92,81 @@ export function MergeDiffCard({
     ? targetRequirement.implementation_status
     : mergedData.implementation_status;
 
+  const verificationText = isOriginal
+    ? targetRequirement.requirement_verification || ""
+    : mergedData.requirement_verification ||
+      targetRequirement.requirement_verification ||
+      "";
+
   return (
-    <div
-      className="flex flex-col items-start p-0 border border-[#E6E6E6] rounded-lg flex-none self-stretch flex-grow-0 bg-[#F6F6F6]"
-      data-testid="merge-diff-card"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 w-full h-[52px] bg-white border-b border-[#E6E6E6] rounded-t-lg">
-        <div className="flex items-center gap-4">
-          <span className="font-inter font-semibold text-base text-[#080705]">
-            Preview
-          </span>
-          {onEdit && (
-            <button
-              type="button"
-              onClick={onEdit}
-              className="flex items-center gap-1 font-inter text-xs bg-[#F6F6F6] px-2.5 py-1 h-7 rounded-[12px] text-[#080705] hover:bg-[#E6E6E6]"
-              data-testid="edit-merge-preview-button"
-            >
-              Edit
-              <Pencil size={12} />
-            </button>
-          )}
-        </div>
+    <PreviewCard
+      testId="merge-diff-card"
+      onEdit={onEdit}
+      editTestId="edit-merge-preview-button"
+      headerRight={
         <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
-      </div>
-
-      {/* Content */}
-      <div className="flex flex-col items-start p-6 gap-6 flex-none order-1 self-stretch flex-grow-0 w-full">
-        {/* Description field */}
-        <div className="flex flex-col items-start p-0 gap-1 flex-none order-0 self-stretch flex-grow-0">
-          <div className="flex flex-row items-center gap-2 w-full flex-wrap">
-            <span className="font-inter font-bold text-base leading-5 text-[#1C2024]">
-              Description
-            </span>
-            <div className="flex flex-row items-center gap-2 flex-wrap">
-              {isOriginal ? (
-                targetRequirement.types.map((type, index) => (
-                  <Badge key={index} className={TYPE_BADGE_CLASS}>
-                    {type}
-                  </Badge>
-                ))
-              ) : (
-                <>
-                  {unchangedTypes.map((type, index) => (
-                    <Badge key={index} className={TYPE_BADGE_CLASS}>
-                      {type}
-                    </Badge>
-                  ))}
-                  {newTypes.map((type, index) => (
-                    <Badge key={`new-${index}`} className={NEW_TYPE_BADGE_CLASS}>
-                      {type}
-                    </Badge>
-                  ))}
-                </>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-row items-center py-2 px-0 w-full rounded">
-            <div className="w-full font-inter font-normal text-sm leading-[17px] text-[#080705]">
-              {isOriginal ? (
-                targetRequirement.description
-              ) : (
-                <WordDiff
-                  oldText={targetRequirement.description}
-                  newText={mergedData.description}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-
-        <hr className="w-full border-[#E6E6E6]" />
-
-        {/* Implementation field */}
-        <div className="flex flex-col items-start p-0 gap-1 flex-none order-1 self-stretch flex-grow-0">
-          <div className="flex flex-row items-center gap-2 w-full">
-            <span className="font-inter font-bold text-base leading-5 text-[#1C2024]">
-              Implementation
-            </span>
-            <Badge
-              className="px-1.5 py-0.5 text-xs font-medium rounded-[3px] bg-[#A2CFCA] text-[#080705]"
-            >
-              {displayStatus}
-            </Badge>
-          </div>
-          <div className="flex flex-row items-center py-2 px-0 w-full rounded">
-            <div className="w-full font-inter font-normal text-sm leading-[17px] text-[#080705]">
-              {isOriginal ? (
-                targetRequirement.implementation_description
-              ) : (
-                <WordDiff
-                  oldText={targetRequirement.implementation_description}
-                  newText={mergedData.implementation_description}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-
-        <hr className="w-full border-[#E6E6E6]" />
-
-        {/* Requirement Verification field */}
-        {(mergedData.requirement_verification ||
-          targetRequirement.requirement_verification) && (
-          <div className="flex flex-col items-start p-0 gap-1 flex-none order-2 self-stretch flex-grow-0">
-            <span className="font-inter font-bold text-base leading-5 text-[#1C2024]">
-              Verification
-            </span>
-            <div className="flex flex-row items-center py-2 px-0 w-full rounded">
-              <div className={`w-full font-inter font-normal text-sm leading-[17px] ${isOriginal ? "text-[#080705]" : "line-through text-[rgba(8,7,5,0.5)]"}`}>
-                {isOriginal ? (
-                  targetRequirement.requirement_verification || ""
-                ) : (
-                  mergedData.requirement_verification || targetRequirement.requirement_verification || ""
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+      }
+    >
+      <RequirementCard
+        description={
+          isOriginal ? (
+            targetRequirement.description
+          ) : (
+            <WordDiff
+              oldText={targetRequirement.description}
+              newText={mergedData.description}
+            />
+          )
+        }
+        typeBadges={
+          isOriginal ? (
+            targetRequirement.types.map((type, index) => (
+              <Badge key={index} className={TYPE_BADGE_CLASS}>
+                {type}
+              </Badge>
+            ))
+          ) : (
+            <>
+              {unchangedTypes.map((type, index) => (
+                <Badge key={index} className={TYPE_BADGE_CLASS}>
+                  {type}
+                </Badge>
+              ))}
+              {newTypes.map((type, index) => (
+                <Badge key={`new-${index}`} className={NEW_TYPE_BADGE_CLASS}>
+                  {type}
+                </Badge>
+              ))}
+            </>
+          )
+        }
+        statusBadge={
+          <Badge className="px-1.5 py-0.5 text-xs font-medium rounded-[3px] bg-[#A2CFCA] text-[#080705]">
+            {displayStatus}
+          </Badge>
+        }
+        implementationDescription={
+          isOriginal ? (
+            targetRequirement.implementation_description
+          ) : (
+            <WordDiff
+              oldText={targetRequirement.implementation_description}
+              newText={mergedData.implementation_description}
+            />
+          )
+        }
+        verificationDescription={
+          verificationText ? (
+            isOriginal ? (
+              verificationText
+            ) : (
+              <span className="line-through text-[rgba(8,7,5,0.5)]">
+                {verificationText}
+              </span>
+            )
+          ) : undefined
+        }
+      />
+    </PreviewCard>
   );
 }

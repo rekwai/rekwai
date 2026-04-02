@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Undo2, ExternalLink, Loader2, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { RequirementCard } from "@/components/common/requirement-card";
+import { TypeBadges, StatusBadge } from "@/components/common/requirement-badges";
 import { Requirement } from "@/types/requirement-types";
 
 interface MergeStatusBannerProps {
@@ -80,8 +81,8 @@ export function MergeStatusBanner({
           </div>
           <RequirementCard
             description={mergedRequirement.description}
-            types={mergedRequirement.types}
-            implementationStatus={mergedRequirement.implementation_status}
+            typeBadges={<TypeBadges types={mergedRequirement.types} />}
+            statusBadge={<StatusBadge status={mergedRequirement.implementation_status} />}
             implementationDescription={
               mergedRequirement.implementation_description
             }

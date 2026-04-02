@@ -5,6 +5,7 @@ import { RotateCcw, ArrowRight, Plus, Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RequirementCard } from "@/components/common/requirement-card";
+import { TypeBadges, StatusBadge } from "@/components/common/requirement-badges";
 import { RequirementItem } from "@/types/requirement-types";
 
 interface DismissedSuggestionBannerProps {
@@ -93,10 +94,8 @@ export function DismissedSuggestionBanner({
               extractedRequirement.description ||
               ""
             }
-            types={extractedRequirement.types || []}
-            implementationStatus={
-              extractedRequirement.implementation || "To do"
-            }
+            typeBadges={<TypeBadges types={extractedRequirement.types || []} />}
+            statusBadge={<StatusBadge status={extractedRequirement.implementation || "To do"} />}
             implementationDescription={
               extractedRequirement.implementationDescription || ""
             }

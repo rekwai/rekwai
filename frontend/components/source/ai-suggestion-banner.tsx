@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { X, Check, ExternalLink, Sparkles, Merge, Pencil, Plus } from "lucide-react";
+import { X, Check, ExternalLink, Sparkles, Merge, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RequirementCard } from "@/components/common/requirement-card";
+import { PreviewCard } from "@/components/common/preview-card";
+import { TypeBadges, StatusBadge } from "@/components/common/requirement-badges";
 import { MergeDiffCard } from "./merge-diff-card";
 import {
   SuggestedAction,
@@ -142,45 +144,24 @@ export function AISuggestionBanner({
           onEdit={onEdit}
         />
       ) : suggestion.action === "create_new" && extractedRequirement ? (
-        <div
-          className="flex flex-col items-start p-0 border border-[#E6E6E6] rounded-lg flex-none self-stretch flex-grow-0 bg-[#F6F6F6]"
-          data-testid="create-preview-card"
+        <PreviewCard
+          testId="create-preview-card"
+          onEdit={onEditExtraction}
+          editTestId="edit-create-preview-button"
         >
-          <div className="flex items-center px-3 w-full h-[52px] bg-white border-b border-[#E6E6E6] rounded-t-lg">
-            <div className="flex items-center gap-4">
-              <span className="font-inter font-semibold text-base text-[#080705]">
-                Preview
-              </span>
-              {onEditExtraction && (
-                <button
-                  type="button"
-                  onClick={onEditExtraction}
-                  className="flex items-center gap-1 font-inter text-xs bg-[#F6F6F6] px-2.5 py-1 h-7 rounded-[12px] text-[#080705] hover:bg-[#E6E6E6]"
-                  data-testid="edit-create-preview-button"
-                >
-                  Edit
-                  <Pencil size={12} />
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="p-6">
-            <RequirementCard
-              description={extractedRequirement.text || extractedRequirement.description}
-              types={extractedRequirement.types}
-              implementationStatus={extractedRequirement.implementation}
-              implementationDescription={extractedRequirement.implementationDescription || ""}
-              verificationDescription={extractedRequirement.requirementVerification || ""}
-            />
-          </div>
-        </div>
+          <RequirementCard
+            description={extractedRequirement.text || extractedRequirement.description}
+            typeBadges={<TypeBadges types={extractedRequirement.types} />}
+            statusBadge={<StatusBadge status={extractedRequirement.implementation} />}
+            implementationDescription={extractedRequirement.implementationDescription || ""}
+            verificationDescription={extractedRequirement.requirementVerification || ""}
+          />
+        </PreviewCard>
       ) : suggestion.target_requirement ? (
         <RequirementCard
           description={suggestion.target_requirement.description}
-          types={suggestion.target_requirement.types}
-          implementationStatus={
-            suggestion.target_requirement.implementation_status
-          }
+          typeBadges={<TypeBadges types={suggestion.target_requirement.types} />}
+          statusBadge={<StatusBadge status={suggestion.target_requirement.implementation_status} />}
           implementationDescription={
             suggestion.target_requirement.implementation_description
           }

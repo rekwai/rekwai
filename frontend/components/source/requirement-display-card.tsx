@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { RequirementItem } from "@/types/requirement-types";
 import { buttonStyles } from "@/lib/utils/styles";
 import { RequirementCard } from "@/components/common/requirement-card";
+import { TypeBadges, StatusBadge } from "@/components/common/requirement-badges";
 
 interface RequirementDisplayCardProps {
   requirement: RequirementItem;
@@ -48,8 +49,8 @@ export function RequirementDisplayCard({
       {/* Card */}
       <RequirementCard
         description={requirementText}
-        types={types}
-        implementationStatus={implementationStatus}
+        typeBadges={<TypeBadges types={types} />}
+        statusBadge={<StatusBadge status={implementationStatus} />}
         implementationDescription={implementationDescription}
         verificationDescription={requirementVerification}
       />
