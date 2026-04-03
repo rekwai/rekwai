@@ -26,13 +26,13 @@ You'll need an API key from one of the supported AI providers:
 ### Step 1: Download and Initial Configuration
 
 1. In a terminal, navigate to the location where you want the `docker-compose.yml` and `.env` file to be.
-1. Download these two files:
+2. Download these two files:
    - [docker-compose.yml](https://github.com/rekwai/rekwai/raw/main/docker/docker-compose.yml)
    - [.env.example](https://github.com/rekwai/rekwai/raw/main/docker/.env.example)
-1. Rename `.env.example` to `.env` and open it in a text editor
-1. **Generate storage secrets** by running these commands (this expects you have openssl installed). It will append the
-generated secrets at the end of the `.env` file. **Note: only execute this once, the secrets need to remain the same in
-order for the services to function after restarting.**
+3. Rename `.env.example` to `.env` and open it in a text editor
+4. **Generate storage secrets** by running these commands (this expects you have openssl installed). It will append the
+   generated secrets at the end of the `.env` file. **Note: only execute this once, the secrets need to remain the same in
+   order for the services to function after restarting.**
    ```
    echo "S3_ACCESS_KEY_ID=GK$(openssl rand -hex 12)" >> .env
    echo "S3_SECRET_ACCESS_KEY=$(openssl rand -hex 32)" >> .env
@@ -40,7 +40,7 @@ order for the services to function after restarting.**
    echo "GARAGE_ADMIN_TOKEN=$(openssl rand -base64 32)" >> .env
    echo "GARAGE_METRICS_TOKEN=$(openssl rand -base64 32)" >> .env
    ```
-1. **Configure your AI provider:**
+5. **Configure your AI provider:**
    - Set `SELECTED_PROVIDER` to your chosen provider (`openai`, `gemini`, `anthropic`, or `openrouter`)
    - Fill in the API key for that provider
    - Configure the model settings (see below)
