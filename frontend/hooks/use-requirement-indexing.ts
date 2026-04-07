@@ -364,5 +364,6 @@ export function useRequirementIndexing({
     handleUnlinkRequirement,
     handleGenerateMerge,
     goToNext,
+    setRequirementsList: setRequirements,
   };
 }

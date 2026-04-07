@@ -241,6 +241,47 @@ export const generateRequirementFromQuestion = async (
 };
 
 /**
+ * Creates a new question for a questionnaire.
+ * @param questionnaireId - The UUID of the questionnaire.
+ * @param questionText - The text of the new question.
+ * @returns A promise resolving to the created QuestionnaireQuestion.
+ */
+export const addQuestionnaireQuestion = async (
+  questionnaireId: string,
+  questionText: string,
+): Promise<QuestionnaireQuestion> => {
+  const url = `${getApiUrl()}/questionnaires/${questionnaireId}/questions`;
+  return fetchApi<QuestionnaireQuestion>(url, {
+    method: "POST",
+    body: JSON.stringify({
+      questionnaire_id: questionnaireId,
+      question_text: questionText,
+    }),
+  });
+};
+
+/**
+ * Updates an existing questionnaire question.
+ * @param questionId - The UUID of the question.
+ * @param updates - Object containing fields to update.
+ * @returns A promise resolving to the updated QuestionnaireQuestion.
+ */
+export const updateQuestionnaireQuestion = async (
+  questionId: string,
+  updates: {
+    question_text?: string;
+    answer?: string;
+    answer_type?: AnswerType;
+  },
+): Promise<QuestionnaireQuestion> => {
+  const url = `${getApiUrl()}/questionnaires/questions/${questionId}`;
+  return fetchApi<QuestionnaireQuestion>(url, {
+    method: "PUT",
+    body: JSON.stringify(updates),
+  });
+};
+
+/**
  * Get similar requirements for a question.
  * @param questionId - The UUID of the question.
  * @param limit - Maximum number of similar requirements to return (default: 3).

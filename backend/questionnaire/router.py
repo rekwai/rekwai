@@ -13,6 +13,7 @@ from fastapi import (
     BackgroundTasks,
     status,
     Query,
+    HTTPException,
 )
 from fastapi.responses import PlainTextResponse, StreamingResponse
 
@@ -21,6 +22,7 @@ from dependencies import (
     get_question_service,
     get_async_tasks_service,
 )
+from questionnaire import models
 from questionnaire.models import (
     QuestionnaireQuestion,
     QuestionReviewInput,
@@ -60,12 +62,13 @@ async def upload_questionnaire_document_async(
 ):
     """Upload and process questionnaire document asynchronously, extracting questions."""
     task_id = async_tasks_service.create_task(
-        f"Extract questions from {file.filename}", TaskType.EXTRACT_QUESTIONS
+        f"Extract questions from {file.filename or 'unknown file'}",
+        TaskType.EXTRACT_QUESTIONS,
     )
     file_content = await file.read()
     background_tasks.add_task(
         service.upload_and_process_questionnaire_async,
-        file.filename,
+        file.filename or "unknown_file",
         file_content,
         client_id,
         product_id,
@@ -170,6 +173,39 @@ async def delete_question_endpoint(
     Deletes a specific questionnaire question.
     """
     return service.delete_question(question_id)
+
+
+@router.post(
+    "/{questionnaire_id}/questions",
+    response_model=QuestionnaireQuestion,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_question_endpoint(
+    questionnaire_id: str,
+    question_create: models.QuestionnaireQuestionCreate,
+    service: QuestionService = Depends(get_question_service),
+):
+    """
+    Create a new question for a specific questionnaire.
+    """
+    if question_create.questionnaire_id != questionnaire_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Questionnaire ID in body does not match URL path.",
+        )
+    return service.create_question(question_create)
+
+
+@router.put("/questions/{question_id}", response_model=QuestionnaireQuestion)
+async def update_question_endpoint(
+    question_id: UUID,
+    question_update: models.QuestionnaireQuestionUpdate,
+    service: QuestionService = Depends(get_question_service),
+):
+    """
+    Update an existing questionnaire question.
+    """
+    return service.update_question(question_id, question_update)
 
 
 @router.get("/{questionnaire_id}/preview", response_class=PlainTextResponse)

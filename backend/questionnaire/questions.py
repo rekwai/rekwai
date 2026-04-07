@@ -32,12 +32,13 @@ class QuestionService:
     def get_questions_by_questionnaire_id(
         self, questionnaire_id: str
     ) -> list[models.QuestionnaireQuestion]:
-        questions = self.repository.get_questions_by_questionnaire_id(questionnaire_id)
+        questions = self.repository.get_questions_by_questionnaire_id(
+            str(questionnaire_id)
+        )
         if not questions:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No questions found for questionnaire ID {questionnaire_id}",
-            )
+            # We return empty list instead of 404 if no questions found,
+            # as it's a valid state for a new questionnaire or one where all questions were deleted
+            return []
 
         return [
             models.QuestionnaireQuestion.model_validate(question)
@@ -51,7 +52,7 @@ class QuestionService:
         db_questionnaire = self.repository.get_questionnaire_by_key_or_raise(
             questionnaire_key, organization_id
         )
-        return self.get_questions_by_questionnaire_id(db_questionnaire.id)
+        return self.get_questions_by_questionnaire_id(str(db_questionnaire.id))
 
     def review_question(
         self, question_id: UUID, review_input: models.QuestionReviewInput
@@ -64,10 +65,33 @@ class QuestionService:
         return models.QuestionnaireQuestion.model_validate(db_question)
 
     def delete_question(self, question_id: UUID) -> models.QuestionnaireQuestion:
+        # First delete any links to requirements
+        links = self.link_repository.get_links_for_question(str(question_id))
+        for link in links:
+            self.link_repository.delete_link(link.requirement_id, link.question_id)
+
         db_question = self.repository.delete_question(question_id)
         if not db_question:
             raise HTTPException(
                 status_code=404, detail="Questionnaire question not found"
+            )
+        return models.QuestionnaireQuestion.model_validate(db_question)
+
+    def create_question(
+        self, question_create: models.QuestionnaireQuestionCreate
+    ) -> models.QuestionnaireQuestion:
+        """Create a new questionnaire question."""
+        db_question = self.repository.create_question(question_create)
+        return models.QuestionnaireQuestion.model_validate(db_question)
+
+    def update_question(
+        self, question_id: UUID, update_data: models.QuestionnaireQuestionUpdate
+    ) -> models.QuestionnaireQuestion:
+        """Update a questionnaire question."""
+        db_question = self.repository.update_question(str(question_id), update_data)
+        if not db_question:
+            raise HTTPException(
+                status_code=404, detail=f"Question with id {question_id} not found."
             )
         return models.QuestionnaireQuestion.model_validate(db_question)
 
@@ -111,7 +135,7 @@ class QuestionService:
 
         # Get the questionnaire to find the product_id
         questionnaire = self.repository.get_questionnaire_by_id(
-            question.questionnaire_id
+            str(question.questionnaire_id)
         )
         if not questionnaire:
             raise HTTPException(
@@ -121,11 +145,11 @@ class QuestionService:
 
         return (
             await self.comparison_service.find_similar_requirements_with_llm_comparison(
-                text_to_embed=question.question_text,
-                doc_req_text=question.question_text,
-                product_id=questionnaire.product_id,
+                text_to_embed=str(question.question_text),
+                doc_req_text=str(question.question_text),
+                product_id=str(questionnaire.product_id),
                 limit=limit,
-                filter_reqs=filter_reqs,
+                filter_reqs=filter_reqs or [],
             )
         )
 

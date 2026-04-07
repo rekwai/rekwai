@@ -272,7 +272,10 @@ export default function DocumentPage({
               size: `${documentData.content_size_bytes} bytes`,
               uploadDate: documentData.created_at,
               key: documentData.document_key,
+              id: documentData.id,
+              productId: documentData.product_id,
             }}
+            onRequirementsUpdate={hook.setRequirementsList}
           />
         </div>
 
