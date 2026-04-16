@@ -17,13 +17,14 @@ import { PageHeader } from "@/components/common/page-header";
 import { BulkApproveDialog } from "@/components/source/bulk-approve-dialog";
 import { RequirementItem } from "@/types/requirement-types";
 import { Loader2, Check } from "lucide-react";
+import { Trash } from "@phosphor-icons/react";
 
 const BASE_BUTTON_STYLES =
   "font-inter flex flex-row justify-center items-center px-2.5 py-1 gap-1.5 h-7 border-none rounded-[12px] text-xs leading-[15px] font-normal";
 
-const DELETE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-[#FBDBDD] dark:bg-[#8B2635] text-[#080705] dark:text-[#FAFFFD] hover:bg-[#FBDBDD]/90 dark:hover:bg-[#8B2635]/90`;
+const DELETE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-semantic-error-bg text-semantic-text hover:bg-semantic-indicator-8`;
 
-const BULK_CREATE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-[#15786A] text-[#FAFFFD] hover:bg-[#15786A]/90`;
+const BULK_CREATE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-semantic-success-fg text-semantic-white hover:bg-semantic-indicator-4`;
 
 interface RequirementHeaderProps {
   productKey: string;
@@ -110,7 +111,14 @@ export function RequirementHeader({
               disabled={isDeleting}
               className={DELETE_BUTTON_STYLES}
             >
-              {isDeleting ? "Deleting..." : "Delete source"}
+              {isDeleting ? (
+                "Deleting..."
+              ) : (
+                <>
+                  <Trash size={14} weight="bold" />
+                  Delete source
+                </>
+              )}
             </Button>
           </div>
         }

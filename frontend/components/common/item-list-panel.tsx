@@ -56,7 +56,7 @@ function AnswerTypeIcon({
         return (
           <Check
             size={12}
-            className="text-[#15786A] flex-shrink-0"
+            className="text-semantic-success-fg flex-shrink-0"
             data-testid="answer-type-yes"
           />
         );
@@ -64,7 +64,7 @@ function AnswerTypeIcon({
         return (
           <X
             size={12}
-            className="text-[#EE3D49] flex-shrink-0"
+            className="text-semantic-error-fg flex-shrink-0"
             data-testid="answer-type-no"
           />
         );
@@ -88,7 +88,7 @@ function AnswerTypeIcon({
     return (
       <Check
         size={12}
-        className="text-[#15786A] flex-shrink-0"
+        className="text-semantic-success-fg flex-shrink-0"
         data-testid="item-completed-indicator"
       />
     );
@@ -123,38 +123,38 @@ const ICON_CONFIG: Record<
 > = {
   attach: {
     icon: Link,
-    fullBg: "bg-[#E8F2FC]",
-    fullIcon: "text-[#0E309F]",
-    selectedFullBg: "bg-[#0C35BB]",
-    selectedFullIcon: "text-[#FAFFFD]",
-    mutedBg: "bg-[#F0F0F2]",
-    mutedIcon: "text-[#8E99B0]",
-    selectedMutedBg: "bg-[rgba(255,255,255,0.15)]",
-    selectedMutedIcon: "text-[rgba(255,255,255,0.5)]",
+    fullBg: "bg-semantic-indicator-6",
+    fullIcon: "text-semantic-indicator-2",
+    selectedFullBg: "bg-semantic-indicator-2",
+    selectedFullIcon: "text-semantic-white",
+    mutedBg: "bg-semantic-highlight",
+    mutedIcon: "text-muted-foreground",
+    selectedMutedBg: "bg-accent",
+    selectedMutedIcon: "text-muted-foreground",
     testId: "suggestion-type-attach",
   },
   merge: {
     icon: Merge,
     fullBg: "bg-[rgba(235,81,16,0.2)]",
-    fullIcon: "text-[#EB5110]",
-    selectedFullBg: "bg-[#F4D5C8]",
-    selectedFullIcon: "text-[#000000]",
-    mutedBg: "bg-[#F2EFED]",
-    mutedIcon: "text-[#B0A099]",
-    selectedMutedBg: "bg-[rgba(255,255,255,0.15)]",
-    selectedMutedIcon: "text-[rgba(255,255,255,0.5)]",
+    fullIcon: "text-semantic-indicator-3",
+    selectedFullBg: "bg-primitive-orange-100",
+    selectedFullIcon: "text-semantic-text",
+    mutedBg: "bg-semantic-highlight",
+    mutedIcon: "text-muted-foreground",
+    selectedMutedBg: "bg-accent",
+    selectedMutedIcon: "text-muted-foreground",
     testId: "suggestion-type-merge",
   },
   create_new: {
     icon: Plus,
-    fullBg: "bg-[#A2CFCA]",
-    fullIcon: "text-[#000000]",
-    selectedFullBg: "bg-[#A2CFCA]",
-    selectedFullIcon: "text-[#000000]",
-    mutedBg: "bg-[#E0EDEB]",
-    mutedIcon: "text-[#7A9994]",
-    selectedMutedBg: "bg-[rgba(255,255,255,0.15)]",
-    selectedMutedIcon: "text-[rgba(255,255,255,0.5)]",
+    fullBg: "bg-semantic-success-bg",
+    fullIcon: "text-semantic-text",
+    selectedFullBg: "bg-semantic-success-bg",
+    selectedFullIcon: "text-semantic-text",
+    mutedBg: "bg-semantic-highlight",
+    mutedIcon: "text-muted-foreground",
+    selectedMutedBg: "bg-accent",
+    selectedMutedIcon: "text-muted-foreground",
     testId: "suggestion-type-create-new",
   },
 };
@@ -183,7 +183,7 @@ function StatusIcon({
       <Info
         size={16}
         weight="fill"
-        className="text-[#F97316] flex-shrink-0"
+        className="text-semantic-indicator-3 flex-shrink-0"
         data-testid={`${testIdPrefix}-error-indicator`}
       />
     );
@@ -217,7 +217,7 @@ function StatusIcon({
   if (isCompleted) {
     return (
       <Check
-        className="text-[#15786A] flex-shrink-0 w-5 h-[18px]"
+        className="text-semantic-success-fg flex-shrink-0 w-5 h-[18px]"
         data-testid={`${testIdPrefix}-completed-indicator`}
       />
     );
@@ -253,30 +253,20 @@ export function ItemListPanel<T>({
   const metadataTab = tabs[1] as TabConfig | undefined;
 
   return (
-    <div className="bg-[#F6F6F6] dark:bg-[#1a1a1a] h-full">
+    <div className="bg-semantic-bg-elevation-1 h-full">
       <RadixTabs.Root value={activeTab} onValueChange={onTabChange}>
         {/* Segmented Control Tabs */}
         <div
-          className="sticky top-0 z-10 flex flex-col items-start px-3 pt-3 pb-3 gap-2.5 flex-shrink-0 bg-[#F6F6F6] dark:bg-[#1a1a1a]"
-          style={{
-            borderTop: 'none',
-            borderRight: 'none',
-            borderLeft: 'none',
-            borderBottom: '1px solid rgba(230, 230, 230, 1)'
-          }}
+          className="sticky top-0 z-10 flex flex-col items-start px-3 pt-3 pb-3 gap-2.5 flex-shrink-0 bg-semantic-bg-elevation-1 border-b border-semantic-stroke"
         >
           <RadixTabs.List
-            className="flex flex-row justify-center items-center p-0 bg-gradient-to-r from-[rgba(0,0,51,0.06)] to-[rgba(0,0,51,0.06)] rounded-[4px] h-8"
-            style={{
-              background:
-                "linear-gradient(90deg, rgba(0, 0, 51, 0.06) 0%, rgba(0, 0, 51, 0.06) 100%), rgba(255, 255, 255, 0.9)",
-            }}
+            className="flex flex-row justify-center items-center p-[2px] rounded-[6px] h-8 bg-muted"
           >
             {tabs.map((tab) => (
               <RadixTabs.Trigger
                 key={tab.value}
                 value={tab.value}
-                className="flex flex-row justify-center items-center px-3.5 py-3.5 gap-1 h-8 rounded-[4px] font-inter text-sm leading-4 tracking-[0.04px] data-[state=active]:bg-white data-[state=active]:border data-[state=active]:border-[rgba(0,0,45,0.09)] data-[state=active]:font-bold data-[state=active]:text-[rgba(0,5,9,0.89)] data-[state=inactive]:bg-transparent data-[state=inactive]:font-normal data-[state=inactive]:text-[rgba(0,5,9,0.89)]"
+                className="flex flex-row justify-center items-center px-3 py-1 h-full rounded-[4px] font-inter text-sm leading-4 tracking-[0.04px] data-[state=active]:bg-background data-[state=active]:border data-[state=active]:border-border data-[state=active]:font-medium data-[state=active]:text-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:font-normal data-[state=inactive]:text-muted-foreground"
                 data-testid={`${tab.value.toLowerCase()}-tab`}
               >
                 {tab.label}
@@ -313,7 +303,7 @@ export function ItemListPanel<T>({
                 </div>
               ) : (
                 <div
-                  className="divide-y divide-[#E3DBDB] dark:divide-[#1a1a1a]"
+                  className="divide-y divide-semantic-stroke"
                   data-testid={`${itemTestIdPrefix}-list`}
                 >
                   {items.map((item, index) => {
@@ -333,8 +323,8 @@ export function ItemListPanel<T>({
                         data-testid={`${itemTestIdPrefix}-${itemId}`}
                         className={`flex items-center gap-4 px-3 py-3 cursor-pointer transition-colors ${
                           isSelected
-                            ? "bg-[#080705] dark:bg-[#121212] text-[#FAFFFD]"
-                            : "bg-transparent hover:bg-gray-50 dark:hover:bg-[#1a1a1a]"
+                            ? "bg-accent text-semantic-text"
+                            : "bg-transparent hover:bg-muted/60"
                         }`}
                         onClick={() => onItemSelect(index)}
                       >
@@ -355,11 +345,7 @@ export function ItemListPanel<T>({
                           />
                         )}
                         <span
-                          className={`text-xs leading-[150%] flex-1 ${
-                            isSelected
-                              ? "text-[#FAFFFD] font-medium"
-                              : "text-[#080705] dark:text-[#FAFFFD] font-normal"
-                          }`}
+                          className="text-base leading-[150%] flex-1 text-semantic-text font-normal"
                           data-testid={
                             isSelected ? "current-item-text" : undefined
                           }

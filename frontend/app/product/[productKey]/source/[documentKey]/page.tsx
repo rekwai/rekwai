@@ -393,7 +393,7 @@ export default function DocumentPage({
   // LAYOUT STRUCTURE
   // ============================================
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-semantic-bg-elevation-1">
       {/* Header */}
       <div className="flex-none">
         <RequirementHeader
@@ -410,7 +410,7 @@ export default function DocumentPage({
       {/* Main Content - split 50/50 horizontally */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - 50% width, scrollable */}
-        <div className="w-1/2 overflow-y-auto border-r border-gray-200 dark:border-gray-700">
+        <div className="w-1/2 overflow-y-auto border-r border-semantic-stroke bg-semantic-bg-elevation-1">
           <RequirementListPanel
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -430,7 +430,7 @@ export default function DocumentPage({
         </div>
 
         {/* Right Panel - 50% width, scrollable */}
-        <div className="w-1/2 overflow-y-auto bg-[#FAFFFD] dark:bg-[#121212]">
+        <div className="w-1/2 overflow-y-auto bg-semantic-bg-elevation-2">
           <RequirementDetailsPanel
             selectedRequirement={selectedRequirement}
             requirements={requirements}

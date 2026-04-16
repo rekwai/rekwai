@@ -20,7 +20,7 @@ export function LinkedRequirementsHeader({
 }: LinkedRequirementsHeaderProps) {
   return (
     <div className="flex flex-row items-center p-0 gap-2.5 h-7">
-      <Badge className="flex flex-row justify-center items-center px-3 py-1.5 gap-1.5 h-7 bg-[#080705] dark:bg-[#080705] text-[#FAFFFD] dark:text-[#FAFFFD] rounded-[3px] font-inter font-medium text-sm leading-4 tracking-[0.04px]">
+      <Badge className="flex flex-row justify-center items-center px-3 py-1.5 gap-1.5 h-7 bg-semantic-emphasis text-semantic-white rounded-[3px] font-inter font-medium text-sm leading-4 tracking-[0.04px]">
         Existing requirements
       </Badge>
       <Button
@@ -31,7 +31,7 @@ export function LinkedRequirementsHeader({
         title="Create new requirement from source"
         data-testid="create-new-requirement-button"
       >
-        <Plus size={12} className="text-[#080705] dark:text-[#080705]" />
+        <Plus size={12} className="text-semantic-text" />
       </Button>
       <Button
         variant="ghost"
@@ -41,7 +41,7 @@ export function LinkedRequirementsHeader({
         title="Link existing requirement"
         data-testid="add-link-button"
       >
-        <Link size={12} className="text-[#080705] dark:text-[#080705]" />
+        <Link size={12} className="text-semantic-text" />
       </Button>
       <Button
         variant="ghost"
@@ -54,7 +54,7 @@ export function LinkedRequirementsHeader({
       >
         <RotateCcw
           size={12}
-          className={`text-[#080705] dark:text-[#080705] ${isFetchingSuggestion ? "animate-[spin_1s_linear_infinite_reverse]" : ""}`}
+          className={`text-semantic-text ${isFetchingSuggestion ? "animate-[spin_1s_linear_infinite_reverse]" : ""}`}
         />
       </Button>
     </div>

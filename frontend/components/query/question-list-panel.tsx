@@ -44,7 +44,6 @@ export function QuestionListPanel({
       getItemText={(q) => q.question_text}
       isItemCompleted={(q) => !!isAnswered(q)}
       getItemAnswerType={(q) => q.answer_type}
-      isItemError={(q) => !isAnswered(q)}
       itemTestIdPrefix="question-item"
       renderMetadata={() => (
         <div className="p-4 space-y-6">

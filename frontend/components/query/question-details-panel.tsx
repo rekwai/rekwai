@@ -52,7 +52,7 @@ export function QuestionDetailsPanel({
 
   if (!selectedQuestion) {
     return (
-      <div className="flex-1 flex items-center justify-center p-6 text-gray-500 dark:text-[#FAFFFD] italic">
+      <div className="flex-1 flex items-center justify-center p-6 text-muted-foreground italic">
         Select a question to view details.
       </div>
     );
@@ -65,10 +65,10 @@ export function QuestionDetailsPanel({
 
   return (
     <>
-      <div className="p-8 space-y-6" data-testid="question-details">
+      <div className="p-8 space-y-6 bg-semantic-bg-elevation-2 min-h-full" data-testid="question-details">
         {requirementActions.isLoadingRequirements ? (
           // Unified loading state for both Result and Requirements
-          <div className="flex flex-col items-center justify-center p-12 text-gray-500 dark:text-gray-400">
+          <div className="flex flex-col items-center justify-center p-12 text-muted-foreground">
             <div className="font-inter font-normal text-sm">
               Searching the system for answers...
             </div>

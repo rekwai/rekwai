@@ -94,7 +94,7 @@ export function RequirementSelectionModal({
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/10 z-40"
+        className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm supports-[backdrop-filter]:bg-black/15"
         onClick={handleClose}
         data-testid="requirement-selection-modal-overlay"
       />

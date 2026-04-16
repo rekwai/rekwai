@@ -39,27 +39,27 @@ const ACTION_CONFIG: Record<
 > = {
   attach: {
     badgeLabel: "Attach to Requirement",
-    badgeBg: "bg-[#E8F2FC] text-[#0E309F]",
+    badgeBg: "bg-semantic-indicator-6 text-semantic-indicator-2",
     confirmLabel: "Attach to requirement",
     confirmingLabel: "Attaching to requirement",
-    confirmBg: "bg-[#080705] text-white hover:bg-[#2a2a2a]",
+    confirmBg: "bg-semantic-emphasis text-semantic-white hover:bg-semantic-black",
   },
   merge: {
     badgeLabel: "Merge Requirements",
-    badgeBg: "bg-[#F4D5C8] text-[#080705]",
+    badgeBg: "bg-primitive-orange-100 text-semantic-text",
     badgeIcon: Merge,
     confirmLabel: "Merge Requirements",
     confirmingLabel: "Merging requirements",
-    confirmBg: "bg-[#EB5110] text-[#FAFFFD] hover:bg-[#EB5110]/90",
+    confirmBg: "bg-semantic-indicator-3 text-semantic-white hover:bg-semantic-indicator-3",
     confirmIcon: Merge,
   },
   create_new: {
     badgeLabel: "Create Requirement",
-    badgeBg: "bg-[#A2CFCA] text-[#080705]",
+    badgeBg: "bg-semantic-success-bg text-semantic-text",
     badgeIcon: Plus,
     confirmLabel: "Create Requirement",
     confirmingLabel: "Creating requirement",
-    confirmBg: "bg-[#080705] text-white hover:bg-[#2a2a2a]",
+    confirmBg: "bg-semantic-emphasis text-semantic-white hover:bg-semantic-black",
     confirmIcon: Plus,
   },
 };
@@ -94,8 +94,8 @@ export function AISuggestionBanner({
     >
       {/* Header row */}
       <div className="flex items-center gap-2">
-        <Sparkles size={16} className="text-[#080705]" />
-        <span className="font-inter font-semibold text-base text-[#080705]">
+        <Sparkles size={16} className="text-semantic-text" />
+        <span className="font-inter font-semibold text-base text-semantic-text">
           Suggestion
         </span>
         <Badge
@@ -107,7 +107,7 @@ export function AISuggestionBanner({
       </div>
 
       {/* Justification */}
-      <p className="font-inter font-medium text-sm text-[#000000] leading-5">
+      <p className="font-inter font-medium text-sm text-semantic-text leading-5">
         {suggestion.justification}
       </p>
 
@@ -118,7 +118,7 @@ export function AISuggestionBanner({
           size="sm"
           onClick={onDismiss}
           disabled={isConfirming}
-          className="flex items-center gap-1.5 text-xs px-2.5 py-1 h-7 rounded-[12px] bg-[#F6F6F6] hover:bg-[#E6E6E6] text-[#080705]"
+          className="flex items-center gap-1.5 text-xs px-2.5 py-1 h-7 rounded-[12px] bg-semantic-bg-elevation-1 hover:bg-semantic-highlight text-semantic-text"
           data-testid="dismiss-suggestion-button"
         >
           Dismiss Suggestion
@@ -167,7 +167,7 @@ export function AISuggestionBanner({
           }
           showVerification={false}
           header={
-            <span className="font-inter font-semibold text-xs leading-5 text-[#080705]">
+            <span className="font-inter font-semibold text-xs leading-5 text-semantic-text">
               {suggestion.target_requirement.requirement_key}
             </span>
           }

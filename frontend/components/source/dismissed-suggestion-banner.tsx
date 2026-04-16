@@ -45,7 +45,7 @@ export function DismissedSuggestionBanner({
         data-testid="dismissed-suggestion-banner"
       >
         <div className="flex items-center gap-2">
-          <span className="font-inter font-semibold text-sm text-[#080705]">
+          <span className="font-inter font-semibold text-sm text-semantic-text">
             Suggestion
           </span>
           <Badge className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 border-gray-200 text-gray-600">
@@ -57,7 +57,7 @@ export function DismissedSuggestionBanner({
           size="sm"
           onClick={handleRerun}
           disabled={loading}
-          className="flex items-center gap-1.5 text-xs px-2 py-1 h-7 text-[#080705] hover:bg-[#E6E6E6]"
+          className="flex items-center gap-1.5 text-xs px-2 py-1 h-7 text-semantic-text hover:bg-semantic-highlight"
           data-testid="rerun-suggestion-button"
         >
           {loading ? (
@@ -73,14 +73,14 @@ export function DismissedSuggestionBanner({
       {extractedRequirement && (
         <>
           <div className="flex items-center gap-2">
-            <span className="font-inter font-semibold text-xs text-[#080705]">
+            <span className="font-inter font-semibold text-xs text-semantic-text">
               Extraction
             </span>
             {onEditExtraction && (
               <button
                 type="button"
                 onClick={onEditExtraction}
-                className="flex items-center gap-1 font-inter text-xs text-muted-foreground hover:text-[#080705]"
+                className="flex items-center gap-1 font-inter text-xs text-muted-foreground hover:text-semantic-text"
                 data-testid="edit-extraction-button"
               >
                 Edit
@@ -112,7 +112,7 @@ export function DismissedSuggestionBanner({
           variant="outline"
           size="sm"
           onClick={onAttachToRequirement}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 h-8 rounded-md border-[#E6E6E6] text-[#080705] hover:bg-[#E6E6E6]"
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 h-8 rounded-md border-semantic-stroke text-semantic-text hover:bg-semantic-highlight"
           data-testid="dismissed-attach-button"
         >
           Attach to requirement
@@ -121,7 +121,7 @@ export function DismissedSuggestionBanner({
         <Button
           size="sm"
           onClick={onAddRequirement}
-          className="flex items-center gap-1.5 bg-[#080705] text-white hover:bg-[#2a2a2a] text-xs px-3 py-1.5 h-8 rounded-md"
+          className="flex items-center gap-1.5 bg-semantic-emphasis text-semantic-white hover:bg-semantic-black text-xs px-3 py-1.5 h-8 rounded-md"
           data-testid="dismissed-add-requirement-button"
         >
           Add Requirement

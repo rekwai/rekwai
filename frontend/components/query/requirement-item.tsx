@@ -31,7 +31,7 @@ export function RequirementItem({
       showVerification={false}
       header={
         <div className="flex flex-row items-center p-0 gap-1.5 h-5 flex-none order-0 flex-grow">
-          <span className="font-inter font-semibold text-xs leading-5 text-[#080705] flex-none order-0">
+          <span className="font-inter font-semibold text-xs leading-5 text-semantic-text flex-none order-0">
             {requirement.requirement_key}
           </span>
         </div>
@@ -46,7 +46,7 @@ export function RequirementItem({
             className={`${buttonStyles.iconButtonWithBorder} flex-none order-1`}
             data-testid="edit-requirement-button"
           >
-            <Pencil size={12} className="text-[#080705]" />
+            <Pencil size={12} className="text-semantic-text" />
           </Button>
           {/* Merge Button */}
           {onMerge && (
@@ -60,9 +60,9 @@ export function RequirementItem({
               title="Merge this requirement"
             >
               {isMerging ? (
-                <Loader2 size={12} className="animate-spin text-[#080705]" />
+                <Loader2 size={12} className="animate-spin text-semantic-text" />
               ) : (
-                <Merge size={12} className="text-[#080705]" />
+                <Merge size={12} className="text-semantic-text" />
               )}
             </Button>
           )}
@@ -77,9 +77,9 @@ export function RequirementItem({
             title="Ignore this requirement"
           >
             {isToggling ? (
-              <Loader2 size={12} className="animate-spin text-[#080705]" />
+              <Loader2 size={12} className="animate-spin text-semantic-text" />
             ) : (
-              <X size={12} className="text-[#080705]" />
+              <X size={12} className="text-semantic-text" />
             )}
           </Button>
         </>

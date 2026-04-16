@@ -3,6 +3,72 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
+  /* Semantic color tokens (light mode) */
+  --semantic-bg-elevation-1: var(--primitive-grey-400);
+  --semantic-bg-elevation-2: var(--primitive-grey-500);
+  --semantic-white: var(--primitive-grey-100);
+  --semantic-black: var(--primitive-black-700);
+  --semantic-stroke: var(--primitive-grey-100);
+  --semantic-highlight: var(--primitive-grey-100);
+  --semantic-emphasis: var(--primitive-black-700);
+  --semantic-text: var(--primitive-black-700);
+  --semantic-focus: var(--primitive-blue-2);
+  --semantic-indicator-1: var(--primitive-yellow-500);
+  --semantic-indicator-2: var(--primitive-blue-2);
+  --semantic-indicator-3: var(--primitive-orange-500);
+  --semantic-indicator-4: var(--primitive-green-2);
+  --semantic-indicator-5: var(--primitive-red-2);
+  --semantic-indicator-6: var(--primitive-blue-1);
+  --semantic-indicator-7: var(--primitive-yellow-300);
+  --semantic-indicator-8: var(--primitive-orange-100);
+  --semantic-success-bg: var(--primitive-green-1);
+  --semantic-success-fg: var(--primitive-green-2);
+  --semantic-error-bg: var(--primitive-red-1);
+  --semantic-error-fg: var(--primitive-red-2);
+  --semantic-button-primary-bg: var(--primitive-yellow-500);
+  --semantic-button-secondary-bg: var(--semantic-bg-elevation-2);
+  --semantic-button-secondary-stroke: var(--semantic-stroke);
+
+  /* Primitive color tokens (Figma token system) */
+  --primitive-grey-500: #fafffd;
+  --primitive-grey-400: #f8f8f8;
+  --primitive-grey-300: #e6e6e6;
+  --primitive-grey-200: #ebebeb;
+  --primitive-grey-100: #f3f3f3;
+
+  --primitive-black-700: #111111;
+  --primitive-black-600: #080705;
+  --primitive-black-500: #080705;
+  --primitive-black-400: #1c1d1d;
+  --primitive-black-300: #312f2f;
+  --primitive-black-200: #454545;
+  --primitive-black-100: #5d5d5d;
+
+  --primitive-yellow-100: #f8f6ea;
+  --primitive-yellow-200: #e1d9a1;
+  --primitive-yellow-300: #dccf78;
+  --primitive-yellow-400: #e5cf33;
+  --primitive-yellow-500: #f1d929;
+
+  --primitive-orange-100: #fae5dd;
+  --primitive-orange-200: #ffc7b0;
+  --primitive-orange-300: #ffb191;
+  --primitive-orange-400: #f17541;
+  --primitive-orange-500: #eb5110;
+
+  --primitive-blue-1: #b5ddfc;
+  --primitive-blue-2: #0b37a7;
+
+  --primitive-green-1: #a2cfca;
+  --primitive-green-2: #15786a;
+
+  --primitive-red-1: #fbdbdd;
+  --primitive-red-2: #ee3d49;
+
+  --primitive-purple-1: #9b51e0;
+  --primitive-purple-2: #c6b1d9;
+
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
   --card: 0 0% 100%;
@@ -26,6 +92,33 @@
 }
 
 .dark {
+  color-scheme: dark;
+  /* Semantic color tokens (dark mode) */
+  --semantic-bg-elevation-1: var(--primitive-black-500);
+  --semantic-bg-elevation-2: var(--primitive-black-400);
+  --semantic-white: var(--primitive-grey-100);
+  --semantic-black: var(--primitive-black-700);
+  --semantic-stroke: var(--primitive-black-300);
+  --semantic-highlight: var(--primitive-black-300);
+  --semantic-emphasis: var(--primitive-grey-500);
+  --semantic-text: var(--primitive-grey-100);
+  --semantic-focus: var(--primitive-blue-1);
+  --semantic-indicator-1: var(--primitive-yellow-500);
+  --semantic-indicator-2: var(--primitive-blue-2);
+  --semantic-indicator-3: var(--primitive-orange-500);
+  --semantic-indicator-4: var(--primitive-green-2);
+  --semantic-indicator-5: var(--primitive-red-2);
+  --semantic-indicator-6: var(--primitive-blue-1);
+  --semantic-indicator-7: var(--primitive-yellow-300);
+  --semantic-indicator-8: var(--primitive-orange-100);
+  --semantic-success-bg: var(--primitive-green-1);
+  --semantic-success-fg: var(--primitive-green-2);
+  --semantic-error-bg: var(--primitive-red-1);
+  --semantic-error-fg: var(--primitive-red-2);
+  --semantic-button-primary-bg: var(--primitive-yellow-500);
+  --semantic-button-secondary-bg: var(--semantic-bg-elevation-2);
+  --semantic-button-secondary-stroke: var(--semantic-stroke);
+
   --background: 0 0% 3%; /* #080705 - main background */
   --foreground: 0 0% 98%; /* #FAFFFD - main text */
   --card: 0 0% 19%; /* #312F2F - sidebar and content background */
@@ -51,4 +144,9 @@
 nextjs-portal {
   left: unset !important;
   top: unset !important;
+}
+
+/* Enforce consistent 4px radius for native buttons */
+button {
+  border-radius: 4px !important;
 }

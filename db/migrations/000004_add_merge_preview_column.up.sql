@@ -1,2 +1,2 @@
-ALTER TABLE extracted_requirement
+ALTER TABLE public.extracted_requirement
   ADD COLUMN merge_preview jsonb;

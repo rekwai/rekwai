@@ -41,13 +41,13 @@ export function NavigationFooter({
   const isNextDisabled = isOnLastItem && !onNext;
 
   return (
-    <div className="flex border-t border-[#E6E6E6] dark:border-[#1a1a1a]">
+    <div className="flex border-t border-semantic-stroke bg-semantic-bg-elevation-1">
       {/* Left spacer matching list width (50%) */}
-      <div className="w-1/2 bg-[#F6F6F6] dark:bg-[#1a1a1a]" />
+      <div className="w-1/2 bg-semantic-bg-elevation-1" />
 
       {/* Right section - navigation buttons (50%) */}
-      <div className="w-1/2 bg-white dark:bg-[#121212] border-l border-[#E6E6E6] dark:border-[#3a3a3a]">
-        <div className="flex justify-end items-center px-2 py-4 gap-3 backdrop-blur-[2px]">
+      <div className="w-1/2 bg-semantic-bg-elevation-2 border-l border-semantic-stroke">
+        <div className="flex justify-end items-center px-2 py-4 gap-3">
           {/* More actions (if provided) */}
           {moreActions}
 
@@ -56,13 +56,10 @@ export function NavigationFooter({
             size="sm"
             onClick={handlePrevious}
             disabled={isPreviousDisabled}
-            className="flex items-center justify-center px-2.5 py-1 w-8 h-7 bg-[#F6F6F6] dark:bg-[#2a2a2a] rounded-[12px] hover:bg-[#E6E6E6] dark:hover:bg-[#3a3a3a] disabled:opacity-50"
+            className="flex items-center justify-center px-2.5 py-1 w-8 h-7 bg-semantic-bg-elevation-1 border border-semantic-stroke rounded-[4px] hover:bg-semantic-highlight disabled:opacity-50"
             data-testid="previous-arrow-button"
           >
-            <ChevronLeft
-              size={16}
-              className="text-[#080705] dark:text-[#FAFFFD]"
-            />
+            <ChevronLeft size={16} className="text-semantic-text" />
           </Button>
 
           {/* Save & Next button */}
@@ -70,13 +67,13 @@ export function NavigationFooter({
             size="sm"
             onClick={handleNext}
             disabled={isNextDisabled}
-            className="flex items-center justify-center px-2.5 py-1 gap-1.5 h-7 bg-[#15786A] hover:bg-[#15786A]/90 dark:bg-[#15786A] dark:hover:bg-[#0f5d52] text-[#FAFFFD] rounded-[12px] disabled:opacity-50"
+            className="flex items-center justify-center px-2.5 py-1 gap-1.5 h-7 bg-semantic-success-fg hover:bg-semantic-indicator-4 text-semantic-white rounded-[4px] disabled:opacity-50"
             data-testid="save-next-button"
           >
-            <span className="text-xs font-normal leading-[15px] text-[#FAFFFD]">
+            <span className="text-xs font-normal leading-[15px] text-semantic-white">
               {nextButtonLabel}
             </span>
-            <ChevronRight size={12} className="text-[#FAFFFD]" />
+            <ChevronRight size={12} className="text-semantic-white" />
           </Button>
         </div>
       </div>

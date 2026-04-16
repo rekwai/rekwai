@@ -111,13 +111,13 @@ export function QueryRequirementsSection({
           {/* Create requirement button */}
           <button
             onClick={onCreateRequirement}
-            className="box-border flex flex-col justify-center items-center py-3 px-3 gap-2 w-[328px] h-[108px] border border-[#E6E6E6] rounded-[10px] hover:bg-gray-50 transition-colors flex-none flex-grow"
+            className="box-border flex flex-col justify-center items-center py-3 px-3 gap-2 w-[328px] h-[108px] border border-border bg-card rounded-[10px] hover:bg-accent transition-colors flex-none flex-grow"
           >
-            <Plus size={16} className="text-[#080705] flex-none" />
-            <span className="font-inter font-medium text-sm leading-[130%] text-[#000000] flex-none">
+            <Plus size={16} className="text-foreground flex-none" />
+            <span className="font-inter font-medium text-sm leading-[130%] text-foreground flex-none">
               Create requirement
             </span>
-            <span className="font-inter font-normal text-[12px] leading-[130%] text-center text-[#1C2024] flex-none">
+            <span className="font-inter font-normal text-[12px] leading-[130%] text-center text-muted-foreground flex-none">
               This will create a new requirement based on the question.
             </span>
           </button>
@@ -125,13 +125,13 @@ export function QueryRequirementsSection({
           {/* Link requirement button */}
           <button
             onClick={() => setIsSelectionModalOpen(true)}
-            className="box-border flex flex-col justify-center items-center py-3 px-3 gap-2 w-[328px] h-[108px] border border-[#E6E6E6] rounded-[10px] hover:bg-gray-50 transition-colors flex-none flex-grow"
+            className="box-border flex flex-col justify-center items-center py-3 px-3 gap-2 w-[328px] h-[108px] border border-border bg-card rounded-[10px] hover:bg-accent transition-colors flex-none flex-grow"
           >
-            <Link size={16} className="text-[#080705] flex-none" />
-            <span className="font-inter font-medium text-sm leading-[130%] text-[#000000] flex-none">
+            <Link size={16} className="text-foreground flex-none" />
+            <span className="font-inter font-medium text-sm leading-[130%] text-foreground flex-none">
               Link requirement(s)
             </span>
-            <span className="font-inter font-normal text-[10px] leading-[130%] text-center text-[#1C2024] flex-none">
+            <span className="font-inter font-normal text-[10px] leading-[130%] text-center text-muted-foreground flex-none">
               This will allow you to select and link associated requirements.
             </span>
           </button>

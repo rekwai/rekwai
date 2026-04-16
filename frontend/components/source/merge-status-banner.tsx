@@ -36,7 +36,7 @@ export function MergeStatusBanner({
       {/* Status header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-inter font-semibold text-sm text-[#080705]">
+          <span className="font-inter font-semibold text-sm text-semantic-text">
             Status
           </span>
           <Badge className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded bg-green-50 border-green-200 text-green-700">
@@ -48,7 +48,7 @@ export function MergeStatusBanner({
           type="button"
           onClick={handleUndo}
           disabled={isUndoing}
-          className="flex items-center gap-1 font-inter text-xs font-medium text-[#080705] hover:underline disabled:opacity-50"
+          className="flex items-center gap-1 font-inter text-xs font-medium text-semantic-text hover:underline disabled:opacity-50"
           data-testid="undo-merge-button"
         >
           {isUndoing ? (
@@ -64,14 +64,14 @@ export function MergeStatusBanner({
       {mergedRequirement && (
         <>
           <div className="flex items-center gap-2">
-            <span className="font-inter font-semibold text-xs text-[#080705]">
+            <span className="font-inter font-semibold text-xs text-semantic-text">
               {targetRequirementKey}
             </span>
             {onEdit && (
               <button
                 type="button"
                 onClick={() => onEdit(mergedRequirement)}
-                className="flex items-center gap-1 font-inter text-xs text-muted-foreground hover:text-[#080705]"
+                className="flex items-center gap-1 font-inter text-xs text-muted-foreground hover:text-semantic-text"
                 data-testid="edit-merged-requirement-button"
               >
                 Edit

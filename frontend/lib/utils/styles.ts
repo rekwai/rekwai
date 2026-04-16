@@ -3,27 +3,27 @@
 // Button styles for consistency across the application
 export const buttonStyles = {
   primary:
-    "flex items-center gap-1.5 px-2.5 py-1 text-xs font-normal bg-[#15786A] border-none rounded-[12px] text-white hover:bg-[#15786A]/90 hover:text-white disabled:opacity-50",
+    "flex items-center gap-1.5 px-2.5 py-1 text-xs font-normal bg-semantic-success-fg border-none rounded-[4px] text-semantic-white hover:bg-semantic-indicator-4 hover:text-semantic-white disabled:opacity-50",
   secondary:
-    "flex items-center gap-1.5 px-2.5 py-1 text-xs font-normal bg-[#00100B] border-none hover:bg-[#00100B]/90 rounded-[12px] text-white hover:text-white disabled:opacity-50",
+    "flex items-center gap-1.5 px-2.5 py-1 text-xs font-normal bg-semantic-emphasis border-none hover:bg-semantic-black rounded-[4px] text-semantic-white hover:text-semantic-white disabled:opacity-50",
   outline:
-    "flex items-center gap-1.5 px-2.5 py-1 text-xs font-normal bg-[#F6F6F6] border border-[#E6E6E6] rounded-[12px] text-[#080705] hover:bg-[#E3DBDB]/90 disabled:opacity-50",
+    "flex items-center gap-1.5 px-2.5 py-1 text-xs font-normal bg-semantic-bg-elevation-1 border border-semantic-stroke rounded-[4px] text-semantic-text hover:bg-semantic-highlight disabled:opacity-50",
   ghost:
-    "px-2.5 py-1 text-xs font-normal bg-[#F6F6F6] dark:bg-[#1a1a1a] text-[#080705] dark:text-[#FAFFFD] border-none hover:bg-gray-200 dark:hover:bg-[#312F2F]",
+    "px-2.5 py-1 text-xs font-normal bg-semantic-bg-elevation-1 text-semantic-text border-none hover:bg-semantic-highlight",
   iconButton:
-    "flex flex-row justify-center items-center py-1 px-2.5 gap-1.5 w-8 h-7 bg-[#F6F6F6] dark:bg-[#F6F6F6] rounded-xl border-0",
+    "flex flex-row justify-center items-center py-1 px-2.5 gap-1.5 w-8 h-7 bg-semantic-bg-elevation-1 rounded-[4px] border-0",
   iconButtonWithBorder:
-    "flex flex-row justify-center items-center py-1 px-2.5 gap-1 w-8 h-7 bg-[#FAFFFD] border border-[#080705] rounded-xl",
+    "flex flex-row justify-center items-center py-1 px-2.5 gap-1 w-8 h-7 bg-semantic-bg-elevation-2 border border-semantic-emphasis rounded-[4px]",
   iconButtonDestructive:
-    "flex flex-row justify-center items-center py-1 px-2.5 gap-1 w-8 h-7 bg-[#FBDBDD] rounded-xl border-0",
+    "flex flex-row justify-center items-center py-1 px-2.5 gap-1 w-8 h-7 bg-semantic-error-bg rounded-[4px] border-0",
 } as const;
 
 // Badge styles for various badge types
 export const badgeStyles = {
   result:
-    "bg-[#E1D9A1] text-[#080705] text-xs font-medium px-1.5 py-0.5 rounded-[3px]",
+    "bg-semantic-indicator-7 text-semantic-text text-xs font-medium px-1.5 py-0.5 rounded-[3px]",
   action:
-    "bg-[#E3DBDB] text-[#080705] text-xs font-medium px-1.5 py-0.5 rounded-[3px] cursor-pointer hover:bg-gray-200",
+    "bg-semantic-highlight text-semantic-text text-xs font-medium px-1.5 py-0.5 rounded-[3px] cursor-pointer hover:bg-semantic-stroke",
   typeBlue:
     "bg-[rgba(0,71,241,0.07)] text-[rgba(0,43,183,0.77)] text-xs px-1.5 py-0.5",
   typeGray: "bg-gray-100 text-gray-700 text-xs px-1.5 py-0.5",
@@ -34,12 +34,12 @@ export const badgeStyles = {
 // Badge color styles for requirement type and status badges
 const BADGE_COLORS = {
   type: {
-    bg: "bg-[#FFC7B0]",
-    text: "text-[#A54148]",
+    bg: "bg-primitive-orange-200",
+    text: "text-semantic-error-fg",
   },
   status: {
-    bg: "bg-[#E1D9A1]",
-    text: "text-[#080705]",
+    bg: "bg-semantic-indicator-7",
+    text: "text-semantic-text",
   },
 } as const;
 
@@ -58,9 +58,9 @@ export const getRequirementBadgeClassName = (
 // Input styles
 export const inputStyles = {
   textarea:
-    "w-full min-h-[80px] px-4 py-3 text-sm leading-[1.5] text-[#080705] dark:text-[#FAFFFD] bg-white/90 dark:bg-[#1a1a1a] border border-[rgba(0,9,50,0.12)] dark:border-[#1a1a1a] rounded-md resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+    "w-full min-h-[80px] px-4 py-3 text-sm leading-[1.5] text-semantic-text bg-semantic-bg-elevation-2 border border-semantic-stroke rounded-md resize-y focus:outline-none focus:ring-2 focus:ring-semantic-focus focus:border-transparent",
   dropdown:
-    "flex items-center justify-between w-full px-3 py-2 text-sm text-[#080705] bg-white/90 border border-[rgba(0,9,50,0.12)] rounded-md cursor-pointer hover:bg-white",
+    "flex items-center justify-between w-full px-3 py-2 text-sm text-semantic-text bg-semantic-bg-elevation-2 border border-semantic-stroke rounded-md cursor-pointer hover:bg-semantic-white",
 } as const;
 
 // Shadow styles
