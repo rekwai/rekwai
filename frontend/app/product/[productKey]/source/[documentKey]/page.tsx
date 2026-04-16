@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { RequirementHeader } from "@/components/source/requirement-header";
 import { RequirementListPanel } from "@/components/source/requirement-list-panel";
 import { RequirementDetailsPanel } from "@/components/source/requirement-details-panel";
-import { NavigationFooter } from "@/components/common/navigation-footer";
+import { FloatingNavigationFooter } from "@/components/common/navigation-footer";
 import { CreateRequirementModal } from "@/components/requirement/create-requirement-modal";
 import { EditExtractedRequirementModal } from "@/components/source/edit-extracted-requirement-modal";
 import {
@@ -394,82 +394,83 @@ export default function DocumentPage({
   // ============================================
   return (
     <div className="h-full w-full flex flex-col overflow-hidden bg-semantic-bg-elevation-1">
-      {/* Header */}
-      <div className="flex-none">
-        <RequirementHeader
-          productKey={productKey}
-          productName={productName}
-          documentKey={documentData.document_key}
-          documentId={documentData.id}
-          requirements={requirements}
-          productId={documentData.product_id}
-          onBulkApproveComplete={reloadDocumentData}
-        />
-      </div>
+      <div className="flex min-h-0 flex-1 flex-col p-8">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[20px] border border-semantic-stroke bg-semantic-bg-elevation-1">
+          <div className="flex-none">
+            <RequirementHeader
+              productKey={productKey}
+              productName={productName}
+              documentKey={documentData.document_key}
+              documentId={documentData.id}
+              requirements={requirements}
+              productId={documentData.product_id}
+              onBulkApproveComplete={reloadDocumentData}
+            />
+          </div>
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            {/* Left Panel - 50% width, scrollable */}
+            <div className="min-h-0 w-1/2 overflow-y-auto border-r border-semantic-stroke bg-semantic-bg-elevation-2">
+              <RequirementListPanel
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                requirements={requirements}
+                selectedRequirementIndex={selectedRequirementIndex}
+                onRequirementSelect={handleRequirementSelect}
+                combinedLoading={combinedLoading}
+                refreshingSuggestionIds={refreshingSuggestionIds}
+                documentMetadata={{
+                  name: documentData.original_filename,
+                  type: documentData.type,
+                  size: `${documentData.content_size_bytes} bytes`,
+                  uploadDate: documentData.created_at,
+                  key: documentData.document_key,
+                }}
+              />
+            </div>
 
-      {/* Main Content - split 50/50 horizontally */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - 50% width, scrollable */}
-        <div className="w-1/2 overflow-y-auto border-r border-semantic-stroke bg-semantic-bg-elevation-1">
-          <RequirementListPanel
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            requirements={requirements}
-            selectedRequirementIndex={selectedRequirementIndex}
-            onRequirementSelect={handleRequirementSelect}
-            combinedLoading={combinedLoading}
-            refreshingSuggestionIds={refreshingSuggestionIds}
-            documentMetadata={{
-              name: documentData.original_filename,
-              type: documentData.type,
-              size: `${documentData.content_size_bytes} bytes`,
-              uploadDate: documentData.created_at,
-              key: documentData.document_key,
-            }}
-          />
+            {/* Right Panel - 50% width */}
+            <div className="relative flex min-h-0 w-1/2 flex-col bg-semantic-bg-elevation-1">
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <RequirementDetailsPanel
+                  selectedRequirement={selectedRequirement}
+                  requirements={requirements}
+                  combinedLoading={combinedLoading}
+                  productId={documentData.product_id}
+                  linkedRequirementsProps={{
+                    isFetchingSuggestion,
+                    suggestedAction,
+                    isSuggestionDismissed,
+                    lastMergeInfo,
+                    mergePreview: selectedRequirement?.mergePreview,
+                  }}
+                  actionHandlers={{
+                    onEditRequirement: () => editExtractedModal.open(),
+                    onEditLinkedRequirement: (requirement: Requirement) =>
+                      editLinkedModal.open(requirement),
+                    onLinkExistingRequirements: handleLinkExistingRequirements,
+                    onCreateNewRequirement: () => createRequirementModal.open(),
+                    onFetchSuggestedAction: fetchSuggestedAction,
+                    onConfirmSuggestion: handleConfirmSuggestion,
+                    onDismissSuggestion: dismissSuggestion,
+                    onEditSuggestion: handleEditSuggestion,
+                    onUndoMerge: handleUndoMerge,
+                  }}
+                />
+              </div>
+
+              {selectedRequirement && (
+                <FloatingNavigationFooter
+                  itemCount={requirements.length}
+                  selectedIndex={selectedRequirementIndex}
+                  onIndexChange={handleRequirementSelect}
+                  onNext={handleNext}
+                  nextButtonLabel={isOnLastItem ? "Close" : "Next"}
+                  className="absolute bottom-4 right-4"
+                />
+              )}
+            </div>
+          </div>
         </div>
-
-        {/* Right Panel - 50% width, scrollable */}
-        <div className="w-1/2 overflow-y-auto bg-semantic-bg-elevation-2">
-          <RequirementDetailsPanel
-            selectedRequirement={selectedRequirement}
-            requirements={requirements}
-            combinedLoading={combinedLoading}
-            productId={documentData.product_id}
-            linkedRequirementsProps={{
-              isFetchingSuggestion,
-              suggestedAction,
-              isSuggestionDismissed,
-              lastMergeInfo,
-              mergePreview: selectedRequirement?.mergePreview,
-            }}
-            actionHandlers={{
-              onEditRequirement: () => editExtractedModal.open(),
-              onEditLinkedRequirement: (requirement: Requirement) =>
-                editLinkedModal.open(requirement),
-              onLinkExistingRequirements: handleLinkExistingRequirements,
-              onCreateNewRequirement: () => createRequirementModal.open(),
-              onFetchSuggestedAction: fetchSuggestedAction,
-              onConfirmSuggestion: handleConfirmSuggestion,
-              onDismissSuggestion: dismissSuggestion,
-              onEditSuggestion: handleEditSuggestion,
-              onUndoMerge: handleUndoMerge,
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="flex-none">
-        {selectedRequirement && (
-          <NavigationFooter
-            itemCount={requirements.length}
-            selectedIndex={selectedRequirementIndex}
-            onIndexChange={handleRequirementSelect}
-            onNext={handleNext}
-            nextButtonLabel={isOnLastItem ? "Close" : "Next"}
-          />
-        )}
       </div>
 
       {/* Create Requirement Modal */}

@@ -65,7 +65,10 @@ export function QuestionDetailsPanel({
 
   return (
     <>
-      <div className="p-8 space-y-6 bg-semantic-bg-elevation-2 min-h-full" data-testid="question-details">
+      <div
+        className="min-h-full space-y-6 bg-semantic-bg-elevation-1 px-8 pt-8 pb-20"
+        data-testid="question-details"
+      >
         {requirementActions.isLoadingRequirements ? (
           // Unified loading state for both Result and Requirements
           <div className="flex flex-col items-center justify-center p-12 text-muted-foreground">

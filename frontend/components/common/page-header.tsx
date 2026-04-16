@@ -4,7 +4,6 @@ import { Fragment, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/common/theme-toggle";
 
 interface BreadcrumbItem {
   label: string;
@@ -76,11 +75,8 @@ export function PageHeader({
       {/* Spacer */}
       <div className="flex-grow" />
 
-      {/* Theme + actions (toggle always visible — full-page routes have no sidebar) */}
-      <div className="flex items-center gap-2.5">
-        <ThemeToggle />
-        {actions}
-      </div>
+      {/* Actions */}
+      {actions && <div className="flex items-center gap-2.5">{actions}</div>}
     </div>
   );
 }

@@ -88,7 +88,7 @@ export function AnswerGenerationSection({
           <div className="flex flex-row items-center p-0 gap-2" aria-hidden="true">
             <Info size={16} className="text-semantic-indicator-3" weight="fill" />
           </div>
-          <span className="font-inter font-normal text-sm leading-[130%] text-semantic-text">
+          <span className="font-inter font-normal text-sm leading-[130%] text-semantic-black">
             Unable to generate an answer as no requirements were found relating
             to this question.
           </span>
@@ -111,27 +111,27 @@ export function AnswerGenerationSection({
       data-testid="answer-section"
     >
       <div className="flex flex-row items-center p-0 gap-2.5">
-        <Badge className="flex flex-row justify-center items-center px-3 py-1.5 gap-1.5 bg-secondary text-secondary-foreground rounded-[3px] font-inter font-medium text-sm leading-4 tracking-[0.04px] hover:bg-secondary border border-border">
+        <div className="font-inter font-semibold text-base leading-4 tracking-[0.04px] text-semantic-text">
           Answer
-        </Badge>
+        </div>
 
         {/* Result toolbar (Figma 1015:26110): nested controls on elevation-2 track */}
         {!isEditingResult && (
-          <div className="inline-flex items-center gap-1 rounded-lg bg-muted p-1">
+          <div className="inline-flex items-center gap-1 rounded-[8px] bg-semantic-bg-elevation-2 p-1">
             <Button
               variant="outline"
               size="sm"
               onClick={onGenerateAnswer}
               disabled={isGeneratingAnswer}
-              className="h-7 px-2.5 py-1 rounded-[4px] border border-border bg-background text-foreground shadow-none hover:bg-accent disabled:opacity-50"
+              className="h-7 px-2.5 py-1 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-semantic-text shadow-none hover:bg-semantic-highlight disabled:opacity-50"
               data-testid="regenerate-answer-button-top"
             >
               <RotateCcw
                 size={12}
                 className={
                   isGeneratingAnswer
-                    ? "animate-[spin_1s_linear_infinite_reverse] text-foreground"
-                    : "text-foreground"
+                    ? "animate-[spin_1s_linear_infinite_reverse] text-semantic-text"
+                    : "text-semantic-text"
                 }
               />
             </Button>
@@ -143,10 +143,10 @@ export function AnswerGenerationSection({
                   onResultChange(selectedQuestion.generated_answer || "");
                   onEditingChange(true);
                 }}
-                className="h-7 px-2.5 py-1 rounded-[4px] border border-border bg-background text-foreground shadow-none hover:bg-accent"
+                className="h-7 px-2.5 py-1 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-semantic-text shadow-none hover:bg-semantic-highlight"
                 data-testid="edit-answer-button-top"
               >
-                <Pencil size={12} className="text-foreground" />
+                <Pencil size={12} className="text-semantic-text" />
               </Button>
             )}
           </div>
@@ -154,7 +154,7 @@ export function AnswerGenerationSection({
       </div>
       {isEditingResult ? (
         <div className="w-full space-y-3">
-          <div className="relative w-full">
+          <div className="relative w-full rounded-lg border border-semantic-stroke bg-semantic-bg-elevation-2 p-4">
             <textarea
               value={editedResult}
               onChange={(e) => onResultChange(e.target.value)}
@@ -196,7 +196,7 @@ export function AnswerGenerationSection({
           )}
         </div>
       ) : (
-        <div className="relative w-full">
+        <div className="relative w-full rounded-lg border border-semantic-stroke bg-semantic-bg-elevation-2 p-4">
           <div
             className="font-inter font-normal text-sm leading-[150%] text-semantic-text w-full"
             data-testid="answer-result"

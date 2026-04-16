@@ -37,7 +37,7 @@ function CheckboxToggle({
       >
         {checked && <Check size={10} className="text-white" />}
       </div>
-      <span className="font-inter font-normal text-sm text-[#080705]">
+      <span className="font-inter font-normal text-sm text-semantic-text">
         {label}
       </span>
     </label>
@@ -160,7 +160,7 @@ export function MergeDiffCard({
             isOriginal ? (
               verificationText
             ) : (
-              <span className="line-through text-[rgba(8,7,5,0.5)]">
+              <span className="line-through text-semantic-text">
                 {verificationText}
               </span>
             )

@@ -122,7 +122,7 @@ export function QuestionHeader({
             variant="outline"
             onClick={deleteWithConfirmation}
             disabled={isDeleting}
-            className="font-inter flex flex-row justify-center items-center px-2.5 py-1 gap-1.5 h-7 bg-semantic-error-bg border-none rounded-[4px] text-xs leading-[15px] font-normal text-semantic-error-fg hover:bg-primitive-orange-100"
+            className="font-inter flex flex-row justify-center items-center px-2.5 py-1 gap-1.5 h-7 bg-semantic-error-bg border-none rounded-[4px] text-xs leading-[15px] font-normal text-semantic-black hover:!bg-semantic-error-fg dark:hover:!bg-semantic-error-fg hover:!text-semantic-white dark:hover:!text-semantic-white"
           >
             {isDeleting ? "Deleting..." : "Delete questionnaire"}
           </Button>

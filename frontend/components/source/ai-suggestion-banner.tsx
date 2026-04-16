@@ -166,8 +166,8 @@ export function AISuggestionBanner({
             suggestion.target_requirement.implementation_description
           }
           showVerification={false}
-          header={
-            <span className="font-inter font-semibold text-xs leading-5 text-semantic-text">
+          title={
+            <span className="font-inter text-xs font-semibold leading-5 text-semantic-text">
               {suggestion.target_requirement.requirement_key}
             </span>
           }

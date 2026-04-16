@@ -253,11 +253,11 @@ export function ItemListPanel<T>({
   const metadataTab = tabs[1] as TabConfig | undefined;
 
   return (
-    <div className="bg-semantic-bg-elevation-1 h-full">
+    <div className="bg-semantic-bg-elevation-2 h-full">
       <RadixTabs.Root value={activeTab} onValueChange={onTabChange}>
         {/* Segmented Control Tabs */}
         <div
-          className="sticky top-0 z-10 flex flex-col items-start px-3 pt-3 pb-3 gap-2.5 flex-shrink-0 bg-semantic-bg-elevation-1 border-b border-semantic-stroke"
+          className="sticky top-0 z-10 flex flex-col items-start px-3 pt-3 pb-3 gap-2.5 flex-shrink-0 bg-semantic-bg-elevation-2 border-b border-semantic-stroke"
         >
           <RadixTabs.List
             className="flex flex-row justify-center items-center p-[2px] rounded-[6px] h-8 bg-muted"

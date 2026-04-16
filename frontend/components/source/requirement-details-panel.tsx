@@ -77,7 +77,10 @@ export function RequirementDetailsPanel({
   }
 
   return (
-    <div className="p-8 space-y-6" data-testid="requirement-details-panel">
+    <div
+      className="min-h-full space-y-6 px-8 pt-8 pb-20"
+      data-testid="requirement-details-panel"
+    >
       <LinkedRequirementsSection
         productId={productId}
         onCreateNewRequirement={actionHandlers.onCreateNewRequirement}

@@ -24,8 +24,7 @@ export const badgeStyles = {
     "bg-semantic-indicator-7 text-semantic-text text-xs font-medium px-1.5 py-0.5 rounded-[3px]",
   action:
     "bg-semantic-highlight text-semantic-text text-xs font-medium px-1.5 py-0.5 rounded-[3px] cursor-pointer hover:bg-semantic-stroke",
-  typeBlue:
-    "bg-[rgba(0,71,241,0.07)] text-[rgba(0,43,183,0.77)] text-xs px-1.5 py-0.5",
+  typeBlue: "bg-type-chip-bg text-type-chip-text text-xs px-1.5 py-0.5",
   typeGray: "bg-gray-100 text-gray-700 text-xs px-1.5 py-0.5",
   similarity: "text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded",
   destructive: "cursor-help",

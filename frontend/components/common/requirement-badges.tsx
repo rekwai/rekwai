@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { getStatusBadgeStyles } from "@/lib/utils/question-modal";
 
 const TYPE_BADGE_CLASS =
-  "flex flex-row justify-center items-center px-1.5 py-0.5 gap-1.5 h-5 bg-[rgba(0,71,241,0.07)] rounded-[3px] font-inter font-medium text-xs leading-4 tracking-[0.04px] text-[rgba(0,43,183,0.77)]";
+  "flex flex-row justify-center items-center px-1.5 py-0.5 gap-1.5 h-5 bg-type-chip-bg text-type-chip-text rounded-[3px] font-inter font-medium text-xs leading-4 tracking-[0.04px]";
 
 export function TypeBadges({ types }: { types: string[] }) {
   return types.map((type, index) => (

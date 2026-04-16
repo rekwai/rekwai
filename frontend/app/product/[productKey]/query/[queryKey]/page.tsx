@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { QuestionHeader } from "@/components/query/question-header";
 import { QuestionListPanel } from "@/components/query/question-list-panel";
 import { QuestionDetailsPanel } from "@/components/query/question-details-panel";
-import { QuestionNavigationFooter } from "@/components/query/question-navigation-footer";
 import { useRequirementActions } from "@/hooks/use-requirement-actions";
+import { FloatingNavigationFooter } from "@/components/common/navigation-footer";
 import {
   getQuestionnaireQuestions,
   getQuestionnaireDetails,
@@ -114,59 +114,58 @@ export default function QueryPage({
   // ============================================
   return (
     <div className="h-full w-full flex flex-col overflow-hidden bg-semantic-bg-elevation-1">
-      {/* Header */}
-      <div className="flex-none">
-        <QuestionHeader
-          productKey={productKey}
-          productName={productName}
-          questionnaireId={questionnaireId}
-          clientName={clientName}
-          queryKey={queryKey}
-        />
-      </div>
+      <div className="flex min-h-0 flex-1 flex-col p-8">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[20px] border border-semantic-stroke bg-semantic-bg-elevation-1">
+          <div className="flex-none">
+            <QuestionHeader
+              productKey={productKey}
+              productName={productName}
+              questionnaireId={questionnaireId}
+              clientName={clientName}
+              queryKey={queryKey}
+            />
+          </div>
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            {/* Left Panel - 50% width, scrollable */}
+            <div className="min-h-0 w-1/2 overflow-y-auto border-r border-semantic-stroke bg-semantic-bg-elevation-2">
+              <QuestionListPanel
+                questions={questions}
+                selectedIndex={selectedIndex}
+                selectedTab={selectedTab}
+                questionnaireId={questionnaireId}
+                questionnaireKey={queryKey}
+                clientName={clientName}
+                requirements={requirementActions.requirements}
+                onIndexChange={setSelectedIndex}
+                onTabChange={setSelectedTab}
+              />
+            </div>
 
-      {/* Main Content - split 50/50 horizontally */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - 50% width, scrollable */}
-        <div className="w-1/2 overflow-y-auto border-r border-semantic-stroke bg-semantic-bg-elevation-1">
-          <QuestionListPanel
-            questions={questions}
-            selectedIndex={selectedIndex}
-            selectedTab={selectedTab}
-            questionnaireId={questionnaireId}
-            questionnaireKey={queryKey}
-            clientName={clientName}
-            requirements={requirementActions.requirements}
-            onIndexChange={setSelectedIndex}
-            onTabChange={setSelectedTab}
-          />
+            {/* Right Panel - 50% width */}
+            <div className="relative flex min-h-0 w-1/2 flex-col bg-semantic-bg-elevation-1">
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <QuestionDetailsPanel
+                  selectedQuestion={selectedQuestion}
+                  questions={questions}
+                  selectedIndex={selectedIndex}
+                  productId={productId}
+                  questionnaireId={questionnaireId}
+                  onQuestionsUpdate={setQuestions}
+                  requirementActions={requirementActions}
+                />
+              </div>
+
+              {selectedQuestion && (
+                <FloatingNavigationFooter
+                  itemCount={questions.length}
+                  selectedIndex={selectedIndex}
+                  onIndexChange={setSelectedIndex}
+                  className="absolute bottom-4 right-4"
+                />
+              )}
+            </div>
+          </div>
         </div>
-
-        {/* Right Panel - 50% width, scrollable */}
-        <div className="w-1/2 overflow-y-auto bg-semantic-bg-elevation-2">
-          <QuestionDetailsPanel
-            selectedQuestion={selectedQuestion}
-            questions={questions}
-            selectedIndex={selectedIndex}
-            productId={productId}
-            questionnaireId={questionnaireId}
-            onQuestionsUpdate={setQuestions}
-            requirementActions={requirementActions}
-          />
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="flex-none">
-        {selectedQuestion && (
-          <QuestionNavigationFooter
-            selectedQuestion={selectedQuestion}
-            questions={questions}
-            selectedIndex={selectedIndex}
-            onQuestionChange={setSelectedIndex}
-            onQuestionsUpdate={setQuestions}
-          />
-        )}
       </div>
     </div>
   );

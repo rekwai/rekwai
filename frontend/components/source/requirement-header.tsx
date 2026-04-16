@@ -22,7 +22,7 @@ import { Trash } from "@phosphor-icons/react";
 const BASE_BUTTON_STYLES =
   "font-inter flex flex-row justify-center items-center px-2.5 py-1 gap-1.5 h-7 border-none rounded-[12px] text-xs leading-[15px] font-normal";
 
-const DELETE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-semantic-error-bg text-semantic-text hover:bg-semantic-indicator-8`;
+const DELETE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} group bg-semantic-error-bg text-semantic-black hover:!bg-semantic-error-fg dark:hover:!bg-semantic-error-fg hover:!text-semantic-white dark:hover:!text-semantic-white`;
 
 const BULK_CREATE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-semantic-success-fg text-semantic-white hover:bg-semantic-indicator-4`;
 
@@ -115,7 +115,11 @@ export function RequirementHeader({
                 "Deleting..."
               ) : (
                 <>
-                  <Trash size={14} weight="bold" />
+                  <Trash
+                    size={14}
+                    weight="bold"
+                    className="text-semantic-black group-hover:text-semantic-white"
+                  />
                   Delete source
                 </>
               )}
