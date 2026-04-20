@@ -246,7 +246,10 @@ class RequirementComparisonService:
         if not candidates:
             return SuggestedAction(
                 action=SuggestedActionType.CREATE_NEW,
-                justification="No existing requirements found for comparison.",
+                justification=(
+                    "There are no existing requirements to compare against, "
+                    "so we suggest creating this as a new one."
+                ),
                 similarity_score=0.0,
             )
 
@@ -276,82 +279,68 @@ class RequirementComparisonService:
 {candidates_text}
 """
 
-        try:
-            # Create decision agent with output validation
-            decision_agent = create_agent(
-                "fast",
-                system_prompt=REQUIREMENT_ACTION_DECISION_PROMPT,
-                output_type=LLMActionDecision,
-            )
+        decision_agent = create_agent(
+            "fast",
+            system_prompt=REQUIREMENT_ACTION_DECISION_PROMPT,
+            output_type=LLMActionDecision,
+        )
 
-            # Register output validator that uses a validation agent
-            @decision_agent.output_validator
-            async def validate_decision(
-                ctx: RunContext, output: LLMActionDecision
-            ) -> LLMActionDecision:
-                validation_result = await self._validate_action_decision(
-                    output, doc_req_text, candidates_text
+        @decision_agent.output_validator
+        async def validate_decision(
+            ctx: RunContext, output: LLMActionDecision
+        ) -> LLMActionDecision:
+            validation_result = await self._validate_action_decision(
+                output, doc_req_text, candidates_text
+            )
+            if not validation_result.is_valid:
+                feedback = (
+                    f"Validation failed. Issues: {'; '.join(validation_result.issues)}. "
                 )
-                if not validation_result.is_valid:
-                    feedback = (
-                        f"Validation failed. Issues: {'; '.join(validation_result.issues)}. "
+                if validation_result.suggested_action:
+                    feedback += (
+                        f"Consider changing action to '{validation_result.suggested_action.value}'."
                     )
-                    if validation_result.suggested_action:
-                        feedback += (
-                            f"Consider changing action to '{validation_result.suggested_action.value}'."
-                        )
-                    raise ModelRetry(feedback)
-                return output
+                raise ModelRetry(feedback)
+            return output
 
-            result = await run_agent_with_retry(
-                decision_agent,
-                user_prompt=user_prompt,
-                deps=None,
-            )
-            decision: LLMActionDecision = result.output
+        result = await run_agent_with_retry(
+            decision_agent,
+            user_prompt=user_prompt,
+            deps=None,
+        )
+        decision: LLMActionDecision = result.output
 
-            # Validate best_match_index bounds
-            if decision.action in (
-                SuggestedActionType.ATTACH,
-                SuggestedActionType.MERGE,
+        if decision.action in (
+            SuggestedActionType.ATTACH,
+            SuggestedActionType.MERGE,
+        ):
+            if (
+                decision.best_match_index is None
+                or decision.best_match_index < 0
+                or decision.best_match_index >= len(candidate_dtos)
             ):
-                if (
-                    decision.best_match_index is None
-                    or decision.best_match_index < 0
-                    or decision.best_match_index >= len(candidate_dtos)
-                ):
-                    logger.warning(
-                        f"Invalid best_match_index {decision.best_match_index} "
-                        f"for {len(candidate_dtos)} candidates. Defaulting to create_new."
-                    )
-                    return SuggestedAction(
-                        action=SuggestedActionType.CREATE_NEW,
-                        justification="AI returned invalid match index; defaulting to create new.",
-                        similarity_score=decision.similarity_score,
-                    )
-
-                target_dto = candidate_dtos[decision.best_match_index]
-                return SuggestedAction(
-                    action=decision.action,
-                    target_requirement_id=target_dto.id,
-                    target_requirement=target_dto,
-                    justification=decision.justification,
-                    similarity_score=decision.similarity_score,
-                )
-            else:
-                return SuggestedAction(
-                    action=SuggestedActionType.CREATE_NEW,
-                    justification=decision.justification,
-                    similarity_score=decision.similarity_score,
+                # Defence-in-depth: validate_decision already rejects out-of-range
+                # indexes via ModelRetry, so reaching this branch means the
+                # validator itself was compromised or bypassed.
+                raise ValueError(
+                    f"AI returned invalid best_match_index {decision.best_match_index} "
+                    f"for {len(candidate_dtos)} candidates (action={decision.action.value})"
                 )
 
-        except Exception as e:
-            logger.error(f"Error in action decision: {e}", exc_info=True)
+            target_dto = candidate_dtos[decision.best_match_index]
             return SuggestedAction(
-                action=SuggestedActionType.CREATE_NEW,
-                justification="Error during AI decision; defaulting to create new.",
-                similarity_score=0.0,
+                action=decision.action,
+                target_requirement_id=target_dto.id,
+                target_requirement=target_dto,
+                justification=decision.justification,
+                similarity_score=decision.similarity_score,
             )
+
+        return SuggestedAction(
+            action=SuggestedActionType.CREATE_NEW,
+            justification=decision.justification,
+            similarity_score=decision.similarity_score,
+        )
 
     async def _validate_action_decision(
         self,
@@ -372,21 +361,17 @@ Justification: {decision.justification}
 **Existing Requirements:**
 {candidates_text}
 """
-        try:
-            validation_agent = create_agent(
-                "fast",
-                system_prompt=ACTION_DECISION_VALIDATION_PROMPT,
-                output_type=ActionDecisionValidationResult,
-            )
-            result = await run_agent_with_retry(
-                validation_agent,
-                user_prompt=validation_prompt,
-                deps=None,
-            )
-            return result.output
-        except Exception as e:
-            logger.warning(f"Validation agent failed, accepting decision: {e}")
-            return ActionDecisionValidationResult(is_valid=True, issues=[])
+        validation_agent = create_agent(
+            "fast",
+            system_prompt=ACTION_DECISION_VALIDATION_PROMPT,
+            output_type=ActionDecisionValidationResult,
+        )
+        result = await run_agent_with_retry(
+            validation_agent,
+            user_prompt=validation_prompt,
+            deps=None,
+        )
+        return result.output
 
     async def compare_requirements_with_llm(
         self, doc_req_text: str, main_req_text: str

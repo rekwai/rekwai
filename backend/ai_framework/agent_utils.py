@@ -6,6 +6,7 @@ for running agents with retry logic and logging agent messages.
 
 import logging
 import asyncio
+import random
 from typing import Callable
 from pydantic import ValidationError
 from pydantic_ai import PromptedOutput
@@ -31,6 +32,14 @@ logger = logging.getLogger(__name__)
 MAX_TOOL_RETRIES = 1
 PROMPTED_OUTPUT_RETRIES = 2
 RETRY_DELAY_SECONDS = 2
+
+# Retry configuration for transient provider API errors (429/503/504).
+# Separate from MAX_TOOL_RETRIES so overload retries don't consume the
+# validation/tool retry budget. Also used by ai.external_ai for Gemini
+# embedding calls — keep consumers in sync if these change.
+MAX_API_RETRIES = 5
+INITIAL_API_RETRY_DELAY = 7.0
+_RETRYABLE_HTTP_STATUSES = {429, 503, 504}
 
 # Validation model names used by different LLM providers
 # Standard OpenAI uses "ChatCompletion", OpenRouter uses "_OpenRouterChatCompletion"
@@ -87,6 +96,32 @@ def _is_malformed_api_response_error(error: Exception) -> bool:
     )
 
     return malformed_tool_call or malformed_response
+
+
+def extract_retryable_status(error: Exception) -> int | None:
+    """Return the HTTP status code if this exception is a retryable transient
+    provider error (rate limit / overload / deadline exceeded), else None.
+
+    Works across OpenAI / Anthropic / OpenRouter (``status_code``) and
+    Gemini / google-genai (``code``) SDK exceptions by duck-typing on the
+    status attribute. The ``isinstance(value, int)`` guard avoids matching
+    unrelated exceptions that happen to expose a non-HTTP ``code`` attribute
+    (e.g. gRPC status codes, OS error codes).
+    """
+    for attr in ("status_code", "code"):
+        value = getattr(error, attr, None)
+        if isinstance(value, int) and value in _RETRYABLE_HTTP_STATUSES:
+            return value
+    return None
+
+
+def api_retry_wait_seconds(retry_count: int) -> float:
+    """Exponential backoff with jitter for transient provider API errors.
+
+    Shared by ``run_agent_with_retry`` and ``ai.external_ai`` so both paths
+    use the same schedule (14s, 28s, 56s, 112s, ...) plus up to 1s jitter.
+    """
+    return INITIAL_API_RETRY_DELAY * (2 ** retry_count) + random.uniform(0, 1)
 
 
 async def _handle_retryable_error(
@@ -233,11 +268,20 @@ async def run_agent_with_retry(
     Uses agent.iter() for node-by-node execution, enabling cancellation checks
     between each execution node (tool calls, model requests).
 
+    Two-level retry model:
+      * Inner loop — retries transient provider HTTP statuses (429/503/504)
+        with exponential backoff up to ``MAX_API_RETRIES``. These errors are
+        disjoint from the pydantic-ai validation/behaviour errors below, so
+        they don't consume the ``max_retries`` budget.
+      * Outer loop — retries ``ValidationError`` / ``UnexpectedModelBehavior``
+        / ``TimeoutError`` up to ``max_retries``, with PromptedOutput fallback
+        on exhaustion for recoverable subclasses.
+
     Args:
         agent: The agent to run
         user_prompt: The prompt to send to the agent
         deps: Dependencies for the agent
-        max_retries: Maximum number of retry attempts
+        max_retries: Maximum number of retry attempts (outer loop only)
         timeout_seconds: Maximum wall-clock time for each attempt. Set to None for
             reasoning/smart models that need extended thinking time. Defaults to 30s.
             Note: This is automatically set to None for "smart" models.
@@ -254,6 +298,9 @@ async def run_agent_with_retry(
         MalformedAPIResponseError: If the API returns invalid response structure
         TimeoutError: If the agent call exceeds timeout_seconds
         TaskCancelledException: If cancellation_check raises it
+        Exception: The original provider exception (e.g. ``openai.APIStatusError``,
+            ``google.genai.errors.APIError``) when transient-status retries are
+            exhausted after ``MAX_API_RETRIES`` attempts.
     """
     # Auto-disable timeout for smart/reasoning models that need extended thinking time
     params = get_agent_creation_params(agent)
@@ -266,19 +313,55 @@ async def run_agent_with_retry(
             cancellation_check()
 
         try:
-            # Use agent.iter() for cancellable node-by-node execution
-            # asyncio.timeout(None) is a no-op, so no branching needed
-            async with asyncio.timeout(timeout_seconds):
-                async with agent.iter(user_prompt=user_prompt, deps=deps) as agent_run:
-                    async for node in agent_run:
-                        if cancellation_check:
-                            cancellation_check()
-                        if isinstance(node, End):
-                            break
-                result = agent_run.result
-            # Clean up registry entry on success (prevents memory leak)
-            pop_agent_creation_params(agent)
-            return result
+            # Inner loop retries transient provider errors (429/503/504) with
+            # exponential backoff before they reach the typed handlers below.
+            # These errors are disjoint from ValidationError / UnexpectedModelBehavior,
+            # so the typed handlers still see every error they care about.
+            api_retry_count = 0
+            while True:
+                try:
+                    # Use agent.iter() for cancellable node-by-node execution
+                    # asyncio.timeout(None) is a no-op, so no branching needed
+                    async with asyncio.timeout(timeout_seconds):
+                        async with agent.iter(user_prompt=user_prompt, deps=deps) as agent_run:
+                            async for node in agent_run:
+                                if cancellation_check:
+                                    cancellation_check()
+                                if isinstance(node, End):
+                                    break
+                        result = agent_run.result
+                    # Clean up registry entry on success (prevents memory leak)
+                    pop_agent_creation_params(agent)
+                    return result
+                except Exception as api_error:
+                    # Deliberately broad: we duck-type on ``status_code`` /
+                    # ``code`` via extract_retryable_status to stay
+                    # provider-agnostic (OpenAI / Anthropic / Gemini / etc.
+                    # without importing any of them). Non-matching exceptions
+                    # re-raise immediately into the typed handlers below.
+                    status = extract_retryable_status(api_error)
+                    if status is None:
+                        raise
+                    api_retry_count += 1
+                    if api_retry_count >= MAX_API_RETRIES:
+                        logger.error(
+                            f"Provider API retries exhausted after {MAX_API_RETRIES} "
+                            f"attempts (last status: {status})"
+                        )
+                        pop_agent_creation_params(agent)
+                        raise
+                    # With the current constants (INITIAL=7s, MAX_API_RETRIES=5)
+                    # worst-case cumulative wait is 14+28+56+112 ≈ 210s (~3.5 min).
+                    wait_time = api_retry_wait_seconds(api_retry_count)
+                    logger.warning(
+                        f"Provider API returned {status}; retrying in "
+                        f"{wait_time:.2f}s (attempt {api_retry_count}/{MAX_API_RETRIES})"
+                    )
+                    if cancellation_check:
+                        cancellation_check()
+                    await asyncio.sleep(wait_time)
+                    if cancellation_check:
+                        cancellation_check()
         except ValidationError as e:
             # Handle malformed API responses (e.g., null function.arguments)
             if _is_malformed_api_response_error(e):
