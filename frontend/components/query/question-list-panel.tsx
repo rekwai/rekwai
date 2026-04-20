@@ -20,6 +20,7 @@ export function QuestionListPanel({
   questionnaireKey,
   clientName,
   requirements,
+  errorQuestionIds = [],
   onIndexChange,
   onTabChange,
 }: QuestionListPanelProps) {
@@ -44,6 +45,7 @@ export function QuestionListPanel({
       getItemText={(q) => q.question_text}
       isItemCompleted={(q) => !!isAnswered(q)}
       getItemAnswerType={(q) => q.answer_type}
+      isItemError={(q) => errorQuestionIds.includes(q.id)}
       itemTestIdPrefix="question-item"
       renderMetadata={() => (
         <div className="p-4 space-y-6">

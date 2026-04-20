@@ -311,7 +311,7 @@ export default function ProductLayout({
                               key={tab}
                               value={tab}
                               data-testid={`tab-${tab.toLowerCase().replace(/\s+/g, "-")}`}
-                              className="py-3 px-4 font-medium text-sm relative rounded-none border-b-2 border-transparent data-[state=active]:border-black dark:data-[state=active]:border-[#F1D929] data-[state=active]:shadow-none bg-transparent text-gray-600 dark:text-[#FAFFFD] data-[state=active]:text-black dark:data-[state=active]:text-[#FAFFFD]"
+                              className="py-3 px-4 font-medium text-sm relative !rounded-[4px] border-b-2 border-transparent data-[state=active]:border-black dark:data-[state=active]:border-[#F1D929] data-[state=active]:shadow-none bg-transparent text-gray-600 dark:text-[#FAFFFD] data-[state=active]:text-black dark:data-[state=active]:text-[#FAFFFD]"
                             >
                               {tab}
                             </TabsTrigger>

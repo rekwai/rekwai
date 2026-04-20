@@ -106,11 +106,11 @@ export function QueryRequirementsSection({
   const renderContent = () => {
     if (showEmptyState) {
       return (
-        <div className="flex flex-row items-start p-0 gap-4 w-[672px] h-[108px] flex-none order-1 self-stretch flex-grow-0">
+        <div className="grid w-full grid-cols-1 gap-4 self-stretch lg:grid-cols-2">
           {/* Create requirement button */}
           <button
             onClick={onCreateRequirement}
-            className="box-border flex flex-col justify-center items-center py-3 px-3 gap-2 w-[328px] h-[108px] border border-border bg-card rounded-[10px] hover:bg-accent transition-colors flex-none flex-grow"
+            className="box-border flex h-[108px] w-full min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-[10px] border border-border bg-card px-3 py-3 transition-colors hover:bg-accent"
           >
             <Plus size={16} className="text-foreground flex-none" />
             <span className="font-inter font-medium text-sm leading-[130%] text-foreground flex-none">
@@ -124,7 +124,7 @@ export function QueryRequirementsSection({
           {/* Link requirement button */}
           <button
             onClick={() => setIsSelectionModalOpen(true)}
-            className="box-border flex flex-col justify-center items-center py-3 px-3 gap-2 w-[328px] h-[108px] border border-border bg-card rounded-[10px] hover:bg-accent transition-colors flex-none flex-grow"
+            className="box-border flex h-[108px] w-full min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-[10px] border border-border bg-card px-3 py-3 transition-colors hover:bg-accent"
           >
             <Link2 size={16} className="text-foreground flex-none" />
             <span className="font-inter font-medium text-sm leading-[130%] text-foreground flex-none">

@@ -41,14 +41,37 @@ export default function QueryPage({
   const [selectedTab, setSelectedTab] = useState<"questions" | "metadata">(
     "questions",
   );
+  const [errorQuestionIds, setErrorQuestionIds] = useState<string[]>([]);
 
   const selectedQuestion = questions?.[selectedIndex];
-
   const requirementActions = useRequirementActions({
     selectedQuestion,
     questionnaireId: questionnaireId,
     productId,
   });
+  const hasNoRequirementsForSelectedQuestion =
+    !!selectedQuestion &&
+    !requirementActions.isLoadingRequirements &&
+    requirementActions.requirements.length === 0 &&
+    !requirementActions.requirementsError;
+
+  useEffect(() => {
+    if (!selectedQuestion) return;
+
+    setErrorQuestionIds((previousIds) => {
+      const hasError = previousIds.includes(selectedQuestion.id);
+
+      if (hasNoRequirementsForSelectedQuestion && !hasError) {
+        return [...previousIds, selectedQuestion.id];
+      }
+
+      if (!hasNoRequirementsForSelectedQuestion && hasError) {
+        return previousIds.filter((id) => id !== selectedQuestion.id);
+      }
+
+      return previousIds;
+    });
+  }, [hasNoRequirementsForSelectedQuestion, selectedQuestion]);
 
   useEffect(() => {
     if (!productKey || !queryKey) return;
@@ -80,6 +103,39 @@ export default function QueryPage({
     };
     loadQuestionnaire();
   }, [productKey, queryKey]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!event.metaKey && !event.ctrlKey) return;
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (!questions?.length) return;
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setSelectedIndex((currentIndex) =>
+          Math.min(currentIndex + 1, questions.length - 1),
+        );
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setSelectedIndex((currentIndex) => Math.max(currentIndex - 1, 0));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [questions?.length]);
 
   if (loading) {
     return (
@@ -136,6 +192,7 @@ export default function QueryPage({
                 questionnaireKey={queryKey}
                 clientName={clientName}
                 requirements={requirementActions.requirements}
+                errorQuestionIds={errorQuestionIds}
                 onIndexChange={setSelectedIndex}
                 onTabChange={setSelectedTab}
               />
