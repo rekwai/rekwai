@@ -12,6 +12,8 @@ import {
   getDocumentWithRequirements,
   DocumentWithRequirements,
   createRequirement,
+  deleteRequirement,
+  deleteExtractionLink,
   updateRequirement as updateRequirementApi,
   getRequirement,
 } from "@/lib/api/requirements";
@@ -21,6 +23,7 @@ import {
   Requirement,
   ExtractedRequirementUpdate,
   SuggestedAction,
+  CreateInfo,
 } from "@/types/requirement-types";
 import {
   PageLoadingState,
@@ -63,6 +66,7 @@ export default function DocumentPage({
   const [pendingMergeLinkId, setPendingMergeLinkId] = useState<string | null>(
     null,
   );
+  const [lastCreateInfo, setLastCreateInfo] = useState<CreateInfo | null>(null);
 
   // Modal state management using custom hook
   const createRequirementModal = useRequirementModal();
@@ -113,9 +117,8 @@ export default function DocumentPage({
     selectedRequirementIndex,
     combinedLoading,
     availableTypes,
-    isFetchingSuggestion,
+    linkedRequirements,
     suggestedAction,
-    isSuggestionDismissed,
     handleRequirementSelect,
     updateRequirement,
     persistField,
@@ -123,7 +126,6 @@ export default function DocumentPage({
     loadLinkedRequirements,
     fetchSuggestedAction,
     confirmSuggestion,
-    dismissSuggestion,
     linkNewRequirement,
     handleLinkExistingRequirements,
     handleGenerateMerge,
@@ -313,7 +315,9 @@ export default function DocumentPage({
   };
 
   // Create a new requirement from the selected extracted requirement
-  const handleCreateNewFromSuggestion = async () => {
+  const handleCreateNewFromSuggestion = async (
+    previousSuggestion?: SuggestedAction | null,
+  ) => {
     if (!selectedRequirement) return;
     const created = await createRequirement({
       description: getFirstNonEmpty(
@@ -328,8 +332,47 @@ export default function DocumentPage({
         selectedRequirement.requirementVerification || "",
       product_id: selectedRequirement.product_id,
     });
-    await linkNewRequirement(created.id.toString(), "create");
+    let isLinked = false;
+    try {
+      await linkNewRequirement(created.id.toString(), "create");
+      isLinked = true;
+    } catch (error) {
+      console.error("Requirement created but linking failed:", error);
+      toast({
+        title: "Requirement created, but linking failed",
+        description:
+          "You can edit this requirement now, and link it later from the source panel.",
+      });
+    }
+
+    setLastCreateInfo({
+      extractedReqId: selectedRequirement.id.toString(),
+      createdRequirement: created,
+      isLinked,
+      previousSuggestion: previousSuggestion ?? undefined,
+    });
   };
+
+  const handleUndoCreate = useCallback(async () => {
+    if (!lastCreateInfo) return;
+
+    if (lastCreateInfo.isLinked) {
+      await deleteExtractionLink(
+        lastCreateInfo.createdRequirement.id.toString(),
+        lastCreateInfo.extractedReqId,
+      );
+    }
+    await deleteRequirement(lastCreateInfo.createdRequirement.id.toString());
+    setLastCreateInfo(null);
+    await reloadDocumentData();
+    await loadLinkedRequirements();
+    await fetchSuggestedAction();
+  }, [
+    lastCreateInfo,
+    reloadDocumentData,
+    loadLinkedRequirements,
+    fetchSuggestedAction,
+  ]);
 
   // Handle AI suggestion confirmation with follow-up actions
   const handleConfirmSuggestion = async () => {
@@ -348,7 +391,7 @@ export default function DocumentPage({
         result.invalidated_ids || [],
       );
     } else if (result?.action === "create_new") {
-      await handleCreateNewFromSuggestion();
+      await handleCreateNewFromSuggestion(suggestionSnapshot);
     }
   };
 
@@ -366,6 +409,10 @@ export default function DocumentPage({
       await openMergeDrawerFallback(result.requirement, overrideValues);
     }
   };
+
+  useEffect(() => {
+    setLastCreateInfo(null);
+  }, [selectedRequirement?.id]);
 
   if (loading) {
     return (
@@ -437,10 +484,10 @@ export default function DocumentPage({
                   combinedLoading={combinedLoading}
                   productId={documentData.product_id}
                   linkedRequirementsProps={{
-                    isFetchingSuggestion,
+                    linkedRequirements,
                     suggestedAction,
-                    isSuggestionDismissed,
                     lastMergeInfo,
+                    lastCreateInfo,
                     mergePreview: selectedRequirement?.mergePreview,
                   }}
                   actionHandlers={{
@@ -448,12 +495,13 @@ export default function DocumentPage({
                     onEditLinkedRequirement: (requirement: Requirement) =>
                       editLinkedModal.open(requirement),
                     onLinkExistingRequirements: handleLinkExistingRequirements,
-                    onCreateNewRequirement: () => createRequirementModal.open(),
                     onFetchSuggestedAction: fetchSuggestedAction,
                     onConfirmSuggestion: handleConfirmSuggestion,
-                    onDismissSuggestion: dismissSuggestion,
                     onEditSuggestion: handleEditSuggestion,
                     onUndoMerge: handleUndoMerge,
+                    onUndoCreate: handleUndoCreate,
+                    onEditCreatedRequirement: (requirement: Requirement) =>
+                      editLinkedModal.open(requirement),
                   }}
                 />
               </div>

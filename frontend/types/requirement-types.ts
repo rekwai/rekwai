@@ -111,6 +111,13 @@ export interface MergeInfo {
   previousSuggestion?: SuggestedAction;
 }
 
+export interface CreateInfo {
+  extractedReqId: string;
+  createdRequirement: Requirement;
+  isLinked: boolean;
+  previousSuggestion?: SuggestedAction;
+}
+
 export interface MergedRequirement {
   description: string;
   types: string[];

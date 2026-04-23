@@ -4,7 +4,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ message, variant = "default" }: EmptyStateProps) {
-  const textColor = variant === "error" ? "text-red-500" : "text-gray-500";
+  const textColor = variant === "error" ? "text-red-500" : "text-semantic-text";
 
   return (
     <div className="flex items-center justify-center w-full h-full">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Check, ExternalLink, Sparkles, Merge, Plus } from "lucide-react";
+import { Check, ExternalLink, Sparkles, Merge, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RequirementCard } from "@/components/common/requirement-card";
@@ -18,7 +18,6 @@ import {
 interface AISuggestionBannerProps {
   suggestion: SuggestedAction;
   onConfirm: () => Promise<unknown>;
-  onDismiss: () => void;
   onEdit?: () => Promise<unknown>;
   mergePreview?: MergedRequirement | null;
   extractedRequirement?: RequirementItemType | null;
@@ -67,7 +66,6 @@ const ACTION_CONFIG: Record<
 export function AISuggestionBanner({
   suggestion,
   onConfirm,
-  onDismiss,
   onEdit,
   mergePreview,
   extractedRequirement,
@@ -113,17 +111,6 @@ export function AISuggestionBanner({
 
       {/* Action buttons — between justification and preview */}
       <div className="flex items-center justify-end gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onDismiss}
-          disabled={isConfirming}
-          className="flex items-center gap-1.5 text-xs px-2.5 py-1 h-7 rounded-[12px] bg-semantic-bg-elevation-1 hover:bg-semantic-highlight text-semantic-text"
-          data-testid="dismiss-suggestion-button"
-        >
-          Dismiss Suggestion
-          <X size={12} />
-        </Button>
         <Button
           size="sm"
           onClick={handleConfirm}

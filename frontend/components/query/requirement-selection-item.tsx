@@ -32,7 +32,7 @@ export function RequirementSelectionItem({
         />
       </div>
       <div className="flex flex-col items-start p-0 gap-2 flex-1">
-        <div className="font-inter font-normal text-xs leading-[15px] text-black">
+        <div className="font-inter font-normal text-xs leading-[15px] text-semantic-text">
           {requirement.requirement_key} - {requirement.description}
         </div>
         <div className="flex flex-row items-start p-0 gap-3">

@@ -18,7 +18,6 @@ import {
   generateMerge,
   updateExtractedRequirement,
   acceptSuggestion,
-  dismissSuggestion as dismissSuggestionApi,
   undoMerge as undoMergeApi,
 } from "@/lib/api/requirements";
 import { updateRequirementInList } from "@/lib/utils/requirement-indexing-utils";
@@ -60,7 +59,6 @@ export function useRequirementIndexing({
   const [refreshingSuggestionIds, setRefreshingSuggestionIds] = useState<
     Set<string>
   >(new Set());
-  const [isSuggestionDismissed, setIsSuggestionDismissed] = useState(false);
   const [lastMergeInfo, setLastMergeInfo] = useState<MergeInfo | null>(null);
 
   const selectedRequirement = requirements[selectedRequirementIndex];
@@ -178,7 +176,6 @@ export function useRequirementIndexing({
       );
 
       setSuggestedAction(result);
-      setIsSuggestionDismissed(false);
     } catch (error) {
       console.error("Failed to fetch suggested action:", error);
     } finally {
@@ -296,25 +293,10 @@ export function useRequirementIndexing({
     return result;
   }, [suggestedAction, selectedRequirement, fetchAndSetLinkedRequirements, updateSelectedRequirementLink, clearSelectedRequirementSuggestion]);
 
-  // Dismiss the AI suggestion
-  const dismissSuggestion = useCallback(async () => {
-    try {
-      if (selectedRequirement?.id) {
-        await dismissSuggestionApi(selectedRequirement.id.toString());
-      }
-    } catch (error) {
-      console.error("Failed to dismiss suggestion:", error);
-    }
-    setSuggestedAction(null);
-    clearSelectedRequirementSuggestion();
-    setIsSuggestionDismissed(true);
-  }, [selectedRequirement, clearSelectedRequirementSuggestion]);
-
   // Restore suggestion state locally after undo
   const restoreSuggestionState = useCallback(
     (suggestion: SuggestedAction) => {
       setSuggestedAction(suggestion);
-      setIsSuggestionDismissed(false);
       setRequirements((prev) =>
         prev.map((req, idx) =>
           idx === selectedRequirementIndex
@@ -398,7 +380,6 @@ export function useRequirementIndexing({
     } else {
       setSuggestedAction(null);
     }
-    setIsSuggestionDismissed(false);
     setLastMergeInfo(null);
   }, [selectedRequirement?.id]);
 
@@ -571,7 +552,6 @@ export function useRequirementIndexing({
     linkedRequirementsLoading,
     isFetchingSuggestion,
     suggestedAction,
-    isSuggestionDismissed,
     lastMergeInfo,
     mergingRequirementId,
     refreshingSuggestionIds,
@@ -584,7 +564,6 @@ export function useRequirementIndexing({
     loadLinkedRequirements,
     fetchSuggestedAction,
     confirmSuggestion,
-    dismissSuggestion,
     undoMerge,
     setLastMergeInfo,
     linkNewRequirement,

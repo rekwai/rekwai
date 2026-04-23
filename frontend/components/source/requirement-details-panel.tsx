@@ -8,13 +8,14 @@ import {
   SuggestedAction,
   MergedRequirement,
   MergeInfo,
+  CreateInfo,
 } from "@/types/requirement-types";
 
 interface LinkedRequirementsProps {
-  isFetchingSuggestion?: boolean;
+  linkedRequirements?: Requirement[];
   suggestedAction?: SuggestedAction | null;
-  isSuggestionDismissed?: boolean;
   lastMergeInfo?: MergeInfo | null;
+  lastCreateInfo?: CreateInfo | null;
   mergePreview?: MergedRequirement | null;
 }
 
@@ -22,12 +23,12 @@ interface ActionHandlers {
   onEditRequirement: () => void;
   onEditLinkedRequirement: (requirement: Requirement) => void;
   onLinkExistingRequirements: (requirements: Requirement[]) => Promise<void>;
-  onCreateNewRequirement: () => void;
   onFetchSuggestedAction?: () => Promise<void>;
   onConfirmSuggestion?: () => Promise<unknown>;
-  onDismissSuggestion?: () => void;
   onEditSuggestion?: () => Promise<unknown>;
   onUndoMerge?: () => Promise<void>;
+  onUndoCreate?: () => Promise<void>;
+  onEditCreatedRequirement?: (requirement: Requirement) => void;
 }
 
 interface RequirementDetailsPanelProps {
@@ -83,23 +84,23 @@ export function RequirementDetailsPanel({
     >
       <LinkedRequirementsSection
         productId={productId}
-        onCreateNewRequirement={actionHandlers.onCreateNewRequirement}
+        linkedRequirements={linkedRequirementsProps.linkedRequirements || []}
         onEditLinkedRequirement={actionHandlers.onEditLinkedRequirement}
         onLinkExistingRequirements={actionHandlers.onLinkExistingRequirements}
         suggestion={{
-          isFetchingSuggestion: linkedRequirementsProps.isFetchingSuggestion,
           suggestedAction: linkedRequirementsProps.suggestedAction,
-          isSuggestionDismissed: linkedRequirementsProps.isSuggestionDismissed,
           lastMergeInfo: linkedRequirementsProps.lastMergeInfo,
+          lastCreateInfo: linkedRequirementsProps.lastCreateInfo,
           mergePreview: linkedRequirementsProps.mergePreview,
           selectedRequirement,
         }}
         suggestionHandlers={{
           onFetchSuggestedAction: actionHandlers.onFetchSuggestedAction,
           onConfirmSuggestion: actionHandlers.onConfirmSuggestion,
-          onDismissSuggestion: actionHandlers.onDismissSuggestion,
           onEditSuggestion: actionHandlers.onEditSuggestion,
           onUndoMerge: actionHandlers.onUndoMerge,
+          onUndoCreate: actionHandlers.onUndoCreate,
+          onEditCreatedRequirement: actionHandlers.onEditCreatedRequirement,
           onEditRequirement: actionHandlers.onEditRequirement,
         }}
       />

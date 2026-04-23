@@ -101,7 +101,7 @@ export function RequirementSelectionModal({
 
       {/* Modal */}
       <div
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 flex flex-col items-start p-0 w-[532px] h-[599px] bg-modal-bg rounded-[10px]"
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 flex flex-col items-start p-0 w-[532px] h-[599px] bg-modal-bg rounded-[10px] text-semantic-text"
         style={{ boxShadow: "0px 0px 20px 10px rgba(0, 0, 0, 0.1)" }}
         data-testid="requirement-selection-modal"
       >
@@ -109,10 +109,10 @@ export function RequirementSelectionModal({
         <div className="flex flex-row items-center p-0 w-[532px] h-[51px] border-b border-modal-border">
           {/* Title block */}
           <div className="flex flex-row items-center px-4 py-4 gap-2 flex-1 h-[51px]">
-            <h2 className="font-inter font-bold text-base leading-[19px] text-black">
+            <h2 className="font-inter font-bold text-base leading-[19px]">
               Link Requirement(s)
             </h2>
-            <span className="font-inter font-bold text-base leading-[19px] text-black">
+            <span className="font-inter font-bold text-base leading-[19px]">
               ({selectedIds.size})
             </span>
           </div>
@@ -123,7 +123,7 @@ export function RequirementSelectionModal({
               className="flex items-center justify-center w-6 h-6"
               data-testid="close-requirement-selection-modal"
             >
-              <X size={24} className="text-black" strokeWidth={1.5} />
+              <X size={24} className="text-semantic-text" strokeWidth={1.5} />
             </button>
           </div>
         </div>
@@ -131,7 +131,7 @@ export function RequirementSelectionModal({
         {/* Body */}
         <div className="flex flex-col items-start p-8 gap-4 w-[532px] h-[488px] bg-modal-bg">
           {/* Instruction text */}
-          <p className="w-full h-[17px] font-inter font-normal text-sm leading-[17px] text-black">
+          <p className="w-full h-[17px] font-inter font-normal text-sm leading-[17px]">
             Select requirements below to link them as a source to the question.
           </p>
 
@@ -142,10 +142,10 @@ export function RequirementSelectionModal({
               placeholder="Search requirements"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-[18px] font-inter font-normal text-xs leading-[150%] text-[#080705] bg-transparent outline-none placeholder:text-[#080705] placeholder:opacity-60"
+              className="w-full h-[18px] font-inter font-normal text-xs leading-[150%] text-semantic-text bg-transparent outline-none placeholder:text-semantic-text placeholder:opacity-60"
               data-testid="requirement-search-input"
             />
-            <Search size={16} className="text-black flex-shrink-0" />
+            <Search size={16} className="text-semantic-text flex-shrink-0" />
           </div>
 
           {/* Divider */}
@@ -189,7 +189,7 @@ export function RequirementSelectionModal({
         <div className="box-border flex flex-row justify-end items-center p-4 gap-3 w-[532px] h-[60px] bg-modal-bg border-t border-modal-border">
           <button
             onClick={handleClose}
-            className="flex flex-row justify-center items-center px-2.5 py-1 gap-1 w-[60px] h-7 bg-cancel-btn rounded-xl font-inter font-normal text-xs leading-[15px] text-[#080705]"
+            className="flex flex-row justify-center items-center px-2.5 py-1 gap-1 w-[60px] h-7 bg-cancel-btn rounded-xl font-inter font-normal text-xs leading-[15px] text-semantic-text"
             data-testid="cancel-requirement-selection"
           >
             Cancel
@@ -197,7 +197,7 @@ export function RequirementSelectionModal({
           <button
             onClick={handleConfirm}
             disabled={selectedIds.size === 0}
-            className="flex flex-row justify-center items-center px-2.5 py-1 gap-1 h-7 bg-custom-yellow rounded-xl font-inter font-normal text-xs leading-[15px] text-[#080705] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex flex-row justify-center items-center px-2.5 py-1 gap-1 h-7 bg-custom-yellow rounded-xl font-inter font-normal text-xs leading-[15px] text-semantic-text disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="confirm-requirement-selection"
           >
             Link ({selectedIds.size})
