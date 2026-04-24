@@ -1,9 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ExternalLink, Sparkles, Merge, Plus } from "lucide-react";
+import {
+  Check,
+  Link,
+  Merge,
+  Plus,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { RequirementCard } from "@/components/common/requirement-card";
 import { PreviewCard } from "@/components/common/preview-card";
 import { TypeBadges, StatusBadge } from "@/components/common/requirement-badges";
@@ -27,39 +39,33 @@ interface AISuggestionBannerProps {
 const ACTION_CONFIG: Record<
   SuggestedActionType,
   {
-    badgeLabel: string;
-    badgeBg: string;
-    badgeIcon?: typeof Merge;
-    confirmLabel: string;
+    actionLabel: string;
+    actionBg: string;
+    actionHover: string;
+    actionIcon?: LucideIcon;
     confirmingLabel: string;
-    confirmBg: string;
-    confirmIcon?: typeof Merge;
   }
 > = {
   attach: {
-    badgeLabel: "Attach to Requirement",
-    badgeBg: "bg-semantic-indicator-6 text-semantic-indicator-2",
-    confirmLabel: "Attach to requirement",
-    confirmingLabel: "Attaching to requirement",
-    confirmBg: "bg-semantic-emphasis text-semantic-white hover:bg-semantic-black",
+    actionLabel: "Link Requirements",
+    actionBg: "bg-semantic-indicator-6 text-semantic-indicator-2",
+    actionHover: "hover:bg-semantic-indicator-2 hover:!text-semantic-white",
+    actionIcon: Link,
+    confirmingLabel: "Linking requirements",
   },
   merge: {
-    badgeLabel: "Merge Requirements",
-    badgeBg: "bg-primitive-orange-100 text-semantic-text",
-    badgeIcon: Merge,
-    confirmLabel: "Merge Requirements",
+    actionLabel: "Merge Requirements",
+    actionBg: "bg-primitive-orange-100 text-semantic-text",
+    actionHover: "hover:bg-semantic-indicator-3 hover:!text-semantic-white",
+    actionIcon: Merge,
     confirmingLabel: "Merging requirements",
-    confirmBg: "bg-semantic-indicator-3 text-semantic-white hover:bg-semantic-indicator-3",
-    confirmIcon: Merge,
   },
   create_new: {
-    badgeLabel: "Create Requirement",
-    badgeBg: "bg-semantic-success-bg text-semantic-black",
-    badgeIcon: Plus,
-    confirmLabel: "Create Requirement",
+    actionLabel: "Create Requirement",
+    actionBg: "bg-semantic-success-bg text-semantic-black",
+    actionHover: "hover:bg-semantic-success-fg hover:!text-semantic-white",
+    actionIcon: Plus,
     confirmingLabel: "Creating requirement",
-    confirmBg: "bg-semantic-emphasis text-semantic-white hover:bg-semantic-black",
-    confirmIcon: Plus,
   },
 };
 
@@ -72,9 +78,12 @@ export function AISuggestionBanner({
   onEditExtraction,
 }: AISuggestionBannerProps) {
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isRequirementModalOpen, setIsRequirementModalOpen] = useState(false);
 
   const config = ACTION_CONFIG[suggestion.action];
   const isMerge = suggestion.action === "merge";
+  const targetRequirement = suggestion.target_requirement;
+  const targetRequirementKey = targetRequirement?.requirement_key;
 
   const handleConfirm = async () => {
     setIsConfirming(true);
@@ -83,6 +92,41 @@ export function AISuggestionBanner({
     } finally {
       setIsConfirming(false);
     }
+  };
+
+  const renderJustification = () => {
+    if (!targetRequirementKey) {
+      return suggestion.justification;
+    }
+
+    const escapedKey = targetRequirementKey.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&",
+    );
+    const keyRegex = new RegExp(`\\b(${escapedKey})\\b`);
+    const parts = suggestion.justification.split(keyRegex);
+
+    if (parts.length === 1) {
+      return suggestion.justification;
+    }
+
+    return parts.map((part, index) => {
+      if (part !== targetRequirementKey) {
+        return <span key={`${part}-${index}`}>{part}</span>;
+      }
+
+      return (
+        <button
+          key={`target-key-${index}`}
+          type="button"
+          className="font-semibold text-semantic-indicator-2 underline underline-offset-2 hover:text-semantic-indicator-2/80"
+          onClick={() => setIsRequirementModalOpen(true)}
+          data-testid="suggestion-target-requirement-link"
+        >
+          {part}
+        </button>
+      );
+    });
   };
 
   return (
@@ -96,33 +140,28 @@ export function AISuggestionBanner({
         <span className="font-inter font-semibold text-base text-semantic-text">
           Suggestion
         </span>
-        <Badge
-          variant="chip"
-          className={`flex items-center gap-1.5 px-1.5 py-0.5 text-xs font-medium rounded-[3px] ${config.badgeBg}`}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleConfirm}
+          disabled={isConfirming}
+          className={`h-7 gap-2 rounded-[12px] border-none px-2.5 py-1 text-xs leading-[15px] font-normal ${config.actionBg} ${config.actionHover}`}
+          data-testid="confirm-suggestion-button"
         >
-          {config.badgeLabel}
-          {config.badgeIcon ? <config.badgeIcon size={12} /> : <ExternalLink size={10} />}
-        </Badge>
+          {isConfirming ? config.confirmingLabel : config.actionLabel}
+          {isConfirming ? (
+            <Check size={12} />
+          ) : config.actionIcon ? (
+            <config.actionIcon size={12} />
+          ) : null}
+        </Button>
       </div>
 
       {/* Justification */}
       <p className="font-inter font-medium text-sm text-semantic-text leading-5">
-        {suggestion.justification}
+        {renderJustification()}
       </p>
-
-      {/* Action buttons — between justification and preview */}
-      <div className="flex items-center justify-end gap-4">
-        <Button
-          size="sm"
-          onClick={handleConfirm}
-          disabled={isConfirming}
-          className={`flex items-center gap-1.5 text-xs px-2.5 py-1 h-7 rounded-[12px] ${config.confirmBg}`}
-          data-testid="confirm-suggestion-button"
-        >
-          {isConfirming ? config.confirmingLabel : config.confirmLabel}
-          {config.confirmIcon ? <config.confirmIcon size={12} /> : isConfirming ? <Check size={12} /> : null}
-        </Button>
-      </div>
 
       {/* Preview */}
       {isMerge && mergePreview && suggestion.target_requirement ? (
@@ -161,6 +200,32 @@ export function AISuggestionBanner({
           }
         />
       ) : null}
+
+      {targetRequirement && (
+        <Dialog
+          open={isRequirementModalOpen}
+          onOpenChange={setIsRequirementModalOpen}
+        >
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{targetRequirement.requirement_key}</DialogTitle>
+            </DialogHeader>
+            <RequirementCard
+              description={targetRequirement.description}
+              typeBadges={<TypeBadges types={targetRequirement.types} />}
+              statusBadge={
+                <StatusBadge status={targetRequirement.implementation_status} />
+              }
+              implementationDescription={
+                targetRequirement.implementation_description
+              }
+              verificationDescription={
+                targetRequirement.requirement_verification || ""
+              }
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

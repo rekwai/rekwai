@@ -41,7 +41,7 @@ export function RequirementItem({
             variant="outline"
             size="sm"
             onClick={() => onEdit(requirement)}
-            className="h-7 pl-2.5 pr-2 py-1 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-xs font-normal text-semantic-text hover:bg-semantic-highlight shadow-none"
+            className="h-7 gap-3 pl-2.5 pr-2 py-1 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-xs font-normal text-semantic-text hover:bg-semantic-highlight shadow-none"
             data-testid="edit-requirement-button"
           >
             Edit
@@ -55,7 +55,7 @@ export function RequirementItem({
               size="sm"
               onClick={() => onMerge(requirement)}
               disabled={isMerging}
-              className="h-7 pl-2.5 pr-2 py-1 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-xs font-normal text-semantic-text hover:bg-semantic-highlight disabled:opacity-50 shadow-none"
+              className="h-7 gap-3 pl-2.5 pr-2 py-1 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-xs font-normal text-semantic-text hover:bg-semantic-highlight disabled:opacity-50 shadow-none"
               data-testid="merge-requirement-button"
               title="Merge this requirement"
             >
@@ -77,7 +77,7 @@ export function RequirementItem({
             size="sm"
             onClick={() => onIgnore(requirement)}
             disabled={isToggling}
-            className="group h-7 pl-2.5 pr-2 py-1 rounded-[4px] bg-semantic-error-bg text-xs font-normal text-semantic-black hover:!bg-semantic-error-fg dark:hover:!bg-semantic-error-fg hover:!text-semantic-white dark:hover:!text-semantic-white disabled:opacity-50 border-none shadow-none"
+            className="group h-7 gap-3 pl-2.5 pr-2 py-1 rounded-[4px] bg-semantic-error-bg text-xs font-normal text-semantic-black hover:!bg-semantic-error-fg dark:hover:!bg-semantic-error-fg hover:!text-semantic-white dark:hover:!text-semantic-white disabled:opacity-50 border-none shadow-none"
             data-testid="ignore-requirement-button"
             title="Ignore this requirement"
           >

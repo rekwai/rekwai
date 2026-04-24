@@ -193,6 +193,8 @@ export interface RequirementDocument {
   created_at: string;
   requirements_count: number;
   linked_requirements_count: number;
+  created_requirements_count?: number;
+  merged_requirements_count?: number;
 }
 
 /**

@@ -24,7 +24,7 @@ const BASE_BUTTON_STYLES =
 
 const DELETE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} group bg-semantic-error-bg text-semantic-black hover:!bg-semantic-error-fg dark:hover:!bg-semantic-error-fg hover:!text-semantic-white dark:hover:!text-semantic-white`;
 
-const BULK_CREATE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-semantic-success-fg text-semantic-white hover:bg-semantic-indicator-4`;
+const BULK_CREATE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-semantic-success-fg !text-semantic-white hover:bg-semantic-indicator-4 hover:!text-semantic-white`;
 
 interface RequirementHeaderProps {
   productKey: string;

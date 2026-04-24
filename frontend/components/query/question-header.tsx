@@ -21,7 +21,7 @@ interface ExportMenuItemProps {
 function ExportMenuItem({ title, description, onSelect }: ExportMenuItemProps) {
   return (
     <DropdownMenuItem
-      className="flex flex-col justify-center items-start px-3 py-1 rounded-[4px] focus:bg-accent"
+      className="flex flex-col justify-center items-start px-3 py-4 rounded-[4px] focus:bg-accent"
       onSelect={(e) => {
         e.preventDefault();
         onSelect();

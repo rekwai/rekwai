@@ -1,4 +1,10 @@
-import { useState, useEffect, useCallback, useTransition } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useTransition,
+  useRef,
+} from "react";
 import {
   RequirementItem,
   Requirement,
@@ -51,6 +57,10 @@ export function useRequirementIndexing({
   const [isFetchingSuggestion, setIsFetchingSuggestion] = useState(false);
   const [suggestedAction, setSuggestedAction] =
     useState<SuggestedAction | null>(null);
+  /** Extracted requirement id that `suggestedAction` belongs to (avoids list/panel mismatch when selection changes before state catches up). */
+  const [suggestedExtractedId, setSuggestedExtractedId] = useState<
+    string | null
+  >(null);
 
   // UI state
   const [mergingRequirementId, setMergingRequirementId] = useState<
@@ -63,6 +73,9 @@ export function useRequirementIndexing({
 
   const selectedRequirement = requirements[selectedRequirementIndex];
   const combinedLoading = isLoading || typesLoading;
+
+  const selectedExtractionRef = useRef<string | null>(null);
+  selectedExtractionRef.current = selectedRequirement?.id?.toString() ?? null;
 
   // Shared helper to clear all suggestion fields on a requirement
   const withClearedSuggestion = (req: RequirementItem): RequirementItem => ({
@@ -163,19 +176,42 @@ export function useRequirementIndexing({
       return;
     }
 
+    const extractedId = selectedRequirement.id.toString();
+
     setIsFetchingSuggestion(true);
-    setSuggestedAction(null);
 
     try {
       // Derive exclude IDs from already-loaded linked requirements state
       const excludeIds = linkedRequirements.map((r) => r.id.toString());
 
       const result = await getSuggestedAction(
-        selectedRequirement.id.toString(),
+        extractedId,
         excludeIds,
       );
 
+      if (selectedExtractionRef.current !== extractedId) {
+        return;
+      }
+
       setSuggestedAction(result);
+      setSuggestedExtractedId(extractedId);
+      setRequirements((prev) =>
+        prev.map((req) =>
+          req.id.toString() === extractedId
+            ? {
+                ...req,
+                suggestedAction: result.action,
+                suggestedTargetRequirementId:
+                  result.target_requirement_id ?? undefined,
+                suggestionJustification: result.justification ?? undefined,
+                suggestionSimilarityScore: result.similarity_score ?? undefined,
+                suggestedTargetRequirement:
+                  result.target_requirement ?? undefined,
+                mergePreview: result.merge_preview ?? undefined,
+              }
+            : req,
+        ),
+      );
     } catch (error) {
       console.error("Failed to fetch suggested action:", error);
     } finally {
@@ -248,6 +284,12 @@ export function useRequirementIndexing({
     invalidated_ids?: string[];
   } | null> => {
     if (!suggestedAction || !selectedRequirement?.id) return null;
+    if (
+      suggestedExtractedId != null &&
+      suggestedExtractedId !== selectedRequirement.id.toString()
+    ) {
+      return null;
+    }
 
     const { action, target_requirement_id, target_requirement } =
       suggestedAction;
@@ -289,14 +331,25 @@ export function useRequirementIndexing({
     };
 
     setSuggestedAction(null);
+    setSuggestedExtractedId(null);
     clearSelectedRequirementSuggestion();
     return result;
-  }, [suggestedAction, selectedRequirement, fetchAndSetLinkedRequirements, updateSelectedRequirementLink, clearSelectedRequirementSuggestion]);
+  }, [
+    suggestedAction,
+    suggestedExtractedId,
+    selectedRequirement,
+    fetchAndSetLinkedRequirements,
+    updateSelectedRequirementLink,
+    clearSelectedRequirementSuggestion,
+  ]);
 
   // Restore suggestion state locally after undo
   const restoreSuggestionState = useCallback(
     (suggestion: SuggestedAction) => {
+      const extractedId =
+        requirements[selectedRequirementIndex]?.id?.toString() ?? null;
       setSuggestedAction(suggestion);
+      setSuggestedExtractedId(extractedId);
       setRequirements((prev) =>
         prev.map((req, idx) =>
           idx === selectedRequirementIndex
@@ -317,7 +370,7 @@ export function useRequirementIndexing({
         ),
       );
     },
-    [selectedRequirementIndex],
+    [selectedRequirementIndex, requirements],
   );
 
   // Undo a merge (restore requirement to pre-merge state)
@@ -362,7 +415,7 @@ export function useRequirementIndexing({
     }
   }, [lastMergeInfo, fetchAndSetLinkedRequirements, updateSelectedRequirementLink, restoreSuggestionState]);
 
-  // Auto-populate suggestion from stored data when selected requirement changes
+  // Auto-populate hook suggestion from the selected row's stored fields (document load or patch)
   useEffect(() => {
     if (
       selectedRequirement?.suggestedAction &&
@@ -376,10 +429,24 @@ export function useRequirementIndexing({
           selectedRequirement.suggestedTargetRequirement ?? null,
         justification: selectedRequirement.suggestionJustification,
         similarity_score: selectedRequirement.suggestionSimilarityScore ?? 0,
+        merge_preview: selectedRequirement.mergePreview ?? undefined,
       });
+      setSuggestedExtractedId(selectedRequirement.id.toString());
     } else {
       setSuggestedAction(null);
+      setSuggestedExtractedId(null);
     }
+  }, [
+    selectedRequirement?.id,
+    selectedRequirement?.suggestedAction,
+    selectedRequirement?.suggestionJustification,
+    selectedRequirement?.suggestedTargetRequirementId,
+    selectedRequirement?.suggestionSimilarityScore,
+    selectedRequirement?.suggestedTargetRequirement,
+    selectedRequirement?.mergePreview,
+  ]);
+
+  useEffect(() => {
     setLastMergeInfo(null);
   }, [selectedRequirement?.id]);
 
@@ -394,7 +461,12 @@ export function useRequirementIndexing({
     if (selectedRequirement.suggestedAction && selectedRequirement.suggestionJustification) {
       return;
     }
-    if (suggestedAction) {
+    const hookAlignedWithRow =
+      suggestedAction &&
+      suggestedExtractedId != null &&
+      suggestedExtractedId === selectedRequirement.id.toString();
+
+    if (hookAlignedWithRow) {
       return;
     }
     if (linkedRequirementsLoading) {
@@ -412,6 +484,7 @@ export function useRequirementIndexing({
     selectedRequirement?.suggestionJustification,
     isFetchingSuggestion,
     suggestedAction,
+    suggestedExtractedId,
     linkedRequirementsLoading,
     linkedRequirements.length,
     lastMergeInfo,
@@ -587,6 +660,7 @@ export function useRequirementIndexing({
     linkedRequirementsLoading,
     isFetchingSuggestion,
     suggestedAction,
+    suggestedExtractedId,
     lastMergeInfo,
     mergingRequirementId,
     refreshingSuggestionIds,

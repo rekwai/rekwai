@@ -108,12 +108,12 @@ const ICON_CONFIG: Record<
   SuggestionType,
   {
     icon: typeof Link;
-    // Full color (completed action)
+    // Post-link: reflects persisted link_type (user completed the action)
     fullBg: string;
     fullIcon: string;
     selectedFullBg: string;
     selectedFullIcon: string;
-    // Muted color (just a suggestion)
+    // Pre-link: reflects suggested_action only (AI suggestion, no link yet)
     mutedBg: string;
     mutedIcon: string;
     selectedMutedBg: string;
@@ -123,14 +123,14 @@ const ICON_CONFIG: Record<
 > = {
   attach: {
     icon: Link,
-    fullBg: "bg-semantic-indicator-6",
-    fullIcon: "text-semantic-indicator-2",
+    fullBg: "bg-semantic-indicator-2",
+    fullIcon: "text-semantic-white",
     selectedFullBg: "bg-semantic-indicator-2",
     selectedFullIcon: "text-semantic-white",
-    mutedBg: "bg-semantic-highlight",
-    mutedIcon: "text-muted-foreground",
-    selectedMutedBg: "bg-accent",
-    selectedMutedIcon: "text-muted-foreground",
+    mutedBg: "bg-semantic-indicator-6",
+    mutedIcon: "text-semantic-indicator-2",
+    selectedMutedBg: "bg-semantic-indicator-6",
+    selectedMutedIcon: "text-semantic-indicator-2",
     testId: "suggestion-type-attach",
   },
   merge: {
@@ -139,10 +139,10 @@ const ICON_CONFIG: Record<
     fullIcon: "text-semantic-white",
     selectedFullBg: "bg-semantic-indicator-3",
     selectedFullIcon: "text-semantic-white",
-    mutedBg: "bg-semantic-highlight",
-    mutedIcon: "text-muted-foreground",
-    selectedMutedBg: "bg-accent",
-    selectedMutedIcon: "text-muted-foreground",
+    mutedBg: "bg-[rgba(235,81,16,0.2)]",
+    mutedIcon: "text-semantic-black",
+    selectedMutedBg: "bg-[rgba(235,81,16,0.2)]",
+    selectedMutedIcon: "text-semantic-black",
     testId: "suggestion-type-merge",
   },
   create_new: {
@@ -160,8 +160,8 @@ const ICON_CONFIG: Record<
 };
 
 /**
- * Unified status icon shown to the left of each item.
- * Priority: error > link type (full color) > suggestion type (muted) > completed check > empty.
+ * List status icon: before a link exists, shape/colors follow suggested_action (muted).
+ * After has_links, they follow link_type (full) — the action the user completed.
  */
 function StatusIcon({
   linkType,
@@ -189,17 +189,20 @@ function StatusIcon({
     );
   }
 
-  // Determine icon type: link type takes priority (actual action), then suggestion
-  const iconKey = linkType ? linkTypeToIconKey(linkType) : suggestionType;
-  const isFullColor = isCompleted && !!linkType;
+  // Prefer current suggestion icon when present so list stays aligned with
+  // the suggestion chip; otherwise fall back to persisted link_type.
+  const iconKey = suggestionType ?? (linkType ? linkTypeToIconKey(linkType) : null);
+  const useActionPalette = Boolean(
+    isCompleted && linkType && !suggestionType && iconKey,
+  );
 
   if (iconKey) {
     const config = ICON_CONFIG[iconKey];
     const Icon = config.icon;
-    const bg = isFullColor
+    const bg = useActionPalette
       ? (isSelected ? config.selectedFullBg : config.fullBg)
       : (isSelected ? config.selectedMutedBg : config.mutedBg);
-    const iconColor = isFullColor
+    const iconColor = useActionPalette
       ? (isSelected ? config.selectedFullIcon : config.fullIcon)
       : (isSelected ? config.selectedMutedIcon : config.mutedIcon);
 

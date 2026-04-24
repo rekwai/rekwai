@@ -39,6 +39,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatDate } from "@/lib/utils/date-utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DeleteConfirmationDialogProps {
   open: boolean;
@@ -88,6 +94,8 @@ interface Document {
   dateUploaded: string;
   requirementsCount: number;
   linkedRequirementsCount: number;
+  createdRequirementsCount: number;
+  mergedRequirementsCount: number;
 }
 
 const transformApiDocument = (apiDoc: RequirementDocument): Document => ({
@@ -97,6 +105,8 @@ const transformApiDocument = (apiDoc: RequirementDocument): Document => ({
   dateUploaded: apiDoc.created_at,
   requirementsCount: apiDoc.requirements_count,
   linkedRequirementsCount: apiDoc.linked_requirements_count,
+  createdRequirementsCount: apiDoc.created_requirements_count ?? 0,
+  mergedRequirementsCount: apiDoc.merged_requirements_count ?? 0,
 });
 
 export function SourcesTab({ productId }: { productId: string | null }) {
@@ -126,6 +136,21 @@ export function SourcesTab({ productId }: { productId: string | null }) {
         doc.key.toLowerCase().includes(query),
     );
   }, [searchQuery, documents]);
+
+  const getExtractionTooltipText = useCallback((document: Document) => {
+    const processed = document.linkedRequirementsCount;
+    const total = document.requirementsCount;
+    const created = document.createdRequirementsCount;
+    const merged = document.mergedRequirementsCount;
+    const linked = Math.max(processed - created - merged, 0);
+
+    return [
+      `${processed} out of ${total} requirements processed`,
+      `${created} new requirements created`,
+      `${linked} linked`,
+      `${merged} merged`,
+    ];
+  }, []);
 
   // Row selection state and handlers
   const {
@@ -310,18 +335,31 @@ export function SourcesTab({ productId }: { productId: string | null }) {
                     <DataTableCell>{document.key}</DataTableCell>
                     <DataTableCell>{document.name}</DataTableCell>
                     <DataTableCell>
-                      <DataTableBadge
-                        variant={
-                          document.requirementsCount > 0 &&
-                          document.linkedRequirementsCount ===
-                            document.requirementsCount
-                            ? "success"
-                            : "info"
-                        }
-                      >
-                        {document.linkedRequirementsCount}/
-                        {document.requirementsCount}
-                      </DataTableBadge>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              <DataTableBadge
+                                variant={
+                                  document.requirementsCount > 0 &&
+                                  document.linkedRequirementsCount ===
+                                    document.requirementsCount
+                                    ? "success"
+                                    : "info"
+                                }
+                              >
+                                {document.linkedRequirementsCount}/
+                                {document.requirementsCount}
+                              </DataTableBadge>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-[260px] space-y-1 p-2 text-xs">
+                            {getExtractionTooltipText(document).map((line) => (
+                              <div key={line}>{line}</div>
+                            ))}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </DataTableCell>
                     <DataTableCell>
                       {formatDate(document.dateUploaded)}

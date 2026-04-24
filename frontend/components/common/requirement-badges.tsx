@@ -6,7 +6,7 @@ const TYPE_BADGE_CLASS =
 
 export function TypeBadges({ types }: { types: string[] }) {
   return types.map((type, index) => (
-    <Badge key={index} className={TYPE_BADGE_CLASS}>
+    <Badge key={index} variant="chip" className={TYPE_BADGE_CLASS}>
       {type}
     </Badge>
   ));

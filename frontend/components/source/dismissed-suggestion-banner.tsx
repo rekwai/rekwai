@@ -115,7 +115,7 @@ export function DismissedSuggestionBanner({
           className="flex items-center gap-1.5 text-xs px-3 py-1.5 h-8 rounded-md border-semantic-stroke text-semantic-text hover:bg-semantic-highlight"
           data-testid="dismissed-attach-button"
         >
-          Attach to requirement
+          Link Requirements
           <ArrowRight size={12} />
         </Button>
         <Button

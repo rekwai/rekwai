@@ -202,7 +202,7 @@ export function LinkedRequirementsSection({
                       className="h-7 rounded-[4px] border-semantic-stroke bg-semantic-bg-elevation-2 px-2.5 py-1 text-xs text-semantic-text hover:bg-semantic-highlight"
                       data-testid="fallback-attach-requirement-button"
                     >
-                      Attach to requirement
+                      Link Requirements
                     </Button>
                     <Button
                       size="sm"
@@ -219,7 +219,7 @@ export function LinkedRequirementsSection({
           )}
       </div>
 
-      {/* Requirement Selection Modal - for "Attach to requirement" in dismissed state */}
+      {/* Requirement Selection Modal — manual link from fallback state */}
       <RequirementSelectionModal
         isOpen={isSelectionModalOpen}
         onClose={() => setIsSelectionModalOpen(false)}

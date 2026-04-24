@@ -120,6 +120,7 @@ export default function DocumentPage({
     linkedRequirements,
     isFetchingSuggestion,
     suggestedAction,
+    suggestedExtractedId,
     handleRequirementSelect,
     updateRequirement,
     persistField,
@@ -136,6 +137,14 @@ export default function DocumentPage({
     setLastMergeInfo,
     undoMerge,
   } = hook;
+
+  const suggestionAlignedWithSelection =
+    suggestedAction &&
+    suggestedExtractedId != null &&
+    selectedRequirement &&
+    String(suggestedExtractedId) === String(selectedRequirement.id)
+      ? suggestedAction
+      : null;
 
   // Helper to reload document data after merges
   const reloadDocumentData = useCallback(async () => {
@@ -466,6 +475,7 @@ export default function DocumentPage({
                 onRequirementSelect={handleRequirementSelect}
                 combinedLoading={combinedLoading}
                 refreshingSuggestionIds={refreshingSuggestionIds}
+                selectedRowSuggestedAction={suggestionAlignedWithSelection}
                 documentMetadata={{
                   name: documentData.original_filename,
                   type: documentData.type,
@@ -487,7 +497,7 @@ export default function DocumentPage({
                   linkedRequirementsProps={{
                     linkedRequirements,
                     isFetchingSuggestion,
-                    suggestedAction,
+                    suggestedAction: suggestionAlignedWithSelection,
                     lastMergeInfo,
                     lastCreateInfo,
                     mergePreview: selectedRequirement?.mergePreview,
