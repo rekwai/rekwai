@@ -18,6 +18,7 @@ import { TypeBadges, StatusBadge } from "@/components/common/requirement-badges"
 import { Button } from "@/components/ui/button";
 
 interface SuggestionProps {
+  isFetchingSuggestion?: boolean;
   suggestedAction?: SuggestedAction | null;
   lastMergeInfo?: MergeInfo | null;
   lastCreateInfo?: CreateInfo | null;
@@ -38,6 +39,7 @@ interface SuggestionHandlers {
 interface LinkedRequirementsSectionProps {
   productId: string;
   linkedRequirements?: Requirement[];
+  onCreateNewRequirement: () => void;
   onEditLinkedRequirement: (requirement: Requirement) => void;
   onLinkExistingRequirements: (requirements: Requirement[]) => Promise<void>;
   suggestion?: SuggestionProps;
@@ -47,12 +49,14 @@ interface LinkedRequirementsSectionProps {
 export function LinkedRequirementsSection({
   productId,
   linkedRequirements = [],
+  onCreateNewRequirement,
   onEditLinkedRequirement,
   onLinkExistingRequirements,
   suggestion = {},
   suggestionHandlers = {},
 }: LinkedRequirementsSectionProps) {
   const {
+    isFetchingSuggestion = false,
     suggestedAction,
     lastMergeInfo,
     lastCreateInfo,
@@ -73,7 +77,9 @@ export function LinkedRequirementsSection({
   const linkedSectionTitle =
     selectedRequirement?.linkType === "create"
       ? "Requirement Created"
-      : "Linked Requirements";
+      : selectedRequirement?.linkType === "merge"
+        ? "Merged Requirement"
+        : "Linked Requirements";
 
   const hasSuggestion = !!(suggestedAction && onConfirmSuggestion);
 
@@ -112,9 +118,25 @@ export function LinkedRequirementsSection({
           />
         )}
 
+        {isFetchingSuggestion && !lastMergeInfo && !lastCreateInfo && !hasSuggestion && selectedRequirement && (
+          <div className="space-y-3" data-testid="suggestion-loading-state">
+            <div className="font-inter text-sm text-semantic-text">Loading AI suggestion…</div>
+            <RequirementCard
+              description={selectedRequirement.text || selectedRequirement.description}
+              typeBadges={<TypeBadges types={selectedRequirement.types || []} />}
+              statusBadge={
+                <StatusBadge status={selectedRequirement.implementation || "To do"} />
+              }
+              implementationDescription={selectedRequirement.implementationDescription || ""}
+              verificationDescription={selectedRequirement.requirementVerification || ""}
+            />
+          </div>
+        )}
+
         {!lastMergeInfo &&
           !lastCreateInfo &&
           !hasSuggestion &&
+          !isFetchingSuggestion &&
           !!onFetchSuggestedAction && (
             <div className="space-y-3" data-testid="linked-requirements-fallback">
               {linkedRequirements.length > 0 ? (
@@ -157,8 +179,40 @@ export function LinkedRequirementsSection({
                   ))}
                 </>
               ) : (
-                <div className="rounded-lg border border-semantic-stroke bg-semantic-bg-elevation-2 p-4 font-inter text-sm text-semantic-text">
-                  No active suggestion for this extraction yet.
+                <div className="space-y-3 rounded-lg border border-semantic-stroke bg-semantic-bg-elevation-2 p-4">
+                  <p className="font-inter text-sm text-semantic-text">
+                    No active suggestion for this extraction yet.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {onFetchSuggestedAction && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onFetchSuggestedAction}
+                        className="h-7 rounded-[4px] border-semantic-stroke bg-semantic-bg-elevation-2 px-2.5 py-1 text-xs text-semantic-text hover:bg-semantic-highlight"
+                        data-testid="fallback-rerun-suggestion-button"
+                      >
+                        Re-run suggestion
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsSelectionModalOpen(true)}
+                      className="h-7 rounded-[4px] border-semantic-stroke bg-semantic-bg-elevation-2 px-2.5 py-1 text-xs text-semantic-text hover:bg-semantic-highlight"
+                      data-testid="fallback-attach-requirement-button"
+                    >
+                      Attach to requirement
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={onCreateNewRequirement}
+                      className="h-7 rounded-[4px] bg-custom-yellow px-2.5 py-1 text-xs text-semantic-text hover:bg-custom-yellow/90"
+                      data-testid="fallback-add-requirement-button"
+                    >
+                      Add requirement
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

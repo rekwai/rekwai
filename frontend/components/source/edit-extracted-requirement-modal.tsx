@@ -28,6 +28,7 @@ import {
   getRequirementErrorToast,
 } from "@/lib/utils/requirement-form-helpers";
 import { Divider } from "@/components/ui/divider";
+import { RequiredLabel } from "@/components/ui/required-label";
 import { FieldCheckmark } from "@/components/requirement/field-checkmark";
 import { RequirementTypeSelector } from "@/components/requirement/requirement-type-selector";
 
@@ -122,8 +123,11 @@ export function EditExtractedRequirementModal({
         {/* Form Content */}
         <div className="px-8 py-8 space-y-4 bg-modal-bg max-h-[60vh] overflow-y-auto">
           {/* Form description */}
-          <p className="text-sm text-black">
-            Edit the extracted requirement details below. Fields marked with *
+          <p className="text-sm text-semantic-text">
+            Edit the extracted requirement details below. Fields marked with{" "}
+            <span className="text-semantic-error-fg" aria-hidden="true">
+              *
+            </span>{" "}
             are required.
           </p>
 
@@ -140,13 +144,14 @@ export function EditExtractedRequirementModal({
               htmlFor="req-description"
               className="text-sm font-medium text-label-text"
             >
-              Requirement Description*
+              <RequiredLabel text="Requirement Description" />
             </label>
             <div className="relative">
               <Textarea
                 id="req-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                withFieldCheckmarkGutter
                 className="text-xs resize-none h-[52px] bg-input-white border-input-light shadow-input-inset rounded"
                 placeholder="Enter a detailed description of what is required..."
                 required
@@ -165,7 +170,7 @@ export function EditExtractedRequirementModal({
           {/* Implementation Dropdown */}
           <div className="space-y-1">
             <label className="text-sm font-medium text-label-text">
-              Implementation*
+              <RequiredLabel text="Implementation" />
             </label>
             <div className="relative">
               <DropdownMenu>
@@ -204,13 +209,14 @@ export function EditExtractedRequirementModal({
               htmlFor="impl-description"
               className="text-sm font-medium text-label-text"
             >
-              Implementation Description*
+              <RequiredLabel text="Implementation Description" />
             </label>
             <div className="relative">
               <Textarea
                 id="impl-description"
                 value={implementationDescription}
                 onChange={(e) => setImplementationDescription(e.target.value)}
+                withFieldCheckmarkGutter
                 className="text-xs resize-none h-[52px] bg-input-white border-input-light shadow-input-inset rounded"
                 placeholder="Describe how this requirement will be implemented..."
                 required
@@ -235,6 +241,7 @@ export function EditExtractedRequirementModal({
                 id="req-verification"
                 value={requirementVerification}
                 onChange={(e) => setRequirementVerification(e.target.value)}
+                withFieldCheckmarkGutter
                 className="text-xs resize-none h-[52px] bg-input-white border-input-light shadow-input-inset rounded"
                 placeholder="How can this requirement be verified or tested?"
                 data-testid="requirement-verification"

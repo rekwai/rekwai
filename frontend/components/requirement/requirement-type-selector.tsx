@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { RequiredLabel } from "@/components/ui/required-label";
 
 interface RequirementTypeSelectorProps {
   selectedTypes: string[];
@@ -65,7 +66,7 @@ export function RequirementTypeSelector({
   return (
     <div className="space-y-1">
       <label className="text-sm font-medium text-label-text dark:text-[#FAFFFD]">
-        Requirement type*
+        <RequiredLabel text="Requirement type" />
       </label>
 
       <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>

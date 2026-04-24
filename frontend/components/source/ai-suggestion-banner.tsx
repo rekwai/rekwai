@@ -54,7 +54,7 @@ const ACTION_CONFIG: Record<
   },
   create_new: {
     badgeLabel: "Create Requirement",
-    badgeBg: "bg-semantic-success-bg text-semantic-text",
+    badgeBg: "bg-semantic-success-bg text-semantic-black",
     badgeIcon: Plus,
     confirmLabel: "Create Requirement",
     confirmingLabel: "Creating requirement",
@@ -97,6 +97,7 @@ export function AISuggestionBanner({
           Suggestion
         </span>
         <Badge
+          variant="chip"
           className={`flex items-center gap-1.5 px-1.5 py-0.5 text-xs font-medium rounded-[3px] ${config.badgeBg}`}
         >
           {config.badgeLabel}

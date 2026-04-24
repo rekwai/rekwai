@@ -118,6 +118,7 @@ export default function DocumentPage({
     combinedLoading,
     availableTypes,
     linkedRequirements,
+    isFetchingSuggestion,
     suggestedAction,
     handleRequirementSelect,
     updateRequirement,
@@ -485,6 +486,7 @@ export default function DocumentPage({
                   productId={documentData.product_id}
                   linkedRequirementsProps={{
                     linkedRequirements,
+                    isFetchingSuggestion,
                     suggestedAction,
                     lastMergeInfo,
                     lastCreateInfo,
@@ -495,6 +497,7 @@ export default function DocumentPage({
                     onEditLinkedRequirement: (requirement: Requirement) =>
                       editLinkedModal.open(requirement),
                     onLinkExistingRequirements: handleLinkExistingRequirements,
+                    onCreateNewRequirement: () => createRequirementModal.open(),
                     onFetchSuggestedAction: fetchSuggestedAction,
                     onConfirmSuggestion: handleConfirmSuggestion,
                     onEditSuggestion: handleEditSuggestion,

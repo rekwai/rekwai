@@ -39,7 +39,10 @@ export function MergeStatusBanner({
           <span className="font-inter font-semibold text-sm text-semantic-text">
             Status
           </span>
-          <Badge className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded bg-green-50 border-green-200 text-green-700">
+          <Badge
+            variant="chip"
+            className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded bg-green-50 border-green-200 text-green-700"
+          >
             <ExternalLink size={10} />
             Merged
           </Badge>

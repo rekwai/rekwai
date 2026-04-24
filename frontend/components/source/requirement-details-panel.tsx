@@ -13,6 +13,7 @@ import {
 
 interface LinkedRequirementsProps {
   linkedRequirements?: Requirement[];
+  isFetchingSuggestion?: boolean;
   suggestedAction?: SuggestedAction | null;
   lastMergeInfo?: MergeInfo | null;
   lastCreateInfo?: CreateInfo | null;
@@ -23,6 +24,7 @@ interface ActionHandlers {
   onEditRequirement: () => void;
   onEditLinkedRequirement: (requirement: Requirement) => void;
   onLinkExistingRequirements: (requirements: Requirement[]) => Promise<void>;
+  onCreateNewRequirement: () => void;
   onFetchSuggestedAction?: () => Promise<void>;
   onConfirmSuggestion?: () => Promise<unknown>;
   onEditSuggestion?: () => Promise<unknown>;
@@ -85,9 +87,11 @@ export function RequirementDetailsPanel({
       <LinkedRequirementsSection
         productId={productId}
         linkedRequirements={linkedRequirementsProps.linkedRequirements || []}
+        onCreateNewRequirement={actionHandlers.onCreateNewRequirement}
         onEditLinkedRequirement={actionHandlers.onEditLinkedRequirement}
         onLinkExistingRequirements={actionHandlers.onLinkExistingRequirements}
         suggestion={{
+          isFetchingSuggestion: linkedRequirementsProps.isFetchingSuggestion,
           suggestedAction: linkedRequirementsProps.suggestedAction,
           lastMergeInfo: linkedRequirementsProps.lastMergeInfo,
           lastCreateInfo: linkedRequirementsProps.lastCreateInfo,

@@ -44,15 +44,7 @@ import { useRequirementHistory } from "@/hooks/use-requirement-history";
 import { FieldCheckmark } from "./field-checkmark";
 import { RequirementTypeSelector } from "./requirement-type-selector";
 import { RequirementHistoryDisplay } from "./requirement-history-display";
-
-function RequiredLabel({ text }: { text: string }) {
-  return (
-    <>
-      {text}
-      <span className="text-semantic-error-fg">*</span>
-    </>
-  );
-}
+import { RequiredLabel } from "@/components/ui/required-label";
 
 interface CreateRequirementModalProps {
   open: boolean;
@@ -253,9 +245,13 @@ export function CreateRequirementModal({
           ) : (
             <>
               {/* Form description */}
-              <p className="text-sm text-black dark:text-[#FAFFFD]">
+              <p className="text-sm text-semantic-text dark:text-[#FAFFFD]">
                 Fill in the details below to create a new requirement. Fields
-                marked with * are required.
+                marked with{" "}
+                <span className="text-semantic-error-fg" aria-hidden="true">
+                  *
+                </span>{" "}
+                are required.
               </p>
 
               {/* Type Field - Multiple Selection */}
@@ -280,7 +276,8 @@ export function CreateRequirementModal({
                     onChange={(e) =>
                       formState.setRequirementDescription(e.target.value)
                     }
-                    className="text-xs resize-none h-[52px] pr-10 bg-input-white dark:bg-[#312F2F] border-input-light dark:border-[#1a1a1a] shadow-input-inset rounded text-black dark:text-[#FAFFFD] placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                    withFieldCheckmarkGutter
+                    className="text-xs resize-none h-[52px] bg-input-white dark:bg-[#312F2F] border-input-light dark:border-[#1a1a1a] shadow-input-inset rounded text-black dark:text-[#FAFFFD] placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     placeholder="Enter a detailed description of what is required..."
                     required
                     data-testid="requirement-description"
@@ -346,7 +343,8 @@ export function CreateRequirementModal({
                     onChange={(e) =>
                       formState.setImplementationDescription(e.target.value)
                     }
-                    className="text-xs resize-none h-[52px] pr-10 bg-input-white dark:bg-[#312F2F] border-input-light dark:border-[#1a1a1a] shadow-input-inset rounded text-black dark:text-[#FAFFFD] placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                    withFieldCheckmarkGutter
+                    className="text-xs resize-none h-[52px] bg-input-white dark:bg-[#312F2F] border-input-light dark:border-[#1a1a1a] shadow-input-inset rounded text-black dark:text-[#FAFFFD] placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     placeholder="Describe how this requirement will be implemented..."
                     required
                     data-testid="implementation-description"
@@ -374,7 +372,8 @@ export function CreateRequirementModal({
                     onChange={(e) =>
                       formState.setRequirementVerification(e.target.value)
                     }
-                    className="text-xs resize-none h-[52px] pr-10 bg-input-white dark:bg-[#312F2F] border-input-light dark:border-[#1a1a1a] shadow-input-inset rounded text-black dark:text-[#FAFFFD] placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                    withFieldCheckmarkGutter
+                    className="text-xs resize-none h-[52px] bg-input-white dark:bg-[#312F2F] border-input-light dark:border-[#1a1a1a] shadow-input-inset rounded text-black dark:text-[#FAFFFD] placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     placeholder="How can this requirement be verified or tested?"
                     data-testid="requirement-verification"
                     aria-label="Requirement Verification"

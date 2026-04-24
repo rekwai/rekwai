@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useAsyncDialogSubmit } from "@/hooks/use-async-dialog-submit";
+import { RequiredLabel } from "@/components/ui/required-label";
 
 interface ProductSettingsDialogProps {
   open: boolean;
@@ -94,7 +95,7 @@ export function ProductSettingsDialog({
         <div className="space-y-5 py-4">
           <div className="space-y-2">
             <label htmlFor="product-name" className="text-sm font-medium">
-              Product Name
+              <RequiredLabel text="Product Name" />
             </label>
             <input
               id="product-name"

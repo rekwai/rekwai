@@ -4,10 +4,7 @@ interface FieldCheckmarkProps {
   show: boolean;
 }
 
-/**
- * Displays a green checkmark indicator in the top-right corner of a field
- * Used to provide visual feedback when a field has a value
- */
+/** Top-right completion hint; use with `Textarea` `withFieldCheckmarkGutter` in a `relative` wrapper. */
 export function FieldCheckmark({ show }: FieldCheckmarkProps) {
   if (!show) return null;
 

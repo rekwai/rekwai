@@ -383,6 +383,41 @@ export function useRequirementIndexing({
     setLastMergeInfo(null);
   }, [selectedRequirement?.id]);
 
+  // Default behavior: for unlinked extractions, eagerly fetch a suggestion when
+  // nothing is available locally, so the right panel doesn't land in a dead end.
+  useEffect(() => {
+    if (!open) return;
+    if (!selectedRequirement?.id) return;
+    if (lastMergeInfo) return;
+    if (isFetchingSuggestion) return;
+
+    if (selectedRequirement.suggestedAction && selectedRequirement.suggestionJustification) {
+      return;
+    }
+    if (suggestedAction) {
+      return;
+    }
+    if (linkedRequirementsLoading) {
+      return;
+    }
+    if (linkedRequirements.length > 0) {
+      return;
+    }
+
+    void fetchSuggestedAction();
+  }, [
+    open,
+    selectedRequirement?.id,
+    selectedRequirement?.suggestedAction,
+    selectedRequirement?.suggestionJustification,
+    isFetchingSuggestion,
+    suggestedAction,
+    linkedRequirementsLoading,
+    linkedRequirements.length,
+    lastMergeInfo,
+    fetchSuggestedAction,
+  ]);
+
   // Load linked requirements when selectedRequirement changes
   // Note: loadLinkedRequirements is intentionally excluded from deps to prevent
   // infinite re-renders. We only want to reload when the selected requirement ID

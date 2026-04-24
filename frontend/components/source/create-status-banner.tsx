@@ -39,7 +39,10 @@ export function CreateStatusBanner({
           <span className="font-inter font-semibold text-sm text-semantic-text">
             Suggestion
           </span>
-          <Badge className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded bg-semantic-success-bg text-semantic-text">
+          <Badge
+            variant="chip"
+            className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded bg-semantic-success-bg text-semantic-text"
+          >
             <ExternalLink size={10} />
             Created
           </Badge>
