@@ -16,6 +16,12 @@ import { useBulkApproveSuggestions } from "@/hooks/use-bulk-approve-suggestions"
 import { PageHeader } from "@/components/common/page-header";
 import { BulkApproveDialog } from "@/components/source/bulk-approve-dialog";
 import { RequirementItem } from "@/types/requirement-types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Loader2, Check } from "lucide-react";
 import { Trash } from "@phosphor-icons/react";
 
@@ -24,7 +30,7 @@ const BASE_BUTTON_STYLES =
 
 const DELETE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} group bg-semantic-error-bg text-semantic-black hover:!bg-semantic-error-fg dark:hover:!bg-semantic-error-fg hover:!text-semantic-white dark:hover:!text-semantic-white`;
 
-const BULK_CREATE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-semantic-success-fg !text-semantic-white hover:bg-semantic-indicator-4 hover:!text-semantic-white`;
+const BULK_CREATE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-semantic-success-fg !text-semantic-white transition-colors hover:!bg-[color-mix(in_srgb,var(--semantic-success-fg)_90%,transparent)] hover:!text-semantic-white`;
 
 interface RequirementHeaderProps {
   productKey: string;
@@ -87,24 +93,36 @@ export function RequirementHeader({
         breadcrumbs={breadcrumbs}
         actions={
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={openBulkApproveDialog}
-              disabled={isApproving || breakdown.total === 0}
-              className={BULK_CREATE_BUTTON_STYLES}
-            >
-              {isApproving ? (
-                <>
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Approving...
-                </>
-              ) : (
-                <>
-                  {`Approve ${breakdown.total} Rekwai suggestions`}
-                  <Check className="h-3 w-3" />
-                </>
-              )}
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      variant="outline"
+                      onClick={openBulkApproveDialog}
+                      disabled={isApproving || breakdown.total === 0}
+                      className={BULK_CREATE_BUTTON_STYLES}
+                    >
+                      {isApproving ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Approving...
+                        </>
+                      ) : (
+                        <>
+                          Accept all suggestions
+                          <Check className="h-3 w-3" />
+                        </>
+                      )}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-xs">
+                  This will auto decision all of the extractions with the Rekwai
+                  suggestions
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button
               variant="outline"
               onClick={openDeleteDialog}

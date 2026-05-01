@@ -8,6 +8,7 @@ import {
   MergedRequirement,
   MergeInfo,
   CreateInfo,
+  LinkType,
 } from "@/types/requirement-types";
 import { RequirementSelectionModal } from "@/components/query/requirement-selection-modal";
 import { AISuggestionBanner } from "./ai-suggestion-banner";
@@ -16,6 +17,8 @@ import { CreateStatusBanner } from "./create-status-banner";
 import { RequirementCard } from "@/components/common/requirement-card";
 import { TypeBadges, StatusBadge } from "@/components/common/requirement-badges";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Link, Merge, Plus, type LucideIcon } from "lucide-react";
 
 interface SuggestionProps {
   isFetchingSuggestion?: boolean;
@@ -46,6 +49,45 @@ interface LinkedRequirementsSectionProps {
   suggestionHandlers?: SuggestionHandlers;
 }
 
+/** Matches completed link-type row icons in `item-list-panel` (full palette). */
+function LinkedSectionStatusChip({ linkType }: { linkType?: LinkType | null }) {
+  const variant: {
+    label: string;
+    chipClass: string;
+    Icon: LucideIcon;
+  } =
+    linkType === "create"
+      ? {
+          label: "Requirement Created",
+          chipClass: "bg-semantic-success-fg text-semantic-white",
+          Icon: Plus,
+        }
+      : linkType === "merge"
+        ? {
+            label: "Merged Requirement",
+            chipClass: "bg-semantic-indicator-3 text-semantic-white",
+            Icon: Merge,
+          }
+        : {
+            label: "Linked Requirements",
+            chipClass: "bg-semantic-indicator-2 text-semantic-white",
+            Icon: Link,
+          };
+
+  const { label, chipClass, Icon } = variant;
+
+  return (
+    <Badge
+      variant="chip"
+      data-testid="linked-section-status-chip"
+      className={`inline-flex w-fit flex-row items-center gap-1.5 rounded-[3px] border-transparent px-2 py-0.5 font-inter text-xs font-medium ${chipClass}`}
+    >
+      <Icon size={12} className="shrink-0" aria-hidden />
+      {label}
+    </Badge>
+  );
+}
+
 export function LinkedRequirementsSection({
   productId,
   linkedRequirements = [],
@@ -74,12 +116,6 @@ export function LinkedRequirementsSection({
   } = suggestionHandlers;
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
   const emptyLinkedIds = useMemo(() => new Set<string>(), []);
-  const linkedSectionTitle =
-    selectedRequirement?.linkType === "create"
-      ? "Requirement Created"
-      : selectedRequirement?.linkType === "merge"
-        ? "Merged Requirement"
-        : "Linked Requirements";
 
   const hasSuggestion = !!(suggestedAction && onConfirmSuggestion);
 
@@ -141,9 +177,9 @@ export function LinkedRequirementsSection({
             <div className="space-y-3" data-testid="linked-requirements-fallback">
               {linkedRequirements.length > 0 ? (
                 <>
-                  <div className="font-inter text-sm font-semibold text-semantic-text">
-                    {linkedSectionTitle}
-                  </div>
+                  <LinkedSectionStatusChip
+                    linkType={selectedRequirement?.linkType}
+                  />
                   {linkedRequirements.map((requirement) => (
                     <RequirementCard
                       key={requirement.id}

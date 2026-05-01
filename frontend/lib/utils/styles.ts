@@ -3,7 +3,7 @@
 // Button styles for consistency across the application
 export const buttonStyles = {
   primary:
-    "flex items-center gap-1.5 px-2.5 py-1 text-xs font-normal bg-semantic-success-fg border-none rounded-[4px] text-semantic-white hover:bg-semantic-indicator-4 hover:text-semantic-white disabled:opacity-50",
+    "flex items-center gap-1.5 px-2.5 py-1 text-xs font-normal bg-semantic-success-fg border-none rounded-[4px] text-semantic-white transition-colors hover:bg-[color-mix(in_srgb,var(--semantic-success-fg)_90%,transparent)] hover:text-semantic-white disabled:opacity-50",
   secondary:
     "flex items-center gap-1.5 px-2.5 py-1 text-xs font-normal bg-semantic-emphasis border-none hover:bg-semantic-black rounded-[4px] text-semantic-white hover:text-semantic-white disabled:opacity-50",
   outline:

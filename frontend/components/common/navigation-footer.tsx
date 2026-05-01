@@ -72,7 +72,7 @@ export function NavigationFooter({
             size="sm"
             onClick={handleNext}
             disabled={isNextDisabled}
-            className="flex items-center justify-center px-2.5 py-1 gap-1.5 h-7 !bg-semantic-success-fg dark:!bg-semantic-success-fg hover:!bg-semantic-indicator-4 dark:hover:!bg-semantic-indicator-4 !text-semantic-white dark:!text-semantic-white rounded-[4px] disabled:opacity-50"
+            className="flex items-center justify-center px-2.5 py-1 gap-1.5 h-7 !bg-semantic-success-fg dark:!bg-semantic-success-fg transition-colors hover:!bg-[color-mix(in_srgb,var(--semantic-success-fg)_90%,transparent)] dark:hover:!bg-[color-mix(in_srgb,var(--semantic-success-fg)_90%,transparent)] !text-semantic-white dark:!text-semantic-white rounded-[4px] disabled:opacity-50"
             data-testid="save-next-button"
           >
             <span className="text-xs font-normal leading-[15px] text-semantic-white">
@@ -139,7 +139,7 @@ export function FloatingNavigationFooter({
         size="sm"
         onClick={handleNext}
         disabled={isNextDisabled}
-        className="flex items-center justify-center px-2.5 py-1 gap-1.5 h-7 !bg-semantic-success-fg dark:!bg-semantic-success-fg hover:!bg-semantic-indicator-4 dark:hover:!bg-semantic-indicator-4 !text-semantic-white dark:!text-semantic-white rounded-[4px] disabled:opacity-50"
+        className="flex items-center justify-center px-2.5 py-1 gap-1.5 h-7 !bg-semantic-success-fg dark:!bg-semantic-success-fg transition-colors hover:!bg-[color-mix(in_srgb,var(--semantic-success-fg)_90%,transparent)] dark:hover:!bg-[color-mix(in_srgb,var(--semantic-success-fg)_90%,transparent)] !text-semantic-white dark:!text-semantic-white rounded-[4px] disabled:opacity-50"
         data-testid="save-next-button"
       >
         <span className="text-xs font-normal leading-[15px] text-semantic-white">

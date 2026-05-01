@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RequirementCard } from "@/components/common/requirement-card";
 import { PreviewCard } from "@/components/common/preview-card";
 import { WordDiff } from "@/components/common/word-diff";
@@ -16,35 +16,7 @@ interface MergeDiffCardProps {
   onEdit?: () => void | Promise<unknown>;
 }
 
-function CheckboxToggle({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  label: string;
-}) {
-  return (
-    <label className="flex items-center gap-1 cursor-pointer">
-      <div
-        className={`flex items-center justify-center w-3.5 h-3.5 rounded-[3px] ${
-          checked
-            ? "bg-[#3E63DD] shadow-[inset_0px_1.5px_2px_rgba(0,0,0,0.1),inset_0px_1.5px_2px_rgba(0,0,85,0.024)]"
-            : "bg-white border border-[rgba(0,0,45,0.09)]"
-        }`}
-        onClick={() => onChange(!checked)}
-      >
-        {checked && <Check size={10} className="text-white" />}
-      </div>
-      <span className="font-inter font-normal text-sm text-semantic-text">
-        {label}
-      </span>
-    </label>
-  );
-}
-
-function ViewToggle({
+function MergeViewTabs({
   viewMode,
   onViewModeChange,
 }: {
@@ -52,21 +24,32 @@ function ViewToggle({
   onViewModeChange: (mode: ViewMode) => void;
 }) {
   return (
-    <div
-      className="flex items-center gap-4 text-xs"
-      data-testid="merge-view-toggle"
+    <Tabs
+      value={viewMode}
+      onValueChange={(value) => {
+        if (value === "suggestion" || value === "original") {
+          onViewModeChange(value);
+        }
+      }}
     >
-      <CheckboxToggle
-        checked={viewMode === "suggestion"}
-        onChange={() => onViewModeChange("suggestion")}
-        label="Show Suggestion"
-      />
-      <CheckboxToggle
-        checked={viewMode === "original"}
-        onChange={() => onViewModeChange("original")}
-        label="Show Original"
-      />
-    </div>
+      <TabsList
+        className="inline-flex h-8 items-center justify-center gap-0 rounded-[6px] bg-muted p-[2px] text-muted-foreground"
+        data-testid="merge-view-toggle"
+      >
+        <TabsTrigger
+          value="suggestion"
+          className="h-full rounded-[4px] px-3 py-1 font-inter text-xs font-normal data-[state=active]:border data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:font-medium data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground"
+        >
+          Suggestion
+        </TabsTrigger>
+        <TabsTrigger
+          value="original"
+          className="h-full rounded-[4px] px-3 py-1 font-inter text-xs font-normal data-[state=active]:border data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:font-medium data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground"
+        >
+          Original
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
   );
 }
 
@@ -104,7 +87,7 @@ export function MergeDiffCard({
       onEdit={onEdit}
       editTestId="edit-merge-preview-button"
       headerRight={
-        <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
+        <MergeViewTabs viewMode={viewMode} onViewModeChange={setViewMode} />
       }
     >
       <RequirementCard

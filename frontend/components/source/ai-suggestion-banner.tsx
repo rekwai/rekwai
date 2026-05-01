@@ -55,8 +55,10 @@ const ACTION_CONFIG: Record<
   },
   merge: {
     actionLabel: "Merge Requirements",
-    actionBg: "bg-primitive-orange-100 text-semantic-text",
-    actionHover: "hover:bg-semantic-indicator-3 hover:!text-semantic-white",
+    actionBg:
+      "bg-primitive-orange-100 !text-semantic-black dark:!text-semantic-black",
+    actionHover:
+      "hover:bg-semantic-indicator-3 hover:!text-semantic-white dark:hover:!text-semantic-white",
     actionIcon: Merge,
     confirmingLabel: "Merging requirements",
   },
@@ -119,7 +121,7 @@ export function AISuggestionBanner({
         <button
           key={`target-key-${index}`}
           type="button"
-          className="font-semibold text-semantic-indicator-2 underline underline-offset-2 hover:text-semantic-indicator-2/80"
+          className="font-semibold text-semantic-indicator-2 underline underline-offset-2 hover:text-semantic-indicator-2/80 dark:text-semantic-indicator-6 dark:hover:text-semantic-indicator-6/80"
           onClick={() => setIsRequirementModalOpen(true)}
           data-testid="suggestion-target-requirement-link"
         >
