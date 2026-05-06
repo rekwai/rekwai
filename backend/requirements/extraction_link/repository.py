@@ -15,7 +15,7 @@ class RequirementExtractionLinkRepository:
         self.db = db
 
     def create_link(
-        self, link: RequirementExtractionLinkCreate
+        self, link: RequirementExtractionLinkCreate, commit: bool = True
     ) -> RequirementExtractionLink:
         """Create a single requirement-extraction link."""
         try:
@@ -25,7 +25,9 @@ class RequirementExtractionLinkRepository:
                 link_type=link.link_type,
             )
             self.db.add(db_link)
-            self.db.commit()
+            self.db.flush()
+            if commit:
+                self.db.commit()
             self.db.refresh(db_link)
             return RequirementExtractionLink.model_validate(db_link)
         except IntegrityError:

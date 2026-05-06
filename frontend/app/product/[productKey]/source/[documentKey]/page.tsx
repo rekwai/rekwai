@@ -142,6 +142,7 @@ export default function DocumentPage({
     suggestedAction &&
     suggestedExtractedId != null &&
     selectedRequirement &&
+    !selectedRequirement.hasLinks &&
     String(suggestedExtractedId) === String(selectedRequirement.id)
       ? suggestedAction
       : null;
@@ -460,7 +461,6 @@ export default function DocumentPage({
               documentKey={documentData.document_key}
               documentId={documentData.id}
               requirements={requirements}
-              productId={documentData.product_id}
               onBulkApproveComplete={reloadDocumentData}
             />
           </div>

@@ -56,23 +56,25 @@ def add_extraction_link(
         extracted_requirement_id=request.extracted_requirement_id,
         link_type=request.link_type,
     )
-    result = repository.create_link(link_create)
 
-    # Record history on the main requirement
-    if request.link_type:
-        db_extracted_req = requirement_repository.get_extracted_requirement_by_id(
-            request.extracted_requirement_id
-        )
-        if db_extracted_req:
-            main_req = requirement_repository.get(requirement_id)
-            requirement_repository.log_extraction_action(
+    try:
+        result = repository.create_link(link_create, commit=False)
+
+        if request.link_type:
+            requirement_repository.record_extraction_link_history(
                 requirement_id=requirement_id,
-                product_id=str(db_extracted_req.product_id),
                 link_type=request.link_type,
                 extracted_requirement_id=request.extracted_requirement_id,
-                document_id=str(db_extracted_req.document_id),
-                new_data=main_req,
+                commit=False,
             )
+
+        requirement_repository.db.commit()
+    except ValueError as exc:
+        requirement_repository.db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception:
+        requirement_repository.db.rollback()
+        raise
 
     return result
 

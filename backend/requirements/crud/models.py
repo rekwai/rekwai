@@ -203,6 +203,40 @@ class SuggestedAction(BaseModel):
     merge_preview: Optional["MergedRequirement"] = None
 
 
+class BulkAcceptSuggestionItem(BaseModel):
+    """Per-extracted-requirement result for bulk suggestion approval."""
+
+    extracted_requirement_id: str
+    status: Literal["accepted", "skipped", "failed"]
+    action: Optional[SuggestedActionType] = None
+    reason: Optional[
+        Literal[
+            "already_linked",
+            "no_suggestion",
+            "invalidated_duplicate",
+            "missing_target",
+            "missing_merge_preview",
+            "unsupported_action",
+            "error",
+        ]
+    ] = None
+    requirement_id: Optional[str] = None
+    invalidated_ids: List[str] = Field(default_factory=list)
+    message: Optional[str] = None
+
+
+class BulkAcceptSuggestionsResult(BaseModel):
+    """Summary response for approving stored suggestions in bulk."""
+
+    accepted: int = 0
+    failed: int = 0
+    skipped: int = 0
+    already_linked: int = 0
+    no_suggestion: int = 0
+    invalidated_duplicate: int = 0
+    items: List[BulkAcceptSuggestionItem] = Field(default_factory=list)
+
+
 class ActionDecisionValidationResult(BaseModel):
     """Validation output for an AI action decision."""
 
@@ -243,6 +277,7 @@ class RequirementHistoryBase(BaseModel):
     previous_implementation_status: Optional[str] = None
     source_extracted_requirement_id: Optional[str] = None
     source_document_id: Optional[str] = None
+    source_action: Optional[Literal["attach", "merge", "create"]] = None
     new_description: Optional[str] = None
     new_types: Optional[List[str]] = None
     new_requirement_verification: Optional[str] = None

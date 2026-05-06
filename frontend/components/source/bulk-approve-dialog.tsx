@@ -86,11 +86,29 @@ export function BulkApproveDialog({
   const renderResultContent = () => {
     if (!result) return null;
     const parts: string[] = [];
-    if (result.succeeded > 0) parts.push(`${result.succeeded} succeeded`);
+    if (result.accepted > 0) parts.push(`${result.accepted} accepted`);
     if (result.failed > 0) parts.push(`${result.failed} failed`);
     if (result.skipped > 0) parts.push(`${result.skipped} skipped`);
     return (
-      <AlertDialogDescription>{parts.join(", ")}.</AlertDialogDescription>
+      <AlertDialogDescription asChild>
+        <div className="space-y-2">
+          <p>{parts.join(", ")}.</p>
+          {result.invalidatedDuplicate > 0 && (
+            <p className="text-amber-700 dark:text-amber-300">
+              {result.invalidatedDuplicate} suggestion
+              {result.invalidatedDuplicate !== 1 ? "s were" : " was"} skipped
+              because{" "}
+              {result.invalidatedDuplicate !== 1
+                ? "they targeted"
+                : "it targeted"}{" "}
+              requirements that were already changed during this bulk approval.
+              Review{" "}
+              {result.invalidatedDuplicate !== 1 ? "those rows" : "that row"}{" "}
+              manually.
+            </p>
+          )}
+        </div>
+      </AlertDialogDescription>
     );
   };
 

@@ -32,6 +32,7 @@ from ..crud.models import (
     MergedRequirement,
     ExtractedRequirementDto,
     ExtractedRequirementUpdate,
+    BulkAcceptSuggestionsResult,
 )
 from .services import RequirementDocumentService
 from async_tasks.models import TaskCreateResponse
@@ -162,6 +163,23 @@ async def get_document_with_requirements_by_key(
         Combined document and requirements data
     """
     return await service.get_document_with_requirements_by_key(document_key)
+
+
+@router.post(
+    "/document/{document_id}/accept-suggestions",
+    response_model=BulkAcceptSuggestionsResult,
+    tags=["requirements_document"],
+)
+async def bulk_accept_suggestions(
+    document_id: str,
+    service: RequirementService = Depends(get_requirement_service),
+):
+    """Accept all stored AI suggestions for a document.
+
+    Duplicate merge targets are invalidated and skipped so users can review
+    them manually after the bulk operation.
+    """
+    return await service.bulk_accept_suggestions_for_document(document_id)
 
 
 @router.get(

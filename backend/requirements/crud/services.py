@@ -27,6 +27,7 @@ from async_tasks.exceptions import TaskCancelledException
 from ..document.services import RequirementDocumentService
 from ..document.models import RequirementDocumentCreate
 from ..extraction_link.repository import RequirementExtractionLinkRepository
+from ..extraction_link.models import RequirementExtractionLinkCreate
 from product.repository import ProductRepository
 
 logger = logging.getLogger(__name__)
@@ -137,6 +138,222 @@ class RequirementService:
         if not deleted_req:
             raise HTTPException(status_code=404, detail="Requirement not found")
         return deleted_req
+
+    def _create_extraction_link_with_history(
+        self,
+        requirement_id: str,
+        extracted_requirement_id: str,
+        link_type: str,
+    ) -> None:
+        """Create an extraction link and provenance history in one transaction."""
+        link_data = RequirementExtractionLinkCreate(
+            requirement_id=requirement_id,
+            extracted_requirement_id=extracted_requirement_id,
+            link_type=link_type,
+        )
+        self.extraction_link_repository.create_link(link_data, commit=False)
+        self.repository.record_extraction_link_history(
+            requirement_id=requirement_id,
+            link_type=link_type,
+            extracted_requirement_id=extracted_requirement_id,
+            commit=False,
+        )
+        self.repository.db.commit()
+
+    async def bulk_accept_suggestions_for_document(
+        self, document_id: str
+    ) -> models.BulkAcceptSuggestionsResult:
+        """Approve stored suggestions for a document without re-suggesting.
+
+        If accepting one suggestion invalidates later merge suggestions targeting the
+        same requirement, those later extracted requirements are skipped so users can
+        review them manually outside the bulk flow.
+        """
+        self.requirement_document_service.get_by_id(document_id)
+        extracted_requirements = self.repository.get_extracted_requirements_by_document_id(
+            document_id
+        )
+        result = models.BulkAcceptSuggestionsResult()
+        invalidated_ids: set[str] = set()
+
+        for extracted_requirement in extracted_requirements:
+            extracted_id = str(extracted_requirement.id)
+            action = extracted_requirement.suggested_action
+
+            if self.extraction_link_repository.get_links_for_extracted_requirement(
+                extracted_id
+            ):
+                result.skipped += 1
+                result.already_linked += 1
+                result.items.append(
+                    models.BulkAcceptSuggestionItem(
+                        extracted_requirement_id=extracted_id,
+                        status="skipped",
+                        action=action,
+                        reason="already_linked",
+                    )
+                )
+                continue
+
+            if extracted_id in invalidated_ids:
+                result.skipped += 1
+                result.invalidated_duplicate += 1
+                result.items.append(
+                    models.BulkAcceptSuggestionItem(
+                        extracted_requirement_id=extracted_id,
+                        status="skipped",
+                        action=action,
+                        reason="invalidated_duplicate",
+                    )
+                )
+                continue
+
+            if not action:
+                result.skipped += 1
+                result.no_suggestion += 1
+                result.items.append(
+                    models.BulkAcceptSuggestionItem(
+                        extracted_requirement_id=extracted_id,
+                        status="skipped",
+                        reason="no_suggestion",
+                    )
+                )
+                continue
+
+            if action == models.SuggestedActionType.ATTACH.value:
+                accept_result = self.requirement_document_service.accept_suggestion(
+                    extracted_id
+                )
+                accepted_invalidated_ids = accept_result.get("invalidated_ids", [])
+                invalidated_ids.update(accepted_invalidated_ids)
+                result.accepted += 1
+                result.items.append(
+                    models.BulkAcceptSuggestionItem(
+                        extracted_requirement_id=extracted_id,
+                        status="accepted",
+                        action=models.SuggestedActionType.ATTACH,
+                        requirement_id=accept_result.get("target_requirement_id"),
+                        invalidated_ids=accepted_invalidated_ids,
+                    )
+                )
+                continue
+
+            if action == models.SuggestedActionType.MERGE.value:
+                target_id = (
+                    str(extracted_requirement.suggested_target_requirement_id)
+                    if extracted_requirement.suggested_target_requirement_id
+                    else None
+                )
+                if not target_id:
+                    result.skipped += 1
+                    result.items.append(
+                        models.BulkAcceptSuggestionItem(
+                            extracted_requirement_id=extracted_id,
+                            status="skipped",
+                            action=models.SuggestedActionType.MERGE,
+                            reason="missing_target",
+                        )
+                    )
+                    continue
+
+                merge_preview = models.MergedRequirement.from_json(
+                    extracted_requirement.merge_preview
+                )
+                if not merge_preview:
+                    result.skipped += 1
+                    result.items.append(
+                        models.BulkAcceptSuggestionItem(
+                            extracted_requirement_id=extracted_id,
+                            status="skipped",
+                            action=models.SuggestedActionType.MERGE,
+                            reason="missing_merge_preview",
+                        )
+                    )
+                    continue
+
+                await self.update_requirement(
+                    target_id,
+                    models.RequirementUpdate(
+                        description=merge_preview.description,
+                        types=merge_preview.types,
+                        requirement_verification=merge_preview.requirement_verification,
+                        implementation_description=merge_preview.implementation_description,
+                        implementation_status=merge_preview.implementation_status,
+                        product_id=str(extracted_requirement.product_id),
+                    ),
+                )
+                self._create_extraction_link_with_history(
+                    target_id, extracted_id, "merge"
+                )
+                accept_result = self.requirement_document_service.accept_suggestion(
+                    extracted_id
+                )
+                accepted_invalidated_ids = accept_result.get("invalidated_ids", [])
+                invalidated_ids.update(accepted_invalidated_ids)
+                result.accepted += 1
+                result.items.append(
+                    models.BulkAcceptSuggestionItem(
+                        extracted_requirement_id=extracted_id,
+                        status="accepted",
+                        action=models.SuggestedActionType.MERGE,
+                        requirement_id=target_id,
+                        invalidated_ids=accepted_invalidated_ids,
+                    )
+                )
+                continue
+
+            if action == models.SuggestedActionType.CREATE_NEW.value:
+                if extracted_requirement.implementation_description is None:
+                    raise ValueError(
+                        f"Extracted requirement {extracted_id} is missing "
+                        "implementation_description"
+                    )
+                if extracted_requirement.implementation_status is None:
+                    raise ValueError(
+                        f"Extracted requirement {extracted_id} is missing "
+                        "implementation_status"
+                    )
+
+                types = self.repository.get_extracted_requirement_types(extracted_id)
+                created = await self.create_requirement(
+                    models.RequirementCreate(
+                        description=extracted_requirement.description,
+                        types=types,
+                        requirement_verification=extracted_requirement.requirement_verification,
+                        implementation_description=extracted_requirement.implementation_description,
+                        implementation_status=extracted_requirement.implementation_status,
+                        product_id=str(extracted_requirement.product_id),
+                    )
+                )
+                self._create_extraction_link_with_history(
+                    created.id, extracted_id, "create"
+                )
+                accept_result = self.requirement_document_service.accept_suggestion(
+                    extracted_id
+                )
+                accepted_invalidated_ids = accept_result.get("invalidated_ids", [])
+                result.accepted += 1
+                result.items.append(
+                    models.BulkAcceptSuggestionItem(
+                        extracted_requirement_id=extracted_id,
+                        status="accepted",
+                        action=models.SuggestedActionType.CREATE_NEW,
+                        requirement_id=created.id,
+                        invalidated_ids=accepted_invalidated_ids,
+                    )
+                )
+                continue
+
+            result.skipped += 1
+            result.items.append(
+                models.BulkAcceptSuggestionItem(
+                    extracted_requirement_id=extracted_id,
+                    status="skipped",
+                    reason="unsupported_action",
+                )
+            )
+
+        return result
 
     def get_distinct_requirement_types(self) -> List[str]:
         org_id = get_organization_id()
@@ -541,19 +758,14 @@ class RequirementService:
             suggestion.action.value == "merge"
             and suggestion.target_requirement_id
         ):
-            try:
-                merge_preview = (
-                    await self.requirement_document_service.generate_merge(
-                        extracted_requirement_id,
-                        suggestion.target_requirement_id,
-                    )
-                )
-                self.repository.set_extracted_requirement_merge_preview(
-                    extracted_requirement_id, merge_preview.model_dump()
-                )
-                suggestion.merge_preview = merge_preview
-            except Exception as e:
-                logger.warning(f"Failed to generate merge preview: {e}")
+            merge_preview = await self.requirement_document_service.generate_merge(
+                extracted_requirement_id,
+                suggestion.target_requirement_id,
+            )
+            self.repository.set_extracted_requirement_merge_preview(
+                extracted_requirement_id, merge_preview.model_dump()
+            )
+            suggestion.merge_preview = merge_preview
 
         return suggestion
 

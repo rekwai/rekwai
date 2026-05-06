@@ -1,18 +1,9 @@
 import { useState, useMemo } from "react";
+import { RequirementItem, SuggestedActionType } from "@/types/requirement-types";
 import {
-  RequirementItem,
-  CreateRequirementPayload,
-  SuggestedActionType,
-} from "@/types/requirement-types";
-import {
-  createRequirement,
-  createExtractionLink,
-  updateRequirement as updateRequirementApi,
-  acceptSuggestion,
-  getSuggestedAction,
+  bulkAcceptSuggestions,
+  BulkAcceptSuggestionsResult,
 } from "@/lib/api/requirements";
-import { getFirstNonEmpty } from "@/lib/utils/string-utils";
-import { mergePreviewToUpdatePayload } from "@/lib/utils/requirement-transformers";
 
 export interface BulkApproveBreakdown {
   attach: number;
@@ -27,9 +18,12 @@ export interface BulkApproveProgress {
 }
 
 export interface BulkApproveResult {
-  succeeded: number;
+  accepted: number;
   failed: number;
   skipped: number;
+  alreadyLinked: number;
+  noSuggestion: number;
+  invalidatedDuplicate: number;
 }
 
 interface UseBulkApproveSuggestionsReturn {
@@ -46,7 +40,7 @@ interface UseBulkApproveSuggestionsReturn {
 
 export function useBulkApproveSuggestions(
   requirements: RequirementItem[],
-  productId: string,
+  documentId: string,
   onComplete: () => Promise<void>,
 ): UseBulkApproveSuggestionsReturn {
   const [isApproving, setIsApproving] = useState(false);
@@ -55,7 +49,7 @@ export function useBulkApproveSuggestions(
   const [result, setResult] = useState<BulkApproveResult | null>(null);
 
   const suggestedRequirements = useMemo(
-    () => requirements.filter((req) => req.suggestedAction),
+    () => requirements.filter((req) => !req.hasLinks && req.suggestedAction),
     [requirements],
   );
 
@@ -92,99 +86,25 @@ export function useBulkApproveSuggestions(
     setIsApproving(true);
     setProgress({ current: 0, total: breakdown.total });
 
-    let succeeded = 0;
-    let failed = 0;
-    let skipped = 0;
+    try {
+      const bulkResult: BulkAcceptSuggestionsResult =
+        await bulkAcceptSuggestions(documentId);
+      setProgress({ current: breakdown.total, total: breakdown.total });
 
-    // Track which target requirements have already been merged into,
-    // so we can detect conflicts and re-suggest
-    const mergedTargetIds = new Set<string>();
+      await onComplete();
 
-    for (let i = 0; i < suggestedRequirements.length; i++) {
-      const req = suggestedRequirements[i];
-      setProgress({ current: i + 1, total: breakdown.total });
-
-      try {
-        let action: SuggestedActionType | undefined = req.suggestedAction as
-          | SuggestedActionType
-          | undefined;
-        let targetId = req.suggestedTargetRequirementId;
-        let mergePreview = req.mergePreview;
-
-        // Detect merge conflict: target was already merged by an earlier item
-        if (
-          action === "merge" &&
-          targetId &&
-          mergedTargetIds.has(targetId)
-        ) {
-          // Re-suggest: get a fresh suggestion from the AI
-          try {
-            const freshSuggestion = await getSuggestedAction(
-              req.id.toString(),
-            );
-            action = freshSuggestion.action;
-            targetId = freshSuggestion.target_requirement_id ?? undefined;
-            mergePreview = freshSuggestion.merge_preview ?? undefined;
-          } catch (error) {
-            console.error(
-              `Failed to re-suggest for conflicting merge ${req.id}:`,
-              error,
-            );
-            failed++;
-            continue;
-          }
-        }
-
-        if (action === "attach") {
-          await acceptSuggestion(req.id.toString());
-          succeeded++;
-        } else if (action === "merge") {
-          if (!mergePreview || !targetId) {
-            skipped++;
-            continue;
-          }
-          const payload = mergePreviewToUpdatePayload(
-            mergePreview,
-            productId,
-          );
-          await updateRequirementApi(targetId, payload);
-          await createExtractionLink(targetId, req.id.toString());
-          await acceptSuggestion(req.id.toString());
-          mergedTargetIds.add(targetId);
-          succeeded++;
-        } else if (action === "create_new") {
-          const createPayload: CreateRequirementPayload = {
-            description: getFirstNonEmpty(req.description, req.text),
-            types: req.types || [],
-            product_id: productId,
-            requirement_verification: req.requirementVerification || "",
-            implementation_description: req.implementationDescription || "",
-            implementation_status: req.implementation || "To do",
-          };
-          const created = await createRequirement(createPayload);
-          await createExtractionLink(
-            created.id.toString(),
-            req.id.toString(),
-          );
-          await acceptSuggestion(req.id.toString());
-          succeeded++;
-        } else {
-          skipped++;
-        }
-      } catch (error) {
-        console.error(
-          `Failed to approve suggestion for extracted ${req.id}:`,
-          error,
-        );
-        failed++;
-      }
+      setResult({
+        accepted: bulkResult.accepted,
+        failed: bulkResult.failed,
+        skipped: bulkResult.skipped,
+        alreadyLinked: bulkResult.already_linked,
+        noSuggestion: bulkResult.no_suggestion,
+        invalidatedDuplicate: bulkResult.invalidated_duplicate,
+      });
+    } finally {
+      setIsApproving(false);
+      setProgress(null);
     }
-
-    await onComplete();
-
-    setIsApproving(false);
-    setProgress(null);
-    setResult({ succeeded, failed, skipped });
   };
 
   return {

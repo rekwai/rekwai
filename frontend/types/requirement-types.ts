@@ -66,7 +66,10 @@ export interface RequirementHistory {
   requirement_id: string;
   product_id: string;
   change_timestamp: string;
-  change_type: "CREATE" | "UPDATE" | "DELETE" | "LINK_FROM_EXTRACTION" | "MERGE_FROM_EXTRACTION" | "CREATE_FROM_EXTRACTION";
+  change_type: "CREATE" | "UPDATE" | "DELETE";
+  source_extracted_requirement_id: string | null;
+  source_document_id: string | null;
+  source_action: LinkType | null;
   user_id: string | null;
   previous_description: string | null;
   previous_types: string[] | null;

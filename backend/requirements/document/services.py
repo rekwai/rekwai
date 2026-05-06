@@ -182,6 +182,7 @@ class RequirementDocumentService:
 
         # Combine document and requirements data
         return {
+            "id": str(document.id),
             "product_id": str(document.product_id),
             "original_filename": document.original_filename,
             "file_extension": document.file_extension,
@@ -352,36 +353,40 @@ class RequirementDocumentService:
             else None
         )
 
-        # For attach: create the extraction link immediately
-        # For merge: skip link creation (link is created after user completes the merge)
-        if action == "attach" and target_id:
-            try:
-                link_data = RequirementExtractionLinkCreate(
-                    requirement_id=target_id,
-                    extracted_requirement_id=extracted_requirement_id,
-                    link_type="attach",
-                )
-                self.extraction_link_repository.create_link(link_data)
-                # Record history on the target requirement
-                main_req = self.requirement_repository.get(target_id)
-                self.requirement_repository.log_extraction_action(
-                    requirement_id=target_id,
-                    product_id=str(db_req.product_id),
-                    link_type="attach",
-                    extracted_requirement_id=extracted_requirement_id,
-                    document_id=str(db_req.document_id),
-                    new_data=main_req,
-                )
-            except ValueError:
-                log.info(
-                    f"Link already exists for requirement {target_id} "
-                    f"and extracted requirement {extracted_requirement_id}"
-                )
+        try:
+            # For attach: create the extraction link immediately
+            # For merge: skip link creation (link is created after user completes the merge)
+            if action == "attach" and target_id:
+                try:
+                    link_data = RequirementExtractionLinkCreate(
+                        requirement_id=target_id,
+                        extracted_requirement_id=extracted_requirement_id,
+                        link_type="attach",
+                    )
+                    self.extraction_link_repository.create_link(
+                        link_data, commit=False
+                    )
+                    self.requirement_repository.record_extraction_link_history(
+                        requirement_id=target_id,
+                        link_type="attach",
+                        extracted_requirement_id=extracted_requirement_id,
+                        commit=False,
+                    )
+                except ValueError:
+                    log.info(
+                        f"Link already exists for requirement {target_id} "
+                        f"and extracted requirement {extracted_requirement_id}"
+                    )
 
-        # Clear suggestion columns
-        self.requirement_repository.set_extracted_requirement_suggestion(
-            extracted_requirement_id
-        )
+            # Clear suggestion columns
+            self.requirement_repository.set_extracted_requirement_suggestion(
+                extracted_requirement_id,
+                commit=False,
+            )
+            self.requirement_repository.db.commit()
+        except Exception:
+            self.requirement_repository.db.rollback()
+            raise
 
         # Invalidate sibling merge suggestions targeting the same requirement
         invalidated_ids: list[str] = []

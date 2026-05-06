@@ -13,6 +13,7 @@ import {
   SuggestedAction,
   SuggestedActionType,
   MergeInfo,
+  LinkType,
 } from "@/types/requirement-types";
 import {
   getDistinctRequirementTypes,
@@ -455,6 +456,7 @@ export function useRequirementIndexing({
   useEffect(() => {
     if (!open) return;
     if (!selectedRequirement?.id) return;
+    if (selectedRequirement.hasLinks) return;
     if (lastMergeInfo) return;
     if (isFetchingSuggestion) return;
 
@@ -502,7 +504,7 @@ export function useRequirementIndexing({
 
   // Generic helper to create links and reload (DRY principle)
   const createLinksAndReload = useCallback(
-    async (requirementIds: string[], linkType?: string) => {
+    async (requirementIds: string[], linkType?: LinkType) => {
       if (!selectedRequirement?.id || requirementIds.length === 0) return;
 
       try {
@@ -512,7 +514,7 @@ export function useRequirementIndexing({
           ),
         );
         await fetchAndSetLinkedRequirements();
-        updateSelectedRequirementLink(true, linkType as RequirementItem["linkType"]);
+        updateSelectedRequirementLink(true, linkType);
       } catch (error) {
         console.error("Failed to create extraction link(s):", error);
         throw error;
@@ -581,7 +583,7 @@ export function useRequirementIndexing({
   };
 
   // Handle linking a single newly created requirement
-  const linkNewRequirement = async (requirementId: string, linkType?: string) => {
+  const linkNewRequirement = async (requirementId: string, linkType?: LinkType) => {
     await createLinksAndReload([requirementId], linkType);
   };
 

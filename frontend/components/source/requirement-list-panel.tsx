@@ -57,6 +57,9 @@ export function RequirementListPanel({
       isItemCompleted={(req) => req.hasLinks}
       getItemLinkType={(req) => req.linkType ?? null}
       getItemSuggestionType={(req) => {
+        if (req.hasLinks) {
+          return null;
+        }
         if (
           selectedRowSuggestedAction &&
           selectedReq &&

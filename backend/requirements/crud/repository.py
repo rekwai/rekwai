@@ -26,6 +26,7 @@ class RequirementRepository:
         new_data: Optional[models.RequirementDto] = None,
         source_extracted_requirement_id: Optional[str] = None,
         source_document_id: Optional[str] = None,
+        source_action: Optional[str] = None,
     ):
         history_entry = tables.RequirementHistoryDB(
             requirement_id=requirement_id,
@@ -55,6 +56,7 @@ class RequirementRepository:
             else None,
             source_extracted_requirement_id=source_extracted_requirement_id,
             source_document_id=source_document_id,
+            source_action=source_action,
         )
         self.db.add(history_entry)
 
@@ -67,14 +69,15 @@ class RequirementRepository:
         document_id: str,
         previous_data: Optional[models.RequirementDto] = None,
         new_data: Optional[models.RequirementDto] = None,
+        commit: bool = True,
     ):
         """Log a history entry for an extraction-related action (attach, merge, create)."""
         change_type_map = {
-            "attach": "LINK_FROM_EXTRACTION",
-            "merge": "MERGE_FROM_EXTRACTION",
-            "create": "CREATE_FROM_EXTRACTION",
+            "attach": "UPDATE",
+            "merge": "UPDATE",
+            "create": "CREATE",
         }
-        change_type = change_type_map.get(link_type, f"EXTRACTION_{link_type.upper()}")
+        change_type = change_type_map[link_type]
         self._log_history(
             change_type=change_type,
             requirement_id=requirement_id,
@@ -83,8 +86,97 @@ class RequirementRepository:
             new_data=new_data,
             source_extracted_requirement_id=extracted_requirement_id,
             source_document_id=document_id,
+            source_action=link_type,
         )
-        self.db.commit()
+        self.db.flush()
+        if commit:
+            self.db.commit()
+
+    def tag_latest_extraction_history(
+        self,
+        requirement_id: str,
+        change_type: str,
+        extracted_requirement_id: str,
+        document_id: str,
+        require_previous_state: bool = False,
+        commit: bool = True,
+        source_action: Optional[str] = None,
+    ) -> bool:
+        """Attach extraction provenance to the latest matching history row."""
+        query = self.db.query(tables.RequirementHistoryDB).filter(
+            tables.RequirementHistoryDB.requirement_id == requirement_id,
+            tables.RequirementHistoryDB.change_type == change_type,
+        )
+        if require_previous_state:
+            query = query.filter(
+                tables.RequirementHistoryDB.previous_description.isnot(None)
+            )
+
+        history_entry = query.order_by(
+            tables.RequirementHistoryDB.change_timestamp.desc()
+        ).first()
+        if not history_entry:
+            return False
+
+        history_entry.source_extracted_requirement_id = extracted_requirement_id
+        history_entry.source_document_id = document_id
+        history_entry.source_action = source_action
+        self.db.flush()
+        if commit:
+            self.db.commit()
+        return True
+
+    def record_extraction_link_history(
+        self,
+        requirement_id: str,
+        link_type: str,
+        extracted_requirement_id: str,
+        commit: bool = True,
+    ) -> None:
+        """Record import provenance for a created requirement-extraction link."""
+        db_extracted_req = self.get_extracted_requirement_by_id(extracted_requirement_id)
+        if not db_extracted_req:
+            raise ValueError("Extracted requirement not found")
+
+        if link_type == "create":
+            tagged = self.tag_latest_extraction_history(
+                requirement_id=requirement_id,
+                change_type="CREATE",
+                extracted_requirement_id=extracted_requirement_id,
+                document_id=str(db_extracted_req.document_id),
+                commit=False,
+                source_action=link_type,
+            )
+        elif link_type == "merge":
+            tagged = self.tag_latest_extraction_history(
+                requirement_id=requirement_id,
+                change_type="UPDATE",
+                extracted_requirement_id=extracted_requirement_id,
+                document_id=str(db_extracted_req.document_id),
+                require_previous_state=True,
+                commit=False,
+                source_action=link_type,
+            )
+        elif link_type == "attach":
+            main_req = self.get(requirement_id)
+            self.log_extraction_action(
+                requirement_id=requirement_id,
+                product_id=str(db_extracted_req.product_id),
+                link_type=link_type,
+                extracted_requirement_id=extracted_requirement_id,
+                document_id=str(db_extracted_req.document_id),
+                new_data=main_req,
+                commit=False,
+            )
+            tagged = True
+        else:
+            raise ValueError(f"Invalid extraction link type: {link_type}")
+
+        if not tagged:
+            raise RuntimeError("Expected requirement history entry was not found")
+
+        if commit:
+            self.db.commit()
 
     def _get_requirement_by_filters(self, **filters) -> Optional[tables.RequirementDB]:
         """Generic method to get a single requirement by any filters."""
@@ -452,6 +544,7 @@ class RequirementRepository:
             .filter(
                 tables.RequirementHistoryDB.requirement_id == requirement_id,
                 tables.RequirementHistoryDB.change_type == "UPDATE",
+                tables.RequirementHistoryDB.previous_description.isnot(None),
             )
             .order_by(tables.RequirementHistoryDB.change_timestamp.desc())
             .first()
@@ -650,6 +743,7 @@ class RequirementRepository:
         justification: Optional[str] = None,
         similarity_score: Optional[float] = None,
         merge_preview: Optional[dict] = None,
+        commit: bool = True,
     ) -> Optional[tables.ExtractedRequirementDB]:
         """Set or clear the AI suggestion on an extracted requirement row.
 
@@ -673,7 +767,8 @@ class RequirementRepository:
 
         self.db.flush()
         self.db.refresh(db_extracted_req)
-        self.db.commit()
+        if commit:
+            self.db.commit()
         return db_extracted_req
 
     def find_extracted_requirements_by_suggestion_target(

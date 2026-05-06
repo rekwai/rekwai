@@ -104,7 +104,7 @@ class RequirementHistoryDB(Base):
         nullable=False,
         index=True,
     )
-    change_type = Column(String(50), nullable=False)  # e.g., CREATE, UPDATE, DELETE
+    change_type = Column(String(10), nullable=False)  # CREATE, UPDATE, DELETE
     previous_description = Column(Text, nullable=True)
     previous_types = Column(JSON, nullable=True)  # Store array of types
     previous_requirement_verification = Column(Text, nullable=True)
@@ -129,6 +129,7 @@ class RequirementHistoryDB(Base):
         ForeignKey("requirement_document.id", ondelete="SET NULL"),
         nullable=True,
     )
+    source_action = Column(String(20), nullable=True)  # attach, merge, create
 
     def __repr__(self):
         """Return a string representation of the RequirementHistoryDB instance."""

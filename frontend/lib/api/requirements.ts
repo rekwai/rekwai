@@ -7,6 +7,7 @@ import {
   ExtractedRequirementDto,
   SuggestedAction,
   SuggestedActionType,
+  LinkType,
 } from "../../types/requirement-types";
 import { QuestionAnswer, QuestionRequest } from "../../types/query-types";
 
@@ -314,7 +315,7 @@ export async function deleteQuestionLink(
 export async function createExtractionLink(
   requirementId: string,
   extractedRequirementId: string,
-  linkType?: string,
+  linkType?: LinkType,
 ): Promise<void> {
   const response = await fetch(
     `${getApiUrl()}/requirements/${requirementId}/extraction-links`,
@@ -387,6 +388,34 @@ export async function generateMerge(
  * For attach/merge: creates the extraction link and clears suggestion.
  * For create_new: just clears suggestion.
  */
+export interface BulkAcceptSuggestionItem {
+  extracted_requirement_id: string;
+  status: "accepted" | "skipped" | "failed";
+  action?: SuggestedActionType | null;
+  reason?:
+    | "already_linked"
+    | "no_suggestion"
+    | "invalidated_duplicate"
+    | "missing_target"
+    | "missing_merge_preview"
+    | "unsupported_action"
+    | "error"
+    | null;
+  requirement_id?: string | null;
+  invalidated_ids: string[];
+  message?: string | null;
+}
+
+export interface BulkAcceptSuggestionsResult {
+  accepted: number;
+  failed: number;
+  skipped: number;
+  already_linked: number;
+  no_suggestion: number;
+  invalidated_duplicate: number;
+  items: BulkAcceptSuggestionItem[];
+}
+
 export async function acceptSuggestion(
   extractedRequirementId: string,
 ): Promise<{
@@ -408,6 +437,16 @@ export async function acceptSuggestion(
 /**
  * Dismisses the AI suggestion for an extracted requirement.
  */
+export async function bulkAcceptSuggestions(
+  documentId: string,
+): Promise<BulkAcceptSuggestionsResult> {
+  const response = await fetch(
+    `${getApiUrl()}/requirements/document/${documentId}/accept-suggestions`,
+    { method: "POST" },
+  );
+  return handleResponse<BulkAcceptSuggestionsResult>(response);
+}
+
 export async function dismissSuggestion(
   extractedRequirementId: string,
 ): Promise<{ status: string }> {
