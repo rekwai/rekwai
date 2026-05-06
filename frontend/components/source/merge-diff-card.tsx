@@ -75,11 +75,12 @@ export function MergeDiffCard({
     ? targetRequirement.implementation_status
     : mergedData.implementation_status;
 
+  const originalVerificationText =
+    targetRequirement.requirement_verification || "";
+  const mergedVerificationText = mergedData.requirement_verification;
   const verificationText = isOriginal
-    ? targetRequirement.requirement_verification || ""
-    : mergedData.requirement_verification ||
-      targetRequirement.requirement_verification ||
-      "";
+    ? originalVerificationText
+    : mergedVerificationText;
 
   return (
     <PreviewCard
@@ -143,9 +144,10 @@ export function MergeDiffCard({
             isOriginal ? (
               verificationText
             ) : (
-              <span className="line-through text-semantic-text">
-                {verificationText}
-              </span>
+              <WordDiff
+                oldText={originalVerificationText}
+                newText={mergedVerificationText}
+              />
             )
           ) : undefined
         }

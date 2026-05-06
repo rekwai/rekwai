@@ -101,10 +101,12 @@ export function BulkApproveDialog({
               {result.invalidatedDuplicate !== 1
                 ? "they targeted"
                 : "it targeted"}{" "}
-              requirements that were already changed during this bulk approval.
-              Review{" "}
-              {result.invalidatedDuplicate !== 1 ? "those rows" : "that row"}{" "}
-              manually.
+              requirements that were already changed during this bulk approval. {" "}
+              {result.invalidatedDuplicate !== 1 ? "Those rows" : "That row"}{" "}
+              {result.invalidatedDuplicate !== 1 ? "need" : "needs"}{" "}
+              {result.invalidatedDuplicate !== 1 ? "fresh" : "a fresh"} Rekwai
+              suggestion and {result.invalidatedDuplicate !== 1 ? "are" : "is"}{" "}
+              being refreshed now.
             </p>
           )}
         </div>

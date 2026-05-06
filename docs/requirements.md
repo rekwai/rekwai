@@ -103,7 +103,7 @@ If the system missed relevant requirements or you need more context:
 **Accept All Suggestions:**
 - Use the "Accept all suggestions" button in the header to approve stored Rekwai suggestions for unlinked source requirements.
 - Rekwai will attach, merge, or create requirements according to the suggestions shown for each row.
-- If multiple merge suggestions target the same existing requirement, Rekwai accepts the first one, invalidates the duplicates, and skips those rows so you can review them manually.
+- If multiple merge suggestions target the same existing requirement, Rekwai accepts the first one, refreshes the skipped rows, and leaves them for manual review.
 - Linked rows are considered complete and will not receive new suggestions.
 
 ### Option 2: Add Requirements Manually

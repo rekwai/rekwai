@@ -59,7 +59,7 @@ export function mergePreviewToUpdatePayload(
     implementation_status:
       preview.implementation_status as ImplementationStatus,
     implementation_description: preview.implementation_description,
-    requirement_verification: preview.requirement_verification || undefined,
+    requirement_verification: preview.requirement_verification,
     product_id: productId,
   };
 }

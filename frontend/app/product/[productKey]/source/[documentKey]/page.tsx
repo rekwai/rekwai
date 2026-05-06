@@ -150,13 +150,9 @@ export default function DocumentPage({
   // Helper to reload document data after merges
   const reloadDocumentData = useCallback(async () => {
     if (!documentKey) return;
-    try {
-      const data = await getDocumentWithRequirements(documentKey);
-      setDocumentData(data);
-      setTransformedRequirements(transformDocumentRequirementsToItems(data));
-    } catch (error) {
-      console.error("Failed to reload document data:", error);
-    }
+    const data = await getDocumentWithRequirements(documentKey);
+    setDocumentData(data);
+    setTransformedRequirements(transformDocumentRequirementsToItems(data));
   }, [documentKey]);
 
   // Compute whether we're on the last requirement
@@ -169,6 +165,13 @@ export default function DocumentPage({
       router.push(`/product/${productKey}/source`);
     }
   };
+
+  const handleRefreshSkippedSuggestions = useCallback(
+    async (ids: string[]) => {
+      await refreshSuggestionsForIds(ids);
+    },
+    [refreshSuggestionsForIds],
+  );
 
   // Handler for creating new requirement and linking it
   const handleCreateNewRequirement = async (
@@ -271,8 +274,8 @@ export default function DocumentPage({
   const handleUndoMerge = useCallback(async () => {
     const invalidatedIds = await undoMerge();
     await reloadDocumentData();
-    if (invalidatedIds && invalidatedIds.length > 0) {
-      refreshSuggestionsForIds(invalidatedIds);
+    if (invalidatedIds.length > 0) {
+      await refreshSuggestionsForIds(invalidatedIds);
     }
   }, [undoMerge, reloadDocumentData, refreshSuggestionsForIds]);
 
@@ -317,7 +320,7 @@ export default function DocumentPage({
       });
       await reloadDocumentData();
       if (invalidatedIds.length > 0) {
-        refreshSuggestionsForIds(invalidatedIds);
+        await refreshSuggestionsForIds(invalidatedIds);
       }
     } catch (error) {
       console.error("Failed to apply merge directly, falling back to merge drawer:", error);
@@ -462,6 +465,7 @@ export default function DocumentPage({
               documentId={documentData.id}
               requirements={requirements}
               onBulkApproveComplete={reloadDocumentData}
+              onRefreshSkippedSuggestions={handleRefreshSkippedSuggestions}
             />
           </div>
           <div className="flex min-h-0 flex-1 overflow-hidden">

@@ -24,6 +24,7 @@ export interface BulkApproveResult {
   alreadyLinked: number;
   noSuggestion: number;
   invalidatedDuplicate: number;
+  invalidatedDuplicateIds: string[];
 }
 
 interface UseBulkApproveSuggestionsReturn {
@@ -42,6 +43,7 @@ export function useBulkApproveSuggestions(
   requirements: RequirementItem[],
   documentId: string,
   onComplete: () => Promise<void>,
+  onRefreshSkippedSuggestions: (ids: string[]) => Promise<void>,
 ): UseBulkApproveSuggestionsReturn {
   const [isApproving, setIsApproving] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
@@ -93,6 +95,18 @@ export function useBulkApproveSuggestions(
 
       await onComplete();
 
+      const invalidatedDuplicateIds = bulkResult.items
+        .filter(
+          (item) =>
+            item.status === "skipped" &&
+            item.reason === "invalidated_duplicate",
+        )
+        .map((item) => item.extracted_requirement_id);
+
+      if (invalidatedDuplicateIds.length > 0) {
+        await onRefreshSkippedSuggestions(invalidatedDuplicateIds);
+      }
+
       setResult({
         accepted: bulkResult.accepted,
         failed: bulkResult.failed,
@@ -100,6 +114,7 @@ export function useBulkApproveSuggestions(
         alreadyLinked: bulkResult.already_linked,
         noSuggestion: bulkResult.no_suggestion,
         invalidatedDuplicate: bulkResult.invalidated_duplicate,
+        invalidatedDuplicateIds,
       });
     } finally {
       setIsApproving(false);

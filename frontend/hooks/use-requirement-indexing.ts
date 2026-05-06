@@ -239,7 +239,7 @@ export function useRequirementIndexing({
       setRefreshingSuggestionIds((prev) => new Set([...prev, ...ids]));
 
       try {
-        const results = await Promise.allSettled(
+        const results = await Promise.all(
           ids.map((id) => getSuggestedAction(id)),
         );
 
@@ -248,23 +248,19 @@ export function useRequirementIndexing({
             const idx = ids.indexOf(req.id.toString());
             if (idx === -1) return req;
 
-            const result = results[idx];
-            if (result.status === "fulfilled") {
-              const suggestion = result.value;
-              return {
-                ...req,
-                suggestedAction: suggestion.action as SuggestedActionType,
-                suggestedTargetRequirementId:
-                  suggestion.target_requirement_id ?? undefined,
-                suggestionJustification: suggestion.justification ?? undefined,
-                suggestionSimilarityScore:
-                  suggestion.similarity_score ?? undefined,
-                suggestedTargetRequirement:
-                  suggestion.target_requirement ?? undefined,
-                mergePreview: suggestion.merge_preview ?? undefined,
-              };
-            }
-            return req;
+            const suggestion = results[idx];
+            return {
+              ...req,
+              suggestedAction: suggestion.action as SuggestedActionType,
+              suggestedTargetRequirementId:
+                suggestion.target_requirement_id ?? undefined,
+              suggestionJustification: suggestion.justification ?? undefined,
+              suggestionSimilarityScore:
+                suggestion.similarity_score ?? undefined,
+              suggestedTargetRequirement:
+                suggestion.target_requirement ?? undefined,
+              mergePreview: suggestion.merge_preview ?? undefined,
+            };
           }),
         );
       } finally {

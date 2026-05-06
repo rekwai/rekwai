@@ -39,6 +39,7 @@ interface RequirementHeaderProps {
   documentId: string;
   requirements: RequirementItem[];
   onBulkApproveComplete: () => Promise<void>;
+  onRefreshSkippedSuggestions: (ids: string[]) => Promise<void>;
 }
 
 export function RequirementHeader({
@@ -48,6 +49,7 @@ export function RequirementHeader({
   documentId,
   requirements,
   onBulkApproveComplete,
+  onRefreshSkippedSuggestions,
 }: RequirementHeaderProps) {
   const {
     isDeleting,
@@ -67,7 +69,12 @@ export function RequirementHeader({
     closeDialog: closeBulkApproveDialog,
     handleDone: handleBulkApproveDone,
     confirmBulkApprove,
-  } = useBulkApproveSuggestions(requirements, documentId, onBulkApproveComplete);
+  } = useBulkApproveSuggestions(
+    requirements,
+    documentId,
+    onBulkApproveComplete,
+    onRefreshSkippedSuggestions,
+  );
 
   const breadcrumbs: Array<{ label: string; path?: string; isBold?: boolean }> =
     [

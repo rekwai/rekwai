@@ -126,7 +126,7 @@ export interface MergedRequirement {
   types: string[];
   implementation_status: string;
   implementation_description: string;
-  requirement_verification?: string | null;
+  requirement_verification: string;
 }
 
 export interface ExtractedRequirementDto {
