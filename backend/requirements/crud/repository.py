@@ -531,26 +531,40 @@ class RequirementRepository:
         return [models.RequirementHistory.model_validate(h) for h in history_db]
 
     def restore_from_latest_history(
-        self, requirement_id: str
+        self,
+        requirement_id: str,
+        source_extracted_requirement_id: Optional[str] = None,
+        source_action: Optional[str] = None,
     ) -> Optional[models.RequirementDto]:
-        """Restore a requirement to its state before the most recent UPDATE.
+        """Restore a requirement to its state before a matching UPDATE.
 
-        Uses the previous_* fields from the latest history entry to revert.
+        Uses the previous_* fields from the latest matching history entry to revert.
+        Optional source filters let callers restore a specific extraction action
+        instead of any later unrelated edit.
         Returns the restored requirement DTO, or None if no history found.
         """
-        # Get the latest UPDATE history entry
-        history_entry = (
-            self.db.query(tables.RequirementHistoryDB)
-            .filter(
-                tables.RequirementHistoryDB.requirement_id == requirement_id,
-                tables.RequirementHistoryDB.change_type == "UPDATE",
-                tables.RequirementHistoryDB.previous_description.isnot(None),
-            )
-            .order_by(tables.RequirementHistoryDB.change_timestamp.desc())
-            .first()
+        query = self.db.query(tables.RequirementHistoryDB).filter(
+            tables.RequirementHistoryDB.requirement_id == requirement_id,
+            tables.RequirementHistoryDB.change_type == "UPDATE",
+            tables.RequirementHistoryDB.previous_description.isnot(None),
         )
+        if source_extracted_requirement_id is not None:
+            query = query.filter(
+                tables.RequirementHistoryDB.source_extracted_requirement_id
+                == source_extracted_requirement_id
+            )
+        if source_action is not None:
+            query = query.filter(
+                tables.RequirementHistoryDB.source_action == source_action
+            )
+
+        history_entry = query.order_by(
+            tables.RequirementHistoryDB.change_timestamp.desc()
+        ).first()
         if not history_entry or history_entry.previous_description is None:
             return None
+        if history_entry.previous_types is None:
+            raise RuntimeError("Requirement history entry is missing previous_types")
 
         db_req = (
             self.db.query(tables.RequirementDB)
@@ -574,21 +588,19 @@ class RequirementRepository:
         )
 
         # Restore previous types
-        if history_entry.previous_types is not None:
-            self.db.query(tables.RequirementTypeDB).filter(
-                tables.RequirementTypeDB.requirement_id == requirement_id
-            ).delete()
-            for req_type in set(history_entry.previous_types):
-                type_entry = tables.RequirementTypeDB(
-                    requirement_id=requirement_id, type=req_type
-                )
-                self.db.add(type_entry)
+        self.db.query(tables.RequirementTypeDB).filter(
+            tables.RequirementTypeDB.requirement_id == requirement_id
+        ).delete()
+        for req_type in set(history_entry.previous_types):
+            type_entry = tables.RequirementTypeDB(
+                requirement_id=requirement_id, type=req_type
+            )
+            self.db.add(type_entry)
 
         self.db.flush()
         self.db.refresh(db_req)
 
-        restored_types = history_entry.previous_types if history_entry.previous_types is not None else current_data.types
-        restored_data = self.transform_to_dto(db_req, restored_types)
+        restored_data = self.transform_to_dto(db_req, history_entry.previous_types)
 
         # Log the revert as a new history entry
         self._log_history(

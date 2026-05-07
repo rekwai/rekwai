@@ -352,31 +352,30 @@ class RequirementDocumentService:
             if db_req.suggested_target_requirement_id
             else None
         )
+        if action in ("attach", "merge") and not target_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Suggestion target requirement is missing",
+            )
 
         try:
             # For attach: create the extraction link immediately
             # For merge: skip link creation (link is created after user completes the merge)
-            if action == "attach" and target_id:
-                try:
-                    link_data = RequirementExtractionLinkCreate(
-                        requirement_id=target_id,
-                        extracted_requirement_id=extracted_requirement_id,
-                        link_type="attach",
-                    )
-                    self.extraction_link_repository.create_link(
-                        link_data, commit=False
-                    )
-                    self.requirement_repository.record_extraction_link_history(
-                        requirement_id=target_id,
-                        link_type="attach",
-                        extracted_requirement_id=extracted_requirement_id,
-                        commit=False,
-                    )
-                except ValueError:
-                    log.info(
-                        f"Link already exists for requirement {target_id} "
-                        f"and extracted requirement {extracted_requirement_id}"
-                    )
+            if action == "attach":
+                link_data = RequirementExtractionLinkCreate(
+                    requirement_id=target_id,
+                    extracted_requirement_id=extracted_requirement_id,
+                    link_type="attach",
+                )
+                self.extraction_link_repository.create_link(
+                    link_data, commit=False
+                )
+                self.requirement_repository.record_extraction_link_history(
+                    requirement_id=target_id,
+                    link_type="attach",
+                    extracted_requirement_id=extracted_requirement_id,
+                    commit=False,
+                )
 
             # Clear suggestion columns
             self.requirement_repository.set_extracted_requirement_suggestion(
@@ -450,14 +449,29 @@ class RequirementDocumentService:
                 status_code=404, detail="Extracted requirement not found"
             )
 
-        # Restore the requirement from history
+        links = self.extraction_link_repository.get_links_for_extracted_requirement(
+            extracted_requirement_id
+        )
+        has_merge_link = any(
+            str(link.requirement_id) == requirement_id and link.link_type == "merge"
+            for link in links
+        )
+        if not has_merge_link:
+            raise HTTPException(
+                status_code=400,
+                detail="No merge link found for this extracted requirement",
+            )
+
+        # Restore the requirement from the merge-specific history entry.
         restored = self.requirement_repository.restore_from_latest_history(
-            requirement_id
+            requirement_id,
+            source_extracted_requirement_id=extracted_requirement_id,
+            source_action="merge",
         )
         if not restored:
             raise HTTPException(
                 status_code=400,
-                detail="No history available to restore from",
+                detail="No merge history available to restore from",
             )
 
         # Delete the extraction link

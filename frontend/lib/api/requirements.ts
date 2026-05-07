@@ -419,7 +419,7 @@ export interface BulkAcceptSuggestionsResult {
 export async function acceptSuggestion(
   extractedRequirementId: string,
 ): Promise<{
-  action: string;
+  action: SuggestedActionType;
   target_requirement_id: string | null;
   invalidated_ids: string[];
 }> {
@@ -428,7 +428,7 @@ export async function acceptSuggestion(
     { method: "POST" },
   );
   return handleResponse<{
-    action: string;
+    action: SuggestedActionType;
     target_requirement_id: string | null;
     invalidated_ids: string[];
   }>(response);

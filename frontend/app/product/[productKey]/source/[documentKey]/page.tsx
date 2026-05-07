@@ -66,6 +66,8 @@ export default function DocumentPage({
   const [pendingMergeLinkId, setPendingMergeLinkId] = useState<string | null>(
     null,
   );
+  const [pendingMergeAcceptSuggestion, setPendingMergeAcceptSuggestion] =
+    useState(false);
   const [lastCreateInfo, setLastCreateInfo] = useState<CreateInfo | null>(null);
 
   // Modal state management using custom hook
@@ -128,6 +130,7 @@ export default function DocumentPage({
     loadLinkedRequirements,
     fetchSuggestedAction,
     confirmSuggestion,
+    acceptCurrentSuggestion,
     linkNewRequirement,
     handleLinkExistingRequirements,
     handleGenerateMerge,
@@ -249,8 +252,10 @@ export default function DocumentPage({
   const openMergeDrawerFallback = async (
     requirement: Requirement,
     overrideValues?: Partial<Requirement>,
+    acceptSuggestionAfterSave = false,
   ) => {
     setPendingMergeLinkId(requirement.id.toString());
+    setPendingMergeAcceptSuggestion(acceptSuggestionAfterSave);
     if (overrideValues) {
       mergeDrawerModal.open(requirement);
       setDrawerOverrideValues(overrideValues);
@@ -263,8 +268,10 @@ export default function DocumentPage({
         } else {
           setPendingMergeLinkId(null);
         }
-      } catch {
+      } catch (error) {
         setPendingMergeLinkId(null);
+        setPendingMergeAcceptSuggestion(false);
+        throw error;
       }
     }
   };
@@ -282,15 +289,19 @@ export default function DocumentPage({
   const handleUndoMergeRef = useRef(handleUndoMerge);
   handleUndoMergeRef.current = handleUndoMerge;
 
-  // Apply merge preview directly, with fallback to merge drawer on failure
+  // Apply merge preview directly, or open the merge drawer when no preview exists
   const handleMergeWithPreview = async (
     requirement: Requirement,
     suggestionSnapshot: SuggestedAction | null,
-    invalidatedIds: string[],
   ) => {
-    const mergePreviewData = selectedRequirement?.mergePreview;
+    if (!selectedRequirement) {
+      throw new Error("Cannot merge without a selected extracted requirement");
+    }
+
+    const mergePreviewData = selectedRequirement.mergePreview;
+    const extractedRequirementId = selectedRequirement.id.toString();
     if (!mergePreviewData) {
-      await openMergeDrawerFallback(requirement);
+      await openMergeDrawerFallback(requirement, undefined, true);
       return;
     }
 
@@ -298,33 +309,33 @@ export default function DocumentPage({
       mergePreviewData,
       requirement.product_id,
     );
-    try {
-      await updateRequirementApi(requirement.id.toString(), payload);
-      await linkNewRequirement(requirement.id.toString(), "merge");
-      const updatedReq = await getRequirement(requirement.id.toString());
-      setLastMergeInfo({
-        extractedReqId: selectedRequirement!.id.toString(),
-        targetReqId: requirement.id.toString(),
-        targetReqKey: requirement.requirement_key,
-        mergedRequirement: updatedReq,
-        previousSuggestion: suggestionSnapshot ?? undefined,
-      });
-      toast({
-        title: "Requirements successfully merged",
-        description: `Merged into ${requirement.requirement_key}`,
-        action: (
-          <ToastAction altText="Undo" onClick={() => handleUndoMergeRef.current()}>
-            Undo
-          </ToastAction>
-        ),
-      });
-      await reloadDocumentData();
-      if (invalidatedIds.length > 0) {
-        await refreshSuggestionsForIds(invalidatedIds);
-      }
-    } catch (error) {
-      console.error("Failed to apply merge directly, falling back to merge drawer:", error);
-      await openMergeDrawerFallback(requirement, payload);
+    await updateRequirementApi(requirement.id.toString(), payload);
+    await linkNewRequirement(requirement.id.toString(), "merge");
+
+    const invalidatedIds = await acceptCurrentSuggestion(extractedRequirementId);
+    const updatedReq = await getRequirement(requirement.id.toString());
+    setLastMergeInfo({
+      extractedReqId: selectedRequirement.id.toString(),
+      targetReqId: requirement.id.toString(),
+      targetReqKey: requirement.requirement_key,
+      mergedRequirement: updatedReq,
+      previousSuggestion: suggestionSnapshot ?? undefined,
+    });
+    toast({
+      title: "Requirements successfully merged",
+      description: `Merged into ${requirement.requirement_key}`,
+      action: (
+        <ToastAction
+          altText="Undo"
+          onClick={() => handleUndoMergeRef.current()}
+        >
+          Undo
+        </ToastAction>
+      ),
+    });
+    await reloadDocumentData();
+    if (invalidatedIds.length > 0) {
+      await refreshSuggestionsForIds(invalidatedIds);
     }
   };
 
@@ -350,12 +361,13 @@ export default function DocumentPage({
     try {
       await linkNewRequirement(created.id.toString(), "create");
       isLinked = true;
+      await acceptCurrentSuggestion(selectedRequirement.id.toString());
     } catch (error) {
-      console.error("Requirement created but linking failed:", error);
+      console.error("Requirement created but finalization failed:", error);
       toast({
-        title: "Requirement created, but linking failed",
+        title: "Requirement created, but finalization failed",
         description:
-          "You can edit this requirement now, and link it later from the source panel.",
+          "You can edit this requirement now, and retry or dismiss the suggestion later.",
       });
     }
 
@@ -397,13 +409,10 @@ export default function DocumentPage({
         }
       : null;
 
-    const result = await confirmSuggestion();
+    const acceptNow = suggestedAction?.action === "attach";
+    const result = await confirmSuggestion({ acceptNow });
     if (result?.action === "merge" && result.requirement) {
-      await handleMergeWithPreview(
-        result.requirement,
-        suggestionSnapshot,
-        result.invalidated_ids || [],
-      );
+      await handleMergeWithPreview(result.requirement, suggestionSnapshot);
     } else if (result?.action === "create_new") {
       await handleCreateNewFromSuggestion(suggestionSnapshot);
     }
@@ -411,7 +420,7 @@ export default function DocumentPage({
 
   // Handle edit suggestion - opens merge drawer with pre-filled data
   const handleEditSuggestion = async () => {
-    const result = await confirmSuggestion();
+    const result = await confirmSuggestion({ acceptNow: false });
     if (result?.action === "merge" && result.requirement) {
       const mergePreviewData = selectedRequirement?.mergePreview;
       const overrideValues = mergePreviewData
@@ -420,7 +429,7 @@ export default function DocumentPage({
             result.requirement.product_id,
           )
         : undefined;
-      await openMergeDrawerFallback(result.requirement, overrideValues);
+      await openMergeDrawerFallback(result.requirement, overrideValues, true);
     }
   };
 
@@ -580,6 +589,7 @@ export default function DocumentPage({
             // Drawer was cancelled — clear pending merge link
             mergeDrawerModal.close();
             setPendingMergeLinkId(null);
+            setPendingMergeAcceptSuggestion(false);
           }
         }}
         requirement={mergeDrawerModal.data}
@@ -588,14 +598,29 @@ export default function DocumentPage({
           mergeDrawerModal.close();
 
           // Create the extraction link now that merge is complete
+          let invalidatedIds: string[] = [];
           if (pendingMergeLinkId) {
             await linkNewRequirement(pendingMergeLinkId, "merge");
+            if (pendingMergeAcceptSuggestion) {
+              if (!selectedRequirement) {
+                throw new Error(
+                  "Cannot accept merge suggestion without a selected extracted requirement",
+                );
+              }
+              invalidatedIds = await acceptCurrentSuggestion(
+                selectedRequirement.id.toString(),
+              );
+            }
             setPendingMergeLinkId(null);
+            setPendingMergeAcceptSuggestion(false);
           } else {
             await loadLinkedRequirements();
           }
           // Reload document data after merge to refresh hasLinks
           await reloadDocumentData();
+          if (invalidatedIds.length > 0) {
+            await refreshSuggestionsForIds(invalidatedIds);
+          }
         }}
         productId={mergeDrawerModal.data?.product_id || null}
       />

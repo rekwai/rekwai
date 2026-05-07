@@ -220,17 +220,6 @@ export function useRequirementIndexing({
     }
   }, [selectedRequirement, linkedRequirements]);
 
-  // Helper to clear stored suggestion fields from the local requirement
-  const clearSelectedRequirementSuggestion = useCallback(() => {
-    setRequirements((prev) =>
-      prev.map((req, idx) =>
-        idx === selectedRequirementIndex
-          ? withClearedSuggestion(req)
-          : req,
-      ),
-    );
-  }, [selectedRequirementIndex]);
-
   // Refresh suggestions for a list of extracted requirement IDs (e.g. after merge invalidation)
   const refreshSuggestionsForIds = useCallback(
     async (ids: string[]) => {
@@ -274,8 +263,53 @@ export function useRequirementIndexing({
     [],
   );
 
+  const acceptCurrentSuggestion = useCallback(
+    async (extractedRequirementId: string): Promise<string[]> => {
+      const extractedId = extractedRequirementId;
+
+      const acceptResult = await acceptSuggestion(extractedId);
+      const invalidated_ids = acceptResult.invalidated_ids;
+
+      if (acceptResult.action === "attach") {
+        if (!acceptResult.target_requirement_id) {
+          throw new Error(
+            "Accepted attach suggestion is missing target_requirement_id",
+          );
+        }
+        await fetchAndSetLinkedRequirements();
+        updateSelectedRequirementLink(true, "attach");
+      }
+
+      setRequirements((prev) =>
+        prev.map((req) => {
+          const reqId = req.id.toString();
+          if (reqId === extractedId || invalidated_ids.includes(reqId)) {
+            return withClearedSuggestion(req);
+          }
+          return req;
+        }),
+      );
+
+      if (selectedRequirement?.id?.toString() === extractedId) {
+        setSuggestedAction(null);
+        setSuggestedExtractedId(null);
+      }
+
+      return invalidated_ids;
+    },
+    [
+      selectedRequirement,
+      fetchAndSetLinkedRequirements,
+      updateSelectedRequirementLink,
+    ],
+  );
+
   // Confirm the AI suggestion
-  const confirmSuggestion = useCallback(async (): Promise<{
+  const confirmSuggestion = useCallback(async ({
+    acceptNow,
+  }: {
+    acceptNow: boolean;
+  }): Promise<{
     action: SuggestedAction["action"];
     requirement?: Requirement;
     invalidated_ids?: string[];
@@ -288,56 +322,25 @@ export function useRequirementIndexing({
       return null;
     }
 
-    const { action, target_requirement_id, target_requirement } =
-      suggestedAction;
-
-    // Call backend accept endpoint (creates link for attach, clears suggestion)
+    const { action, target_requirement } = suggestedAction;
     let invalidated_ids: string[] = [];
-    try {
-      const acceptResult = await acceptSuggestion(
+
+    if (acceptNow) {
+      invalidated_ids = await acceptCurrentSuggestion(
         selectedRequirement.id.toString(),
       );
-      invalidated_ids = acceptResult.invalidated_ids || [];
-    } catch (error) {
-      console.error("Failed to accept suggestion:", error);
-      return null; // Keep suggestion state intact so user can retry
     }
 
-    // Only update linked requirements state for attach (backend creates link immediately).
-    // For merge, the link is created later after the user completes the merge drawer.
-    if (action === "attach" && target_requirement_id) {
-      await fetchAndSetLinkedRequirements();
-      updateSelectedRequirementLink(true, "attach");
-    }
-
-    // Clear local suggestion fields for invalidated siblings immediately
-    if (invalidated_ids.length > 0) {
-      setRequirements((prev) =>
-        prev.map((req) =>
-          invalidated_ids.includes(req.id.toString())
-            ? withClearedSuggestion(req)
-            : req,
-        ),
-      );
-    }
-
-    const result = {
+    return {
       action,
       requirement: target_requirement ?? undefined,
       invalidated_ids,
     };
-
-    setSuggestedAction(null);
-    setSuggestedExtractedId(null);
-    clearSelectedRequirementSuggestion();
-    return result;
   }, [
     suggestedAction,
     suggestedExtractedId,
     selectedRequirement,
-    fetchAndSetLinkedRequirements,
-    updateSelectedRequirementLink,
-    clearSelectedRequirementSuggestion,
+    acceptCurrentSuggestion,
   ]);
 
   // Restore suggestion state locally after undo
@@ -405,7 +408,7 @@ export function useRequirementIndexing({
         restoreSuggestionState(info.previousSuggestion);
       }
 
-      return result.invalidated_ids || [];
+      return result.invalidated_ids;
     } catch (error) {
       console.error("Failed to undo merge:", error);
       throw error;
@@ -671,6 +674,7 @@ export function useRequirementIndexing({
     loadLinkedRequirements,
     fetchSuggestedAction,
     confirmSuggestion,
+    acceptCurrentSuggestion,
     undoMerge,
     setLastMergeInfo,
     linkNewRequirement,
