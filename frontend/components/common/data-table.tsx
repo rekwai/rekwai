@@ -22,7 +22,7 @@ interface DataTableProps {
 export function DataTable({ children, className }: DataTableProps) {
   return (
     <div
-      className={`flex-1 bg-white dark:bg-[#121212] rounded-lg dark:rounded-[6px] flex flex-col min-h-0 overflow-hidden ${className || ""}`}
+      className={`flex-1 bg-white dark:bg-[#121212] rounded-lg dark:rounded-[6px] border border-[var(--semantic-stroke)] flex flex-col min-h-0 overflow-hidden ${className || ""}`}
     >
       <Table>{children}</Table>
     </div>

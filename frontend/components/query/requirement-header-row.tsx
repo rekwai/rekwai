@@ -17,8 +17,8 @@ export function RequirementHeaderRow({
   isSearchingSimilar = false,
 }: RequirementHeaderRowProps) {
   return (
-    <div className="flex flex-row items-center p-0 gap-2.5 w-[216px] h-7 flex-none order-0 flex-grow-0">
-      <Badge className="flex flex-row justify-center items-center px-3 py-1.5 gap-1.5 h-7 bg-[#080705] text-[#FAFFFD] rounded-[3px] font-inter font-medium text-sm leading-4 tracking-[0.04px] hover:bg-[#080705] dark:hover:bg-[#080705]">
+    <div className="flex flex-row items-center p-0 gap-2.5 h-7 flex-none order-0 flex-grow-0">
+      <Badge className="flex flex-row justify-center items-center px-3 py-1.5 gap-1.5 h-7 bg-secondary text-secondary-foreground rounded-[3px] font-inter font-medium text-sm leading-4 tracking-[0.04px] hover:bg-secondary border border-border">
         Requirement(s)
       </Badge>
       <Button

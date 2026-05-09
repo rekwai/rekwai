@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { QuestionHeader } from "@/components/query/question-header";
 import { QuestionListPanel } from "@/components/query/question-list-panel";
 import { QuestionDetailsPanel } from "@/components/query/question-details-panel";
-import { QuestionNavigationFooter } from "@/components/query/question-navigation-footer";
 import { useRequirementActions } from "@/hooks/use-requirement-actions";
+import { FloatingNavigationFooter } from "@/components/common/navigation-footer";
 import {
   getQuestionnaireQuestions,
   getQuestionnaireDetails,
@@ -41,14 +41,37 @@ export default function QueryPage({
   const [selectedTab, setSelectedTab] = useState<"questions" | "metadata">(
     "questions",
   );
+  const [errorQuestionIds, setErrorQuestionIds] = useState<string[]>([]);
 
   const selectedQuestion = questions?.[selectedIndex];
-
   const requirementActions = useRequirementActions({
     selectedQuestion,
     questionnaireId: questionnaireId,
     productId,
   });
+  const hasNoRequirementsForSelectedQuestion =
+    !!selectedQuestion &&
+    !requirementActions.isLoadingRequirements &&
+    requirementActions.requirements.length === 0 &&
+    !requirementActions.requirementsError;
+
+  useEffect(() => {
+    if (!selectedQuestion) return;
+
+    setErrorQuestionIds((previousIds) => {
+      const hasError = previousIds.includes(selectedQuestion.id);
+
+      if (hasNoRequirementsForSelectedQuestion && !hasError) {
+        return [...previousIds, selectedQuestion.id];
+      }
+
+      if (!hasNoRequirementsForSelectedQuestion && hasError) {
+        return previousIds.filter((id) => id !== selectedQuestion.id);
+      }
+
+      return previousIds;
+    });
+  }, [hasNoRequirementsForSelectedQuestion, selectedQuestion]);
 
   useEffect(() => {
     if (!productKey || !queryKey) return;
@@ -80,6 +103,39 @@ export default function QueryPage({
     };
     loadQuestionnaire();
   }, [productKey, queryKey]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!event.metaKey && !event.ctrlKey) return;
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (!questions?.length) return;
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setSelectedIndex((currentIndex) =>
+          Math.min(currentIndex + 1, questions.length - 1),
+        );
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setSelectedIndex((currentIndex) => Math.max(currentIndex - 1, 0));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [questions?.length]);
 
   if (loading) {
     return (
@@ -113,60 +169,60 @@ export default function QueryPage({
   // LAYOUT STRUCTURE
   // ============================================
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex-none">
-        <QuestionHeader
-          productKey={productKey}
-          productName={productName}
-          questionnaireId={questionnaireId}
-          clientName={clientName}
-          queryKey={queryKey}
-        />
-      </div>
+    <div className="h-full w-full flex flex-col overflow-hidden bg-semantic-bg-elevation-1">
+      <div className="flex min-h-0 flex-1 flex-col p-8">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[20px] border border-semantic-stroke bg-semantic-bg-elevation-1">
+          <div className="flex-none">
+            <QuestionHeader
+              productKey={productKey}
+              productName={productName}
+              questionnaireId={questionnaireId}
+              clientName={clientName}
+              queryKey={queryKey}
+            />
+          </div>
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            {/* Left Panel - 50% width, scrollable */}
+            <div className="min-h-0 w-1/2 overflow-y-auto border-r border-semantic-stroke bg-semantic-bg-elevation-2">
+              <QuestionListPanel
+                questions={questions}
+                selectedIndex={selectedIndex}
+                selectedTab={selectedTab}
+                questionnaireId={questionnaireId}
+                questionnaireKey={queryKey}
+                clientName={clientName}
+                requirements={requirementActions.requirements}
+                errorQuestionIds={errorQuestionIds}
+                onIndexChange={setSelectedIndex}
+                onTabChange={setSelectedTab}
+              />
+            </div>
 
-      {/* Main Content - split 50/50 horizontally */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - 50% width, scrollable */}
-        <div className="w-1/2 overflow-y-auto border-r border-gray-200 dark:border-gray-700">
-          <QuestionListPanel
-            questions={questions}
-            selectedIndex={selectedIndex}
-            selectedTab={selectedTab}
-            questionnaireId={questionnaireId}
-            questionnaireKey={queryKey}
-            clientName={clientName}
-            requirements={requirementActions.requirements}
-            onIndexChange={setSelectedIndex}
-            onTabChange={setSelectedTab}
-          />
+            {/* Right Panel - 50% width */}
+            <div className="relative flex min-h-0 w-1/2 flex-col bg-semantic-bg-elevation-1">
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <QuestionDetailsPanel
+                  selectedQuestion={selectedQuestion}
+                  questions={questions}
+                  selectedIndex={selectedIndex}
+                  productId={productId}
+                  questionnaireId={questionnaireId}
+                  onQuestionsUpdate={setQuestions}
+                  requirementActions={requirementActions}
+                />
+              </div>
+
+              {selectedQuestion && (
+                <FloatingNavigationFooter
+                  itemCount={questions.length}
+                  selectedIndex={selectedIndex}
+                  onIndexChange={setSelectedIndex}
+                  className="absolute bottom-4 right-4"
+                />
+              )}
+            </div>
+          </div>
         </div>
-
-        {/* Right Panel - 50% width, scrollable */}
-        <div className="w-1/2 overflow-y-auto bg-[#FAFFFD] dark:bg-[#121212]">
-          <QuestionDetailsPanel
-            selectedQuestion={selectedQuestion}
-            questions={questions}
-            selectedIndex={selectedIndex}
-            productId={productId}
-            questionnaireId={questionnaireId}
-            onQuestionsUpdate={setQuestions}
-            requirementActions={requirementActions}
-          />
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="flex-none">
-        {selectedQuestion && (
-          <QuestionNavigationFooter
-            selectedQuestion={selectedQuestion}
-            questions={questions}
-            selectedIndex={selectedIndex}
-            onQuestionChange={setSelectedIndex}
-            onQuestionsUpdate={setQuestions}
-          />
-        )}
       </div>
     </div>
   );

@@ -1,28 +1,33 @@
-import { useState, useEffect, useCallback, useTransition } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useTransition,
+  useRef,
+} from "react";
 import {
   RequirementItem,
   Requirement,
   ImplementationStatus,
   ExtractedRequirementDto,
+  SuggestedAction,
+  SuggestedActionType,
+  MergeInfo,
+  LinkType,
 } from "@/types/requirement-types";
 import {
   getDistinctRequirementTypes,
-  getSimilarRequirements,
+  getSuggestedAction,
   listExtractedRequirementLinks,
   createExtractionLink,
   deleteExtractionLink,
   getRequirement,
   generateMerge,
   updateExtractedRequirement,
+  acceptSuggestion,
+  undoMerge as undoMergeApi,
 } from "@/lib/api/requirements";
-import {
-  createIgnoredRequirementsStorage,
-  updateRequirementInList,
-} from "@/lib/utils/requirement-indexing-utils";
-import { autoLinkSimilarRequirements } from "@/lib/utils/auto-link-requirements";
-
-// Module-level singleton for localStorage access
-const ignoredRequirementsStorage = createIgnoredRequirementsStorage();
+import { updateRequirementInList } from "@/lib/utils/requirement-indexing-utils";
 
 interface UseRequirementIndexingProps {
   open: boolean;
@@ -50,15 +55,39 @@ export function useRequirementIndexing({
   );
   const [linkedRequirementsLoading, setLinkedRequirementsLoading] =
     useState(false);
-  const [isSearchingSimilar, setIsSearchingSimilar] = useState(false);
+  const [isFetchingSuggestion, setIsFetchingSuggestion] = useState(false);
+  const [suggestedAction, setSuggestedAction] =
+    useState<SuggestedAction | null>(null);
+  /** Extracted requirement id that `suggestedAction` belongs to (avoids list/panel mismatch when selection changes before state catches up). */
+  const [suggestedExtractedId, setSuggestedExtractedId] = useState<
+    string | null
+  >(null);
 
   // UI state
   const [mergingRequirementId, setMergingRequirementId] = useState<
     string | null
   >(null);
+  const [refreshingSuggestionIds, setRefreshingSuggestionIds] = useState<
+    Set<string>
+  >(new Set());
+  const [lastMergeInfo, setLastMergeInfo] = useState<MergeInfo | null>(null);
 
   const selectedRequirement = requirements[selectedRequirementIndex];
   const combinedLoading = isLoading || typesLoading;
+
+  const selectedExtractionRef = useRef<string | null>(null);
+  selectedExtractionRef.current = selectedRequirement?.id?.toString() ?? null;
+
+  // Shared helper to clear all suggestion fields on a requirement
+  const withClearedSuggestion = (req: RequirementItem): RequirementItem => ({
+    ...req,
+    suggestedAction: undefined,
+    suggestedTargetRequirementId: undefined,
+    suggestionJustification: undefined,
+    suggestionSimilarityScore: undefined,
+    suggestedTargetRequirement: undefined,
+    mergePreview: undefined,
+  });
 
   // Sync requirements when initialRequirements changes
   useEffect(() => {
@@ -129,45 +158,339 @@ export function useRequirementIndexing({
     setLinkedRequirementsLoading(false);
   }, [open, fetchAndSetLinkedRequirements]);
 
-  // Search for similar requirements and auto-link (manual refresh)
-  const refreshSimilarRequirements = useCallback(async () => {
+  const updateSelectedRequirementLink = useCallback(
+    (hasLinks: boolean, linkType?: RequirementItem["linkType"]) => {
+      setRequirements((prev) =>
+        prev.map((req, idx) =>
+          idx === selectedRequirementIndex
+            ? { ...req, hasLinks, ...(linkType !== undefined && { linkType }) }
+            : req,
+        ),
+      );
+    },
+    [selectedRequirementIndex],
+  );
+
+  // Fetch AI suggested action for the selected requirement
+  const fetchSuggestedAction = useCallback(async () => {
     if (!selectedRequirement?.id) {
       return;
     }
 
-    setIsSearchingSimilar(true);
+    const extractedId = selectedRequirement.id.toString();
+
+    setIsFetchingSuggestion(true);
 
     try {
-      // Always load ignored requirements fresh from localStorage to avoid race conditions
-      const currentIgnored = ignoredRequirementsStorage.loadIgnoredRequirements(
-        selectedRequirement.id.toString(),
+      // Derive exclude IDs from already-loaded linked requirements state
+      const excludeIds = linkedRequirements.map((r) => r.id.toString());
+
+      const result = await getSuggestedAction(
+        extractedId,
+        excludeIds,
       );
 
-      // Get currently linked requirement IDs
-      const linkedRequirementIds = await listExtractedRequirementLinks(
-        selectedRequirement.id.toString(),
-      );
+      if (selectedExtractionRef.current !== extractedId) {
+        return;
+      }
 
-      // Get similar requirements (excluding already linked and ignored ones)
-      const allExcludeIds = [...linkedRequirementIds, ...currentIgnored];
-      const results = await getSimilarRequirements(
-        selectedRequirement,
-        allExcludeIds,
+      setSuggestedAction(result);
+      setSuggestedExtractedId(extractedId);
+      setRequirements((prev) =>
+        prev.map((req) =>
+          req.id.toString() === extractedId
+            ? {
+                ...req,
+                suggestedAction: result.action,
+                suggestedTargetRequirementId:
+                  result.target_requirement_id ?? undefined,
+                suggestionJustification: result.justification ?? undefined,
+                suggestionSimilarityScore: result.similarity_score ?? undefined,
+                suggestedTargetRequirement:
+                  result.target_requirement ?? undefined,
+                mergePreview: result.merge_preview ?? undefined,
+              }
+            : req,
+        ),
       );
-
-      // Auto-link requirements with high similarity using shared utility
-      await autoLinkSimilarRequirements(results, (requirementId) =>
-        createExtractionLink(requirementId, selectedRequirement.id.toString()),
-      );
-
-      // Reload linked requirements to show newly auto-linked ones
-      await fetchAndSetLinkedRequirements();
     } catch (error) {
-      console.error("Failed to refresh similar requirements:", error);
+      console.error("Failed to fetch suggested action:", error);
     } finally {
-      setIsSearchingSimilar(false);
+      setIsFetchingSuggestion(false);
     }
-  }, [selectedRequirement, fetchAndSetLinkedRequirements]);
+  }, [selectedRequirement, linkedRequirements]);
+
+  // Refresh suggestions for a list of extracted requirement IDs (e.g. after merge invalidation)
+  const refreshSuggestionsForIds = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+
+      setRefreshingSuggestionIds((prev) => new Set([...prev, ...ids]));
+
+      try {
+        const results = await Promise.all(
+          ids.map((id) => getSuggestedAction(id)),
+        );
+
+        setRequirements((prev) =>
+          prev.map((req) => {
+            const idx = ids.indexOf(req.id.toString());
+            if (idx === -1) return req;
+
+            const suggestion = results[idx];
+            return {
+              ...req,
+              suggestedAction: suggestion.action as SuggestedActionType,
+              suggestedTargetRequirementId:
+                suggestion.target_requirement_id ?? undefined,
+              suggestionJustification: suggestion.justification ?? undefined,
+              suggestionSimilarityScore:
+                suggestion.similarity_score ?? undefined,
+              suggestedTargetRequirement:
+                suggestion.target_requirement ?? undefined,
+              mergePreview: suggestion.merge_preview ?? undefined,
+            };
+          }),
+        );
+      } finally {
+        setRefreshingSuggestionIds((prev) => {
+          const next = new Set(prev);
+          ids.forEach((id) => next.delete(id));
+          return next;
+        });
+      }
+    },
+    [],
+  );
+
+  const acceptCurrentSuggestion = useCallback(
+    async (extractedRequirementId: string): Promise<string[]> => {
+      const extractedId = extractedRequirementId;
+
+      const acceptResult = await acceptSuggestion(extractedId);
+      const invalidated_ids = acceptResult.invalidated_ids;
+
+      if (acceptResult.action === "attach") {
+        if (!acceptResult.target_requirement_id) {
+          throw new Error(
+            "Accepted attach suggestion is missing target_requirement_id",
+          );
+        }
+        await fetchAndSetLinkedRequirements();
+        updateSelectedRequirementLink(true, "attach");
+      }
+
+      setRequirements((prev) =>
+        prev.map((req) => {
+          const reqId = req.id.toString();
+          if (reqId === extractedId || invalidated_ids.includes(reqId)) {
+            return withClearedSuggestion(req);
+          }
+          return req;
+        }),
+      );
+
+      if (selectedRequirement?.id?.toString() === extractedId) {
+        setSuggestedAction(null);
+        setSuggestedExtractedId(null);
+      }
+
+      return invalidated_ids;
+    },
+    [
+      selectedRequirement,
+      fetchAndSetLinkedRequirements,
+      updateSelectedRequirementLink,
+    ],
+  );
+
+  // Confirm the AI suggestion
+  const confirmSuggestion = useCallback(async ({
+    acceptNow,
+  }: {
+    acceptNow: boolean;
+  }): Promise<{
+    action: SuggestedAction["action"];
+    requirement?: Requirement;
+    invalidated_ids?: string[];
+  } | null> => {
+    if (!suggestedAction || !selectedRequirement?.id) return null;
+    if (
+      suggestedExtractedId != null &&
+      suggestedExtractedId !== selectedRequirement.id.toString()
+    ) {
+      return null;
+    }
+
+    const { action, target_requirement } = suggestedAction;
+    let invalidated_ids: string[] = [];
+
+    if (acceptNow) {
+      invalidated_ids = await acceptCurrentSuggestion(
+        selectedRequirement.id.toString(),
+      );
+    }
+
+    return {
+      action,
+      requirement: target_requirement ?? undefined,
+      invalidated_ids,
+    };
+  }, [
+    suggestedAction,
+    suggestedExtractedId,
+    selectedRequirement,
+    acceptCurrentSuggestion,
+  ]);
+
+  // Restore suggestion state locally after undo
+  const restoreSuggestionState = useCallback(
+    (suggestion: SuggestedAction) => {
+      const extractedId =
+        requirements[selectedRequirementIndex]?.id?.toString() ?? null;
+      setSuggestedAction(suggestion);
+      setSuggestedExtractedId(extractedId);
+      setRequirements((prev) =>
+        prev.map((req, idx) =>
+          idx === selectedRequirementIndex
+            ? {
+                ...req,
+                suggestedAction: suggestion.action,
+                suggestedTargetRequirementId:
+                  suggestion.target_requirement_id ?? undefined,
+                suggestionJustification:
+                  suggestion.justification ?? undefined,
+                suggestionSimilarityScore:
+                  suggestion.similarity_score ?? undefined,
+                suggestedTargetRequirement:
+                  suggestion.target_requirement ?? undefined,
+                mergePreview: suggestion.merge_preview ?? undefined,
+              }
+            : req,
+        ),
+      );
+    },
+    [selectedRequirementIndex, requirements],
+  );
+
+  // Undo a merge (restore requirement to pre-merge state)
+  const undoMerge = useCallback(async (): Promise<string[]> => {
+    const info = lastMergeInfo;
+    if (!info) return [];
+
+    const suggestionRestore = info.previousSuggestion
+      ? {
+          suggested_action: info.previousSuggestion.action,
+          suggested_target_requirement_id:
+            info.previousSuggestion.target_requirement_id,
+          suggestion_justification: info.previousSuggestion.justification,
+          suggestion_similarity_score:
+            info.previousSuggestion.similarity_score,
+          merge_preview: info.previousSuggestion.merge_preview ?? null,
+        }
+      : undefined;
+
+    try {
+      const result = await undoMergeApi(
+        info.extractedReqId,
+        info.targetReqId,
+        suggestionRestore,
+      );
+
+      setLastMergeInfo(null);
+      await fetchAndSetLinkedRequirements();
+      const linkedIds = await listExtractedRequirementLinks(
+        info.extractedReqId,
+      );
+      updateSelectedRequirementLink(linkedIds.length > 0);
+
+      if (info.previousSuggestion) {
+        restoreSuggestionState(info.previousSuggestion);
+      }
+
+      return result.invalidated_ids;
+    } catch (error) {
+      console.error("Failed to undo merge:", error);
+      throw error;
+    }
+  }, [lastMergeInfo, fetchAndSetLinkedRequirements, updateSelectedRequirementLink, restoreSuggestionState]);
+
+  // Auto-populate hook suggestion from the selected row's stored fields (document load or patch)
+  useEffect(() => {
+    if (
+      selectedRequirement?.suggestedAction &&
+      selectedRequirement.suggestionJustification
+    ) {
+      setSuggestedAction({
+        action: selectedRequirement.suggestedAction,
+        target_requirement_id:
+          selectedRequirement.suggestedTargetRequirementId ?? null,
+        target_requirement:
+          selectedRequirement.suggestedTargetRequirement ?? null,
+        justification: selectedRequirement.suggestionJustification,
+        similarity_score: selectedRequirement.suggestionSimilarityScore ?? 0,
+        merge_preview: selectedRequirement.mergePreview ?? undefined,
+      });
+      setSuggestedExtractedId(selectedRequirement.id.toString());
+    } else {
+      setSuggestedAction(null);
+      setSuggestedExtractedId(null);
+    }
+  }, [
+    selectedRequirement?.id,
+    selectedRequirement?.suggestedAction,
+    selectedRequirement?.suggestionJustification,
+    selectedRequirement?.suggestedTargetRequirementId,
+    selectedRequirement?.suggestionSimilarityScore,
+    selectedRequirement?.suggestedTargetRequirement,
+    selectedRequirement?.mergePreview,
+  ]);
+
+  useEffect(() => {
+    setLastMergeInfo(null);
+  }, [selectedRequirement?.id]);
+
+  // Default behavior: for unlinked extractions, eagerly fetch a suggestion when
+  // nothing is available locally, so the right panel doesn't land in a dead end.
+  useEffect(() => {
+    if (!open) return;
+    if (!selectedRequirement?.id) return;
+    if (selectedRequirement.hasLinks) return;
+    if (lastMergeInfo) return;
+    if (isFetchingSuggestion) return;
+
+    if (selectedRequirement.suggestedAction && selectedRequirement.suggestionJustification) {
+      return;
+    }
+    const hookAlignedWithRow =
+      suggestedAction &&
+      suggestedExtractedId != null &&
+      suggestedExtractedId === selectedRequirement.id.toString();
+
+    if (hookAlignedWithRow) {
+      return;
+    }
+    if (linkedRequirementsLoading) {
+      return;
+    }
+    if (linkedRequirements.length > 0) {
+      return;
+    }
+
+    void fetchSuggestedAction();
+  }, [
+    open,
+    selectedRequirement?.id,
+    selectedRequirement?.suggestedAction,
+    selectedRequirement?.suggestionJustification,
+    isFetchingSuggestion,
+    suggestedAction,
+    suggestedExtractedId,
+    linkedRequirementsLoading,
+    linkedRequirements.length,
+    lastMergeInfo,
+    fetchSuggestedAction,
+  ]);
 
   // Load linked requirements when selectedRequirement changes
   // Note: loadLinkedRequirements is intentionally excluded from deps to prevent
@@ -178,32 +501,19 @@ export function useRequirementIndexing({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRequirement?.id, open]);
 
-  // Helper to update hasLinks on the selected requirement
-  const updateSelectedRequirementHasLinks = useCallback(
-    (hasLinks: boolean) => {
-      setRequirements((prev) =>
-        prev.map((req, idx) =>
-          idx === selectedRequirementIndex ? { ...req, hasLinks } : req,
-        ),
-      );
-    },
-    [selectedRequirementIndex],
-  );
-
   // Generic helper to create links and reload (DRY principle)
   const createLinksAndReload = useCallback(
-    async (requirementIds: string[]) => {
+    async (requirementIds: string[], linkType?: LinkType) => {
       if (!selectedRequirement?.id || requirementIds.length === 0) return;
 
       try {
         await Promise.all(
           requirementIds.map((reqId) =>
-            createExtractionLink(reqId, selectedRequirement.id.toString()),
+            createExtractionLink(reqId, selectedRequirement.id.toString(), linkType),
           ),
         );
         await fetchAndSetLinkedRequirements();
-        // Update hasLinks since we just created a link
-        updateSelectedRequirementHasLinks(true);
+        updateSelectedRequirementLink(true, linkType);
       } catch (error) {
         console.error("Failed to create extraction link(s):", error);
         throw error;
@@ -212,7 +522,7 @@ export function useRequirementIndexing({
     [
       selectedRequirement,
       fetchAndSetLinkedRequirements,
-      updateSelectedRequirementHasLinks,
+      updateSelectedRequirementLink,
     ],
   );
 
@@ -272,13 +582,13 @@ export function useRequirementIndexing({
   };
 
   // Handle linking a single newly created requirement
-  const linkNewRequirement = async (requirementId: string) => {
-    await createLinksAndReload([requirementId]);
+  const linkNewRequirement = async (requirementId: string, linkType?: LinkType) => {
+    await createLinksAndReload([requirementId], linkType);
   };
 
   // Handle linking multiple existing requirements
   const handleLinkExistingRequirements = async (reqs: Requirement[]) => {
-    await createLinksAndReload(reqs.map((req) => req.id.toString()));
+    await createLinksAndReload(reqs.map((req) => req.id.toString()), "attach");
   };
 
   // Handle unlinking requirement
@@ -294,7 +604,7 @@ export function useRequirementIndexing({
       await fetchAndSetLinkedRequirements();
       // Update hasLinks based on remaining linked requirements (minus the one we just unlinked)
       const remainingCount = linkedRequirements.length - 1;
-      updateSelectedRequirementHasLinks(remainingCount > 0);
+      updateSelectedRequirementLink(remainingCount > 0);
     } catch (error) {
       console.error("Failed to delete extraction link:", error);
       throw error;
@@ -349,8 +659,12 @@ export function useRequirementIndexing({
     availableTypes,
     linkedRequirements,
     linkedRequirementsLoading,
-    isSearchingSimilar,
+    isFetchingSuggestion,
+    suggestedAction,
+    suggestedExtractedId,
+    lastMergeInfo,
     mergingRequirementId,
+    refreshingSuggestionIds,
 
     // Actions
     handleRequirementSelect,
@@ -358,11 +672,16 @@ export function useRequirementIndexing({
     persistField,
     persistTypes,
     loadLinkedRequirements,
-    refreshSimilarRequirements,
+    fetchSuggestedAction,
+    confirmSuggestion,
+    acceptCurrentSuggestion,
+    undoMerge,
+    setLastMergeInfo,
     linkNewRequirement,
     handleLinkExistingRequirements,
     handleUnlinkRequirement,
     handleGenerateMerge,
+    refreshSuggestionsForIds,
     goToNext,
   };
 }

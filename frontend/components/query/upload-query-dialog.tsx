@@ -28,6 +28,7 @@ import { useTaskUpload } from "@/hooks/use-task-upload";
 import { useRouter } from "next/navigation";
 import { listProducts as apiListProducts } from "@/lib/api/products";
 import { listClients, createClient, Client } from "@/lib/api/clients";
+import { RequiredLabel } from "@/components/ui/required-label";
 
 interface ProductOption {
   id: string;
@@ -297,7 +298,7 @@ export function UploadQueryDialog({
               htmlFor="product"
               className="text-sm font-medium text-black dark:text-[#FAFFFD]"
             >
-              Product
+              <RequiredLabel text="Product" />
             </label>
             <div className="relative">
               <select
@@ -408,7 +409,7 @@ export function UploadQueryDialog({
                 htmlFor="client"
                 className="text-sm font-medium text-black dark:text-[#FAFFFD]"
               >
-                Client
+                <RequiredLabel text="Client" />
               </label>
               {!isCreatingClient && (
                 <button

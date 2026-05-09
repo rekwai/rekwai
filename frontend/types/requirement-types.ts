@@ -12,12 +12,19 @@ export interface RequirementItem {
   implementationDescription?: string;
   requirementVerification?: string;
   hasLinks: boolean;
+  linkType?: LinkType | null;
   createdAt: string;
   updatedAt: string;
   created?: string;
   description: string;
   decisionType: string;
   product_id: string;
+  suggestedAction?: SuggestedActionType | null;
+  suggestedTargetRequirementId?: string | null;
+  suggestionJustification?: string | null;
+  suggestionSimilarityScore?: number | null;
+  suggestedTargetRequirement?: Requirement | null;
+  mergePreview?: MergedRequirement | null;
 }
 
 export interface DocumentMetadata {
@@ -60,6 +67,9 @@ export interface RequirementHistory {
   product_id: string;
   change_timestamp: string;
   change_type: "CREATE" | "UPDATE" | "DELETE";
+  source_extracted_requirement_id: string | null;
+  source_document_id: string | null;
+  source_action: LinkType | null;
   user_id: string | null;
   previous_description: string | null;
   previous_types: string[] | null;
@@ -71,24 +81,44 @@ export interface RequirementHistory {
   new_implementation_status: string | null;
 }
 
+// Used by the questionnaire flow only (not the source document flow)
 export interface LLMSimilarityResult {
   is_similar: boolean;
   similarity_score: number;
   justification: string;
 }
 
-export interface SimilarRequirementBase {
-  id: string;
-  requirement_key: string;
-  description: string;
-  types: string[];
-  implementation_description: string;
-  implementation_status: ImplementationStatus;
-  distance: number;
+// Used by the questionnaire flow only (not the source document flow)
+export interface SimilarRequirementWithLLM extends Requirement {
+  llm_result: LLMSimilarityResult | null;
 }
 
-export interface SimilarRequirementWithLLM extends SimilarRequirementBase {
-  llm_result: LLMSimilarityResult | null;
+export type LinkType = "attach" | "merge" | "create";
+
+export type SuggestedActionType = "attach" | "merge" | "create_new";
+
+export interface SuggestedAction {
+  action: SuggestedActionType;
+  target_requirement_id: string | null;
+  target_requirement: Requirement | null;
+  justification: string;
+  similarity_score: number;
+  merge_preview?: MergedRequirement | null;
+}
+
+export interface MergeInfo {
+  extractedReqId: string;
+  targetReqId: string;
+  targetReqKey: string;
+  mergedRequirement?: Requirement;
+  previousSuggestion?: SuggestedAction;
+}
+
+export interface CreateInfo {
+  extractedReqId: string;
+  createdRequirement: Requirement;
+  isLinked: boolean;
+  previousSuggestion?: SuggestedAction;
 }
 
 export interface MergedRequirement {
@@ -96,6 +126,7 @@ export interface MergedRequirement {
   types: string[];
   implementation_status: string;
   implementation_description: string;
+  requirement_verification: string;
 }
 
 export interface ExtractedRequirementDto {
@@ -108,8 +139,15 @@ export interface ExtractedRequirementDto {
   implementation_status?: string | null;
   implementation_description?: string | null;
   has_links: boolean;
+  link_type?: string | null;
   extraction_timestamp: string;
   order: number;
+  suggested_action?: SuggestedActionType | null;
+  suggested_target_requirement_id?: string | null;
+  suggestion_justification?: string | null;
+  suggestion_similarity_score?: number | null;
+  suggested_target_requirement?: Requirement | null;
+  merge_preview?: MergedRequirement | null;
 }
 
 export interface ExtractedRequirementUpdate {

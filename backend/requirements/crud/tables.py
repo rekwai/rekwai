@@ -11,6 +11,7 @@ from sqlalchemy import (
     UniqueConstraint,
     REAL,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 import uuid6
 from sqlalchemy.dialects.postgresql import UUID
@@ -103,7 +104,7 @@ class RequirementHistoryDB(Base):
         nullable=False,
         index=True,
     )
-    change_type = Column(String(50), nullable=False)  # e.g., CREATE, UPDATE, DELETE
+    change_type = Column(String(10), nullable=False)  # CREATE, UPDATE, DELETE
     previous_description = Column(Text, nullable=True)
     previous_types = Column(JSON, nullable=True)  # Store array of types
     previous_requirement_verification = Column(Text, nullable=True)
@@ -118,6 +119,17 @@ class RequirementHistoryDB(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     user_id = Column(String, nullable=True)  # Optional: ID of user making the change
+    source_extracted_requirement_id = Column(
+        UUID(as_uuid=False),
+        ForeignKey("extracted_requirement.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    source_document_id = Column(
+        UUID(as_uuid=False),
+        ForeignKey("requirement_document.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    source_action = Column(String(20), nullable=True)  # attach, merge, create
 
     def __repr__(self):
         """Return a string representation of the RequirementHistoryDB instance."""
@@ -176,6 +188,15 @@ class ExtractedRequirementDB(Base):
         index=True,
     )
     order = Column(REAL, nullable=False)
+    suggested_action = Column(String(20), nullable=True)
+    suggested_target_requirement_id = Column(
+        UUID(as_uuid=False),
+        ForeignKey("requirement.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    suggestion_justification = Column(Text, nullable=True)
+    suggestion_similarity_score = Column(REAL, nullable=True)
+    merge_preview = Column(JSONB, nullable=True)
 
     __table_args__ = (
         Index("idx_extracted_requirement_org_product", organization_id, product_id),

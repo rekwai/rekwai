@@ -61,3 +61,5 @@ backend/backend/
 
 test_log.md
 .playwright-mcp/
+
+tmp/

@@ -187,15 +187,11 @@ export default function ProductLayout({
     );
   };
 
-  // Check if we're on a full-page route (question answering or requirement indexing)
-  // If it's a full-page route, just render children without layout
-  if (isFullPageRoute(pathname)) {
-    return <>{children}</>;
-  }
+  const isFullPage = isFullPageRoute(pathname);
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-background justify-center">
-      <div className="flex h-screen max-w-[1280px] w-full bg-gray-50 dark:bg-background">
+    <div className="flex h-screen bg-gray-50 dark:bg-background">
+      <div className="flex h-screen w-full bg-gray-50 dark:bg-background">
         <Suspense fallback={<div>Loading...</div>}>
           <SideNav
             products={products.map((p) => ({
@@ -231,96 +227,104 @@ export default function ProductLayout({
             </div>
           ) : (
             <div className="flex-1 flex flex-col min-h-0 dark:bg-[#080705] dark:rounded-[20px]">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 flex-shrink-0 dark:border-b-0">
-                <div className="flex items-center">
-                  <h1
-                    data-testid="product-header-title"
-                    className="text-2xl font-bold dark:text-foreground"
-                  >
-                    {selectedProduct?.name || "Product"}
-                  </h1>
-                  <Button
-                    data-testid="product-settings-button"
-                    variant="ghost"
-                    size="icon"
-                    className="ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-accent"
-                    onClick={() => {
-                      if (selectedProduct) {
-                        setProductSettingsDialogOpen(true);
-                      }
-                    }}
-                    disabled={!selectedProduct}
-                  >
-                    <Settings
-                      size={18}
-                      className="text-gray-600 dark:text-muted-foreground"
-                    />
-                  </Button>
-                </div>
+              {isFullPage ? (
+                // Full-page routes (query/source detail) use the whole width
+                <div className="flex-1 flex flex-col min-h-0">{children}</div>
+              ) : (
+                // Index/table views are width-limited and centered
+                <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-[1400px]">
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-6 flex-shrink-0 dark:border-b-0">
+                    <div className="flex items-center">
+                      <h1
+                        data-testid="product-header-title"
+                        className="text-2xl font-bold dark:text-foreground"
+                      >
+                        {selectedProduct?.name || "Product"}
+                      </h1>
+                      <Button
+                        data-testid="product-settings-button"
+                        variant="ghost"
+                        size="icon"
+                        className="ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-accent"
+                        onClick={() => {
+                          if (selectedProduct) {
+                            setProductSettingsDialogOpen(true);
+                          }
+                        }}
+                        disabled={!selectedProduct}
+                      >
+                        <Settings
+                          size={18}
+                          className="text-gray-600 dark:text-muted-foreground"
+                        />
+                      </Button>
+                    </div>
 
-                <div className="flex items-center gap-4">
-                  <Button
-                    variant="outline"
-                    data-testid="create-requirement-button"
-                    onClick={() => setCreateRequirementModalOpen(true)}
-                  >
-                    <Plus size={16} className="mr-2" />
-                    Create Requirement
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    <div className="flex items-center gap-4">
                       <Button
                         variant="outline"
-                        className="flex items-center gap-1"
+                        data-testid="create-requirement-button"
+                        onClick={() => setCreateRequirementModalOpen(true)}
                       >
-                        <Plus size={16} />
-                        Upload
-                        <ChevronDown size={16} />
+                        <Plus size={16} className="mr-2" />
+                        Create Requirement
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem
-                        onClick={() => setUploadModalOpen(true)}
-                      >
-                        Upload Source
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setUploadQueryDialogOpen(true)}
-                      >
-                        Upload Query
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-
-              {/* Tabs */}
-              <div className="border-b border-gray-200 dark:border-border flex-shrink-0">
-                <Tabs
-                  value={activeTab}
-                  className="w-full"
-                  onValueChange={handleTabChange}
-                >
-                  <div className="px-6">
-                    <TabsList className="h-auto bg-transparent p-0 w-auto">
-                      {["Requirements", "Queries", "Sources"].map((tab) => (
-                        <TabsTrigger
-                          key={tab}
-                          value={tab}
-                          data-testid={`tab-${tab.toLowerCase().replace(/\s+/g, "-")}`}
-                          className="py-3 px-4 font-medium text-sm relative rounded-none border-b-2 border-transparent data-[state=active]:border-black dark:data-[state=active]:border-[#F1D929] data-[state=active]:shadow-none bg-transparent text-gray-600 dark:text-[#FAFFFD] data-[state=active]:text-black dark:data-[state=active]:text-[#FAFFFD]"
-                        >
-                          {tab}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="flex items-center gap-1"
+                          >
+                            <Plus size={16} />
+                            Upload
+                            <ChevronDown size={16} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem
+                            onClick={() => setUploadModalOpen(true)}
+                          >
+                            Upload Source
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setUploadQueryDialogOpen(true)}
+                          >
+                            Upload Query
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                </Tabs>
-              </div>
 
-              {/* Content */}
-              <div className="flex-1 flex flex-col min-h-0">{children}</div>
+                  {/* Tabs */}
+                  <div className="border-b border-gray-200 dark:border-border flex-shrink-0">
+                    <Tabs
+                      value={activeTab}
+                      className="w-full"
+                      onValueChange={handleTabChange}
+                    >
+                      <div className="px-6">
+                        <TabsList className="h-auto bg-transparent p-0 w-auto">
+                          {["Requirements", "Queries", "Sources"].map((tab) => (
+                            <TabsTrigger
+                              key={tab}
+                              value={tab}
+                              data-testid={`tab-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+                              className="py-3 px-4 font-medium text-sm relative !rounded-none border-b-2 border-transparent data-[state=active]:border-black dark:data-[state=active]:border-[#F1D929] data-[state=active]:shadow-none bg-transparent text-gray-600 dark:text-[#FAFFFD] data-[state=active]:text-black dark:data-[state=active]:text-[#FAFFFD]"
+                            >
+                              {tab}
+                            </TabsTrigger>
+                          ))}
+                        </TabsList>
+                      </div>
+                    </Tabs>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 flex flex-col min-h-0">{children}</div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -24,9 +24,9 @@ function getAnswerTypeDisplay(answerType: string | null | undefined) {
 
   switch (answerType) {
     case "yes":
-      return { label: "Yes", colorClass: "text-[#15786A]" };
+      return { label: "Yes", colorClass: "text-semantic-success-fg" };
     case "no":
-      return { label: "No", colorClass: "text-[#EE3D49]" };
+      return { label: "No", colorClass: "text-semantic-error-fg" };
     default:
       return null;
   }
@@ -81,14 +81,14 @@ export function AnswerGenerationSection({
     if (hasNoRequirements) {
       return (
         <div 
-          className="flex flex-row items-center py-3 px-3 gap-2 bg-[#FFF7ED] rounded-md border border-[#FFC7B0] w-full"
+          className="flex flex-row items-center py-3 px-3 gap-2 bg-primitive-orange-100 rounded-[4px] border border-primitive-orange-200 w-full"
           role="status"
           aria-live="polite"
         >
           <div className="flex flex-row items-center p-0 gap-2" aria-hidden="true">
-            <Info size={16} className="text-[#F97316]" weight="fill" />
+            <Info size={16} className="text-semantic-indicator-3" weight="fill" />
           </div>
-          <span className="font-inter font-normal text-sm leading-[130%] text-black">
+          <span className="font-inter font-normal text-sm leading-[130%] text-semantic-black">
             Unable to generate an answer as no requirements were found relating
             to this question.
           </span>
@@ -98,7 +98,7 @@ export function AnswerGenerationSection({
 
     return (
       <div className="flex items-center gap-2">
-        <span className="italic text-gray-400 dark:text-[#FAFFFD]">
+        <span className="italic text-muted-foreground">
           No answer generated yet.
         </span>
       </div>
@@ -111,46 +111,50 @@ export function AnswerGenerationSection({
       data-testid="answer-section"
     >
       <div className="flex flex-row items-center p-0 gap-2.5">
-        <Badge className="flex flex-row justify-center items-center px-3 py-1.5 gap-1.5 bg-[#080705] dark:bg-[#080705] text-[#FAFFFD] dark:text-[#FAFFFD] rounded-[3px] font-inter font-medium text-sm leading-4 tracking-[0.04px] hover:bg-[#080705] dark:hover:bg-[#080705]">
+        <div className="font-inter font-semibold text-base leading-4 tracking-[0.04px] text-semantic-text">
           Answer
-        </Badge>
+        </div>
 
-        {/* Regenerate Button - always visible */}
+        {/* Result toolbar (Figma 1015:26110): nested controls on elevation-2 track */}
         {!isEditingResult && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onGenerateAnswer}
-            disabled={isGeneratingAnswer}
-            className={`${buttonStyles.iconButton} disabled:opacity-50`}
-            data-testid="regenerate-answer-button-top"
-          >
-            <RotateCcw
-              size={12}
-              className={`text-[#080705] dark:text-[#080705] ${isGeneratingAnswer ? "animate-[spin_1s_linear_infinite_reverse]" : ""}`}
-            />
-          </Button>
-        )}
-
-        {/* Edit Button - always visible */}
-        {!isEditingResult && !isGeneratingAnswer && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              onResultChange(selectedQuestion.generated_answer || "");
-              onEditingChange(true);
-            }}
-            className={buttonStyles.iconButton}
-            data-testid="edit-answer-button-top"
-          >
-            <Pencil size={12} className="text-[#080705] dark:text-[#080705]" />
-          </Button>
+          <div className="inline-flex items-center gap-1 rounded-[8px] bg-semantic-bg-elevation-2 p-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onGenerateAnswer}
+              disabled={isGeneratingAnswer}
+              className="h-7 px-2.5 py-1 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-semantic-text shadow-none hover:bg-semantic-highlight disabled:opacity-50"
+              data-testid="regenerate-answer-button-top"
+            >
+              <RotateCcw
+                size={12}
+                className={
+                  isGeneratingAnswer
+                    ? "animate-[spin_1s_linear_infinite_reverse] text-semantic-text"
+                    : "text-semantic-text"
+                }
+              />
+            </Button>
+            {!isGeneratingAnswer && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onResultChange(selectedQuestion.generated_answer || "");
+                  onEditingChange(true);
+                }}
+                className="h-7 px-2.5 py-1 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-semantic-text shadow-none hover:bg-semantic-highlight"
+                data-testid="edit-answer-button-top"
+              >
+                <Pencil size={12} className="text-semantic-text" />
+              </Button>
+            )}
+          </div>
         )}
       </div>
       {isEditingResult ? (
         <div className="w-full space-y-3">
-          <div className="relative w-full">
+          <div className="relative w-full rounded-lg border border-semantic-stroke bg-semantic-bg-elevation-2 p-4">
             <textarea
               value={editedResult}
               onChange={(e) => onResultChange(e.target.value)}
@@ -192,9 +196,9 @@ export function AnswerGenerationSection({
           )}
         </div>
       ) : (
-        <div className="relative w-full">
+        <div className="relative w-full rounded-lg border border-semantic-stroke bg-semantic-bg-elevation-2 p-4">
           <div
-            className="font-inter font-normal text-sm leading-[150%] text-[#080705] dark:text-[#FAFFFD] w-full"
+            className="font-inter font-normal text-sm leading-[150%] text-semantic-text w-full"
             data-testid="answer-result"
           >
             {renderAnswerContent()}

@@ -24,6 +24,9 @@ class RequirementRepository:
         product_id: str,
         previous_data: Optional[models.RequirementDto] = None,
         new_data: Optional[models.RequirementDto] = None,
+        source_extracted_requirement_id: Optional[str] = None,
+        source_document_id: Optional[str] = None,
+        source_action: Optional[str] = None,
     ):
         history_entry = tables.RequirementHistoryDB(
             requirement_id=requirement_id,
@@ -51,8 +54,129 @@ class RequirementRepository:
             new_implementation_status=new_data.implementation_status
             if new_data
             else None,
+            source_extracted_requirement_id=source_extracted_requirement_id,
+            source_document_id=source_document_id,
+            source_action=source_action,
         )
         self.db.add(history_entry)
+
+    def log_extraction_action(
+        self,
+        requirement_id: str,
+        product_id: str,
+        link_type: str,
+        extracted_requirement_id: str,
+        document_id: str,
+        previous_data: Optional[models.RequirementDto] = None,
+        new_data: Optional[models.RequirementDto] = None,
+        commit: bool = True,
+    ):
+        """Log a history entry for an extraction-related action (attach, merge, create)."""
+        change_type_map = {
+            "attach": "UPDATE",
+            "merge": "UPDATE",
+            "create": "CREATE",
+        }
+        change_type = change_type_map[link_type]
+        self._log_history(
+            change_type=change_type,
+            requirement_id=requirement_id,
+            product_id=product_id,
+            previous_data=previous_data,
+            new_data=new_data,
+            source_extracted_requirement_id=extracted_requirement_id,
+            source_document_id=document_id,
+            source_action=link_type,
+        )
+        self.db.flush()
+        if commit:
+            self.db.commit()
+
+    def tag_latest_extraction_history(
+        self,
+        requirement_id: str,
+        change_type: str,
+        extracted_requirement_id: str,
+        document_id: str,
+        require_previous_state: bool = False,
+        commit: bool = True,
+        source_action: Optional[str] = None,
+    ) -> bool:
+        """Attach extraction provenance to the latest matching history row."""
+        query = self.db.query(tables.RequirementHistoryDB).filter(
+            tables.RequirementHistoryDB.requirement_id == requirement_id,
+            tables.RequirementHistoryDB.change_type == change_type,
+        )
+        if require_previous_state:
+            query = query.filter(
+                tables.RequirementHistoryDB.previous_description.isnot(None)
+            )
+
+        history_entry = query.order_by(
+            tables.RequirementHistoryDB.change_timestamp.desc()
+        ).first()
+        if not history_entry:
+            return False
+
+        history_entry.source_extracted_requirement_id = extracted_requirement_id
+        history_entry.source_document_id = document_id
+        history_entry.source_action = source_action
+        self.db.flush()
+        if commit:
+            self.db.commit()
+        return True
+
+    def record_extraction_link_history(
+        self,
+        requirement_id: str,
+        link_type: str,
+        extracted_requirement_id: str,
+        commit: bool = True,
+    ) -> None:
+        """Record import provenance for a created requirement-extraction link."""
+        db_extracted_req = self.get_extracted_requirement_by_id(extracted_requirement_id)
+        if not db_extracted_req:
+            raise ValueError("Extracted requirement not found")
+
+        if link_type == "create":
+            tagged = self.tag_latest_extraction_history(
+                requirement_id=requirement_id,
+                change_type="CREATE",
+                extracted_requirement_id=extracted_requirement_id,
+                document_id=str(db_extracted_req.document_id),
+                commit=False,
+                source_action=link_type,
+            )
+        elif link_type == "merge":
+            tagged = self.tag_latest_extraction_history(
+                requirement_id=requirement_id,
+                change_type="UPDATE",
+                extracted_requirement_id=extracted_requirement_id,
+                document_id=str(db_extracted_req.document_id),
+                require_previous_state=True,
+                commit=False,
+                source_action=link_type,
+            )
+        elif link_type == "attach":
+            main_req = self.get(requirement_id)
+            self.log_extraction_action(
+                requirement_id=requirement_id,
+                product_id=str(db_extracted_req.product_id),
+                link_type=link_type,
+                extracted_requirement_id=extracted_requirement_id,
+                document_id=str(db_extracted_req.document_id),
+                new_data=main_req,
+                commit=False,
+            )
+            tagged = True
+        else:
+            raise ValueError(f"Invalid extraction link type: {link_type}")
+
+        if not tagged:
+            raise RuntimeError("Expected requirement history entry was not found")
+
+        if commit:
+            self.db.commit()
 
     def _get_requirement_by_filters(self, **filters) -> Optional[tables.RequirementDB]:
         """Generic method to get a single requirement by any filters."""
@@ -406,6 +530,91 @@ class RequirementRepository:
         )
         return [models.RequirementHistory.model_validate(h) for h in history_db]
 
+    def restore_from_latest_history(
+        self,
+        requirement_id: str,
+        source_extracted_requirement_id: Optional[str] = None,
+        source_action: Optional[str] = None,
+    ) -> Optional[models.RequirementDto]:
+        """Restore a requirement to its state before a matching UPDATE.
+
+        Uses the previous_* fields from the latest matching history entry to revert.
+        Optional source filters let callers restore a specific extraction action
+        instead of any later unrelated edit.
+        Returns the restored requirement DTO, or None if no history found.
+        """
+        query = self.db.query(tables.RequirementHistoryDB).filter(
+            tables.RequirementHistoryDB.requirement_id == requirement_id,
+            tables.RequirementHistoryDB.change_type == "UPDATE",
+            tables.RequirementHistoryDB.previous_description.isnot(None),
+        )
+        if source_extracted_requirement_id is not None:
+            query = query.filter(
+                tables.RequirementHistoryDB.source_extracted_requirement_id
+                == source_extracted_requirement_id
+            )
+        if source_action is not None:
+            query = query.filter(
+                tables.RequirementHistoryDB.source_action == source_action
+            )
+
+        history_entry = query.order_by(
+            tables.RequirementHistoryDB.change_timestamp.desc()
+        ).first()
+        if not history_entry or history_entry.previous_description is None:
+            return None
+        if history_entry.previous_types is None:
+            raise RuntimeError("Requirement history entry is missing previous_types")
+
+        db_req = (
+            self.db.query(tables.RequirementDB)
+            .filter(tables.RequirementDB.id == requirement_id)
+            .first()
+        )
+        if not db_req:
+            return None
+
+        # Capture current state before reverting
+        current_data = self.transform_to_dto(db_req)
+
+        # Restore previous fields
+        db_req.description = history_entry.previous_description
+        db_req.implementation_status = history_entry.previous_implementation_status
+        db_req.implementation_description = (
+            history_entry.previous_implementation_description
+        )
+        db_req.requirement_verification = (
+            history_entry.previous_requirement_verification
+        )
+
+        # Restore previous types
+        self.db.query(tables.RequirementTypeDB).filter(
+            tables.RequirementTypeDB.requirement_id == requirement_id
+        ).delete()
+        for req_type in set(history_entry.previous_types):
+            type_entry = tables.RequirementTypeDB(
+                requirement_id=requirement_id, type=req_type
+            )
+            self.db.add(type_entry)
+
+        self.db.flush()
+        self.db.refresh(db_req)
+
+        restored_data = self.transform_to_dto(db_req, history_entry.previous_types)
+
+        # Log the revert as a new history entry
+        self._log_history(
+            "UPDATE",
+            requirement_id,
+            db_req.product_id,
+            previous_data=current_data,
+            new_data=restored_data,
+        )
+        # Flush only — caller is responsible for committing the transaction
+        # so that undo_merge can atomically restore + delete link in one commit
+        self.db.flush()
+        return restored_data
+
     def create_extracted_requirement(
         self,
         extracted_requirement_data: models.ExtractedRequirement,
@@ -532,6 +741,86 @@ class RequirementRepository:
                         extracted_requirement_id=extracted_requirement_id, type=req_type
                     )
                 )
+
+        self.db.flush()
+        self.db.refresh(db_extracted_req)
+        self.db.commit()
+        return db_extracted_req
+
+    def set_extracted_requirement_suggestion(
+        self,
+        extracted_requirement_id: str,
+        action: Optional[str] = None,
+        target_requirement_id: Optional[str] = None,
+        justification: Optional[str] = None,
+        similarity_score: Optional[float] = None,
+        merge_preview: Optional[dict] = None,
+        commit: bool = True,
+    ) -> Optional[tables.ExtractedRequirementDB]:
+        """Set or clear the AI suggestion on an extracted requirement row.
+
+        Pass values to store a suggestion, or call with no arguments to clear.
+        When action is None, all suggestion fields including merge_preview are cleared.
+        When action is set, merge_preview is explicitly set to the provided value.
+        """
+        db_extracted_req = (
+            self.db.query(tables.ExtractedRequirementDB)
+            .filter(tables.ExtractedRequirementDB.id == extracted_requirement_id)
+            .first()
+        )
+        if not db_extracted_req:
+            return None
+
+        db_extracted_req.suggested_action = action
+        db_extracted_req.suggested_target_requirement_id = target_requirement_id
+        db_extracted_req.suggestion_justification = justification
+        db_extracted_req.suggestion_similarity_score = similarity_score
+        db_extracted_req.merge_preview = merge_preview
+
+        self.db.flush()
+        self.db.refresh(db_extracted_req)
+        if commit:
+            self.db.commit()
+        return db_extracted_req
+
+    def find_extracted_requirements_by_suggestion_target(
+        self,
+        target_requirement_id: str,
+        exclude_id: Optional[str] = None,
+    ) -> List[tables.ExtractedRequirementDB]:
+        """Find extracted requirements with merge suggestions targeting the given requirement.
+
+        Args:
+            target_requirement_id: The main requirement ID being targeted
+            exclude_id: An extracted requirement ID to exclude (e.g., the just-approved one)
+
+        Returns:
+            List of ExtractedRequirementDB rows with merge suggestions to this target
+        """
+        query = self.db.query(tables.ExtractedRequirementDB).filter(
+            tables.ExtractedRequirementDB.suggested_target_requirement_id
+            == target_requirement_id,
+            tables.ExtractedRequirementDB.suggested_action == "merge",
+        )
+        if exclude_id:
+            query = query.filter(tables.ExtractedRequirementDB.id != exclude_id)
+        return query.all()
+
+    def set_extracted_requirement_merge_preview(
+        self,
+        extracted_requirement_id: str,
+        preview_dict: dict,
+    ) -> Optional[tables.ExtractedRequirementDB]:
+        """Store the merge preview JSON on an extracted requirement."""
+        db_extracted_req = (
+            self.db.query(tables.ExtractedRequirementDB)
+            .filter(tables.ExtractedRequirementDB.id == extracted_requirement_id)
+            .first()
+        )
+        if not db_extracted_req:
+            return None
+
+        db_extracted_req.merge_preview = preview_dict
 
         self.db.flush()
         self.db.refresh(db_extracted_req)

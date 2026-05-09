@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useAsyncDialogSubmit } from "@/hooks/use-async-dialog-submit";
+import { RequiredLabel } from "@/components/ui/required-label";
 
 interface AddProductDialogProps {
   open: boolean;
@@ -69,7 +70,7 @@ export function AddProductDialog({
               htmlFor="product-name"
               className="text-sm font-medium text-gray-900 dark:text-[#FAFFFD]"
             >
-              Product Name
+              <RequiredLabel text="Product Name" />
             </label>
             <div className="relative">
               <input
@@ -112,7 +113,7 @@ export function AddProductDialog({
               htmlFor="product-key"
               className="text-sm font-medium text-gray-900 dark:text-[#FAFFFD]"
             >
-              Product Key (3–6 letters)
+              <RequiredLabel text="Product Key (3–6 letters)" />
             </label>
             <div className="relative">
               <input

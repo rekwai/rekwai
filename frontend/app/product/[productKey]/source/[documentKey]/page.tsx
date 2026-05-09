@@ -1,22 +1,29 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { RequirementHeader } from "@/components/source/requirement-header";
 import { RequirementListPanel } from "@/components/source/requirement-list-panel";
 import { RequirementDetailsPanel } from "@/components/source/requirement-details-panel";
-import { NavigationFooter } from "@/components/common/navigation-footer";
+import { FloatingNavigationFooter } from "@/components/common/navigation-footer";
 import { CreateRequirementModal } from "@/components/requirement/create-requirement-modal";
 import { EditExtractedRequirementModal } from "@/components/source/edit-extracted-requirement-modal";
 import {
   getDocumentWithRequirements,
   DocumentWithRequirements,
+  createRequirement,
+  deleteRequirement,
+  deleteExtractionLink,
+  updateRequirement as updateRequirementApi,
+  getRequirement,
 } from "@/lib/api/requirements";
 import { getProductByKey } from "@/lib/api/products";
 import {
   RequirementItem,
   Requirement,
   ExtractedRequirementUpdate,
+  SuggestedAction,
+  CreateInfo,
 } from "@/types/requirement-types";
 import {
   PageLoadingState,
@@ -26,8 +33,13 @@ import {
 import { useRequirementIndexing } from "@/hooks/use-requirement-indexing";
 import { useRequirementModal } from "@/hooks/use-requirement-modal";
 import { getFirstNonEmpty } from "@/lib/utils/string-utils";
-import { transformDocumentRequirementsToItems } from "@/lib/utils/requirement-transformers";
+import {
+  transformDocumentRequirementsToItems,
+  mergePreviewToUpdatePayload,
+} from "@/lib/utils/requirement-transformers";
 import { useResolvedParams } from "@/hooks/use-resolved-params";
+import { useToast } from "@/components/ui/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 
 export default function DocumentPage({
   params,
@@ -35,6 +47,7 @@ export default function DocumentPage({
   params: Promise<{ productKey: string; documentKey: string }>;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const resolvedParams = useResolvedParams(params);
   const productKey = resolvedParams?.productKey ?? null;
   const documentKey = resolvedParams?.documentKey ?? null;
@@ -50,6 +63,12 @@ export default function DocumentPage({
   const [activeTab, setActiveTab] = useState("Requirements");
   const [drawerOverrideValues, setDrawerOverrideValues] =
     useState<Partial<Requirement> | null>(null);
+  const [pendingMergeLinkId, setPendingMergeLinkId] = useState<string | null>(
+    null,
+  );
+  const [pendingMergeAcceptSuggestion, setPendingMergeAcceptSuggestion] =
+    useState(false);
+  const [lastCreateInfo, setLastCreateInfo] = useState<CreateInfo | null>(null);
 
   // Modal state management using custom hook
   const createRequirementModal = useRequirementModal();
@@ -101,20 +120,43 @@ export default function DocumentPage({
     combinedLoading,
     availableTypes,
     linkedRequirements,
-    linkedRequirementsLoading,
-    isSearchingSimilar,
-    mergingRequirementId,
+    isFetchingSuggestion,
+    suggestedAction,
+    suggestedExtractedId,
     handleRequirementSelect,
     updateRequirement,
     persistField,
     persistTypes,
     loadLinkedRequirements,
-    refreshSimilarRequirements,
+    fetchSuggestedAction,
+    confirmSuggestion,
+    acceptCurrentSuggestion,
     linkNewRequirement,
     handleLinkExistingRequirements,
-    handleUnlinkRequirement,
     handleGenerateMerge,
+    refreshSuggestionsForIds,
+    refreshingSuggestionIds,
+    lastMergeInfo,
+    setLastMergeInfo,
+    undoMerge,
   } = hook;
+
+  const suggestionAlignedWithSelection =
+    suggestedAction &&
+    suggestedExtractedId != null &&
+    selectedRequirement &&
+    !selectedRequirement.hasLinks &&
+    String(suggestedExtractedId) === String(selectedRequirement.id)
+      ? suggestedAction
+      : null;
+
+  // Helper to reload document data after merges
+  const reloadDocumentData = useCallback(async () => {
+    if (!documentKey) return;
+    const data = await getDocumentWithRequirements(documentKey);
+    setDocumentData(data);
+    setTransformedRequirements(transformDocumentRequirementsToItems(data));
+  }, [documentKey]);
 
   // Compute whether we're on the last requirement
   const isOnLastItem = selectedRequirementIndex === requirements.length - 1;
@@ -127,13 +169,20 @@ export default function DocumentPage({
     }
   };
 
+  const handleRefreshSkippedSuggestions = useCallback(
+    async (ids: string[]) => {
+      await refreshSuggestionsForIds(ids);
+    },
+    [refreshSuggestionsForIds],
+  );
+
   // Handler for creating new requirement and linking it
   const handleCreateNewRequirement = async (
     createdRequirement?: Requirement,
   ) => {
     if (createdRequirement) {
       try {
-        await linkNewRequirement(createdRequirement.id.toString());
+        await linkNewRequirement(createdRequirement.id.toString(), "create");
         createRequirementModal.close();
       } catch (error) {
         console.error(
@@ -199,14 +248,194 @@ export default function DocumentPage({
     }
   };
 
-  // Handle merge generation with modal
-  const handleGenerateMergeWithModal = async (linkedReq: Requirement) => {
-    const result = await handleGenerateMerge(linkedReq);
-    if (result) {
-      mergeDrawerModal.open(result.requirement);
-      setDrawerOverrideValues(result.overrideValues);
+  // Fallback: open merge drawer for manual editing
+  const openMergeDrawerFallback = async (
+    requirement: Requirement,
+    overrideValues?: Partial<Requirement>,
+    acceptSuggestionAfterSave = false,
+  ) => {
+    setPendingMergeLinkId(requirement.id.toString());
+    setPendingMergeAcceptSuggestion(acceptSuggestionAfterSave);
+    if (overrideValues) {
+      mergeDrawerModal.open(requirement);
+      setDrawerOverrideValues(overrideValues);
+    } else {
+      try {
+        const mergeResult = await handleGenerateMerge(requirement);
+        if (mergeResult) {
+          mergeDrawerModal.open(mergeResult.requirement);
+          setDrawerOverrideValues(mergeResult.overrideValues);
+        } else {
+          setPendingMergeLinkId(null);
+        }
+      } catch (error) {
+        setPendingMergeLinkId(null);
+        setPendingMergeAcceptSuggestion(false);
+        throw error;
+      }
     }
   };
+
+  // Shared undo handler for both merge status banner and toast action.
+  // Wrapped in a ref so the toast action closure always calls the latest version.
+  const handleUndoMerge = useCallback(async () => {
+    const invalidatedIds = await undoMerge();
+    await reloadDocumentData();
+    if (invalidatedIds.length > 0) {
+      await refreshSuggestionsForIds(invalidatedIds);
+    }
+  }, [undoMerge, reloadDocumentData, refreshSuggestionsForIds]);
+
+  const handleUndoMergeRef = useRef(handleUndoMerge);
+  handleUndoMergeRef.current = handleUndoMerge;
+
+  // Apply merge preview directly, or open the merge drawer when no preview exists
+  const handleMergeWithPreview = async (
+    requirement: Requirement,
+    suggestionSnapshot: SuggestedAction | null,
+  ) => {
+    if (!selectedRequirement) {
+      throw new Error("Cannot merge without a selected extracted requirement");
+    }
+
+    const mergePreviewData = selectedRequirement.mergePreview;
+    const extractedRequirementId = selectedRequirement.id.toString();
+    if (!mergePreviewData) {
+      await openMergeDrawerFallback(requirement, undefined, true);
+      return;
+    }
+
+    const payload = mergePreviewToUpdatePayload(
+      mergePreviewData,
+      requirement.product_id,
+    );
+    await updateRequirementApi(requirement.id.toString(), payload);
+    await linkNewRequirement(requirement.id.toString(), "merge");
+
+    const invalidatedIds = await acceptCurrentSuggestion(extractedRequirementId);
+    const updatedReq = await getRequirement(requirement.id.toString());
+    setLastMergeInfo({
+      extractedReqId: selectedRequirement.id.toString(),
+      targetReqId: requirement.id.toString(),
+      targetReqKey: requirement.requirement_key,
+      mergedRequirement: updatedReq,
+      previousSuggestion: suggestionSnapshot ?? undefined,
+    });
+    toast({
+      title: "Requirements successfully merged",
+      description: `Merged into ${requirement.requirement_key}`,
+      action: (
+        <ToastAction
+          altText="Undo"
+          onClick={() => handleUndoMergeRef.current()}
+        >
+          Undo
+        </ToastAction>
+      ),
+    });
+    await reloadDocumentData();
+    if (invalidatedIds.length > 0) {
+      await refreshSuggestionsForIds(invalidatedIds);
+    }
+  };
+
+  // Create a new requirement from the selected extracted requirement
+  const handleCreateNewFromSuggestion = async (
+    previousSuggestion?: SuggestedAction | null,
+  ) => {
+    if (!selectedRequirement) return;
+    const created = await createRequirement({
+      description: getFirstNonEmpty(
+        selectedRequirement.text,
+        selectedRequirement.description,
+      ),
+      types: selectedRequirement.types || [],
+      implementation_status: selectedRequirement.implementation || "To do",
+      implementation_description:
+        selectedRequirement.implementationDescription || "",
+      requirement_verification:
+        selectedRequirement.requirementVerification || "",
+      product_id: selectedRequirement.product_id,
+    });
+    let isLinked = false;
+    try {
+      await linkNewRequirement(created.id.toString(), "create");
+      isLinked = true;
+      await acceptCurrentSuggestion(selectedRequirement.id.toString());
+    } catch (error) {
+      console.error("Requirement created but finalization failed:", error);
+      toast({
+        title: "Requirement created, but finalization failed",
+        description:
+          "You can edit this requirement now, and retry or dismiss the suggestion later.",
+      });
+    }
+
+    setLastCreateInfo({
+      extractedReqId: selectedRequirement.id.toString(),
+      createdRequirement: created,
+      isLinked,
+      previousSuggestion: previousSuggestion ?? undefined,
+    });
+  };
+
+  const handleUndoCreate = useCallback(async () => {
+    if (!lastCreateInfo) return;
+
+    if (lastCreateInfo.isLinked) {
+      await deleteExtractionLink(
+        lastCreateInfo.createdRequirement.id.toString(),
+        lastCreateInfo.extractedReqId,
+      );
+    }
+    await deleteRequirement(lastCreateInfo.createdRequirement.id.toString());
+    setLastCreateInfo(null);
+    await reloadDocumentData();
+    await loadLinkedRequirements();
+    await fetchSuggestedAction();
+  }, [
+    lastCreateInfo,
+    reloadDocumentData,
+    loadLinkedRequirements,
+    fetchSuggestedAction,
+  ]);
+
+  // Handle AI suggestion confirmation with follow-up actions
+  const handleConfirmSuggestion = async () => {
+    const suggestionSnapshot = suggestedAction
+      ? {
+          ...suggestedAction,
+          merge_preview: selectedRequirement?.mergePreview ?? null,
+        }
+      : null;
+
+    const acceptNow = suggestedAction?.action === "attach";
+    const result = await confirmSuggestion({ acceptNow });
+    if (result?.action === "merge" && result.requirement) {
+      await handleMergeWithPreview(result.requirement, suggestionSnapshot);
+    } else if (result?.action === "create_new") {
+      await handleCreateNewFromSuggestion(suggestionSnapshot);
+    }
+  };
+
+  // Handle edit suggestion - opens merge drawer with pre-filled data
+  const handleEditSuggestion = async () => {
+    const result = await confirmSuggestion({ acceptNow: false });
+    if (result?.action === "merge" && result.requirement) {
+      const mergePreviewData = selectedRequirement?.mergePreview;
+      const overrideValues = mergePreviewData
+        ? mergePreviewToUpdatePayload(
+            mergePreviewData,
+            result.requirement.product_id,
+          )
+        : undefined;
+      await openMergeDrawerFallback(result.requirement, overrideValues, true);
+    }
+  };
+
+  useEffect(() => {
+    setLastCreateInfo(null);
+  }, [selectedRequirement?.id]);
 
   if (loading) {
     return (
@@ -234,86 +463,88 @@ export default function DocumentPage({
   // LAYOUT STRUCTURE
   // ============================================
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex-none">
-        <RequirementHeader
-          productKey={productKey}
-          productName={productName}
-          documentKey={documentData.document_key}
-          documentId={documentData.id}
-          requirements={requirements}
-          productId={documentData.product_id}
-          onBulkCreateComplete={async () => {
-            // Reload document data to refresh hasLinks status
-            const data = await getDocumentWithRequirements(documentKey!);
-            setDocumentData(data);
-            setTransformedRequirements(
-              transformDocumentRequirementsToItems(data),
-            );
-          }}
-        />
-      </div>
+    <div className="h-full w-full flex flex-col overflow-hidden bg-semantic-bg-elevation-1">
+      <div className="flex min-h-0 flex-1 flex-col p-8">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[20px] border border-semantic-stroke bg-semantic-bg-elevation-1">
+          <div className="flex-none">
+            <RequirementHeader
+              productKey={productKey}
+              productName={productName}
+              documentKey={documentData.document_key}
+              documentId={documentData.id}
+              requirements={requirements}
+              onBulkApproveComplete={reloadDocumentData}
+              onRefreshSkippedSuggestions={handleRefreshSkippedSuggestions}
+            />
+          </div>
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            {/* Left Panel - 50% width, scrollable */}
+            <div className="min-h-0 w-1/2 overflow-y-auto border-r border-semantic-stroke bg-semantic-bg-elevation-2">
+              <RequirementListPanel
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                requirements={requirements}
+                selectedRequirementIndex={selectedRequirementIndex}
+                onRequirementSelect={handleRequirementSelect}
+                combinedLoading={combinedLoading}
+                refreshingSuggestionIds={refreshingSuggestionIds}
+                selectedRowSuggestedAction={suggestionAlignedWithSelection}
+                documentMetadata={{
+                  name: documentData.original_filename,
+                  type: documentData.type,
+                  size: `${documentData.content_size_bytes} bytes`,
+                  uploadDate: documentData.created_at,
+                  key: documentData.document_key,
+                }}
+              />
+            </div>
 
-      {/* Main Content - split 50/50 horizontally */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - 50% width, scrollable */}
-        <div className="w-1/2 overflow-y-auto border-r border-gray-200 dark:border-gray-700">
-          <RequirementListPanel
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            requirements={requirements}
-            selectedRequirementIndex={selectedRequirementIndex}
-            onRequirementSelect={handleRequirementSelect}
-            combinedLoading={combinedLoading}
-            documentMetadata={{
-              name: documentData.original_filename,
-              type: documentData.type,
-              size: `${documentData.content_size_bytes} bytes`,
-              uploadDate: documentData.created_at,
-              key: documentData.document_key,
-            }}
-          />
+            {/* Right Panel - 50% width */}
+            <div className="relative flex min-h-0 w-1/2 flex-col bg-semantic-bg-elevation-1">
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <RequirementDetailsPanel
+                  selectedRequirement={selectedRequirement}
+                  requirements={requirements}
+                  combinedLoading={combinedLoading}
+                  productId={documentData.product_id}
+                  linkedRequirementsProps={{
+                    linkedRequirements,
+                    isFetchingSuggestion,
+                    suggestedAction: suggestionAlignedWithSelection,
+                    lastMergeInfo,
+                    lastCreateInfo,
+                    mergePreview: selectedRequirement?.mergePreview,
+                  }}
+                  actionHandlers={{
+                    onEditRequirement: () => editExtractedModal.open(),
+                    onEditLinkedRequirement: (requirement: Requirement) =>
+                      editLinkedModal.open(requirement),
+                    onLinkExistingRequirements: handleLinkExistingRequirements,
+                    onCreateNewRequirement: () => createRequirementModal.open(),
+                    onFetchSuggestedAction: fetchSuggestedAction,
+                    onConfirmSuggestion: handleConfirmSuggestion,
+                    onEditSuggestion: handleEditSuggestion,
+                    onUndoMerge: handleUndoMerge,
+                    onUndoCreate: handleUndoCreate,
+                    onEditCreatedRequirement: (requirement: Requirement) =>
+                      editLinkedModal.open(requirement),
+                  }}
+                />
+              </div>
+
+              {selectedRequirement && (
+                <FloatingNavigationFooter
+                  itemCount={requirements.length}
+                  selectedIndex={selectedRequirementIndex}
+                  onIndexChange={handleRequirementSelect}
+                  onNext={handleNext}
+                  nextButtonLabel={isOnLastItem ? "Close" : "Next"}
+                  className="absolute bottom-4 right-4"
+                />
+              )}
+            </div>
+          </div>
         </div>
-
-        {/* Right Panel - 50% width, scrollable */}
-        <div className="w-1/2 overflow-y-auto bg-[#FAFFFD] dark:bg-[#121212]">
-          <RequirementDetailsPanel
-            selectedRequirement={selectedRequirement}
-            requirements={requirements}
-            combinedLoading={combinedLoading}
-            productId={documentData.product_id}
-            linkedRequirementsProps={{
-              linkedRequirements,
-              linkedRequirementsLoading,
-              isSearchingSimilar,
-              mergingRequirementId,
-            }}
-            actionHandlers={{
-              onEditRequirement: () => editExtractedModal.open(),
-              onEditLinkedRequirement: (requirement: Requirement) =>
-                editLinkedModal.open(requirement),
-              onLinkExistingRequirements: handleLinkExistingRequirements,
-              onUnlinkRequirement: handleUnlinkRequirement,
-              onGenerateMerge: handleGenerateMergeWithModal,
-              onCreateNewRequirement: () => createRequirementModal.open(),
-              onRefreshSimilarRequirements: refreshSimilarRequirements,
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="flex-none">
-        {selectedRequirement && (
-          <NavigationFooter
-            itemCount={requirements.length}
-            selectedIndex={selectedRequirementIndex}
-            onIndexChange={handleRequirementSelect}
-            onNext={handleNext}
-            nextButtonLabel={isOnLastItem ? "Close" : "Next"}
-          />
-        )}
       </div>
 
       {/* Create Requirement Modal */}
@@ -353,15 +584,43 @@ export default function DocumentPage({
       {/* Requirement Edit Modal for Updates */}
       <CreateRequirementModal
         open={mergeDrawerModal.isOpen}
-        onOpenChange={mergeDrawerModal.close}
+        onOpenChange={(open) => {
+          if (!open) {
+            // Drawer was cancelled — clear pending merge link
+            mergeDrawerModal.close();
+            setPendingMergeLinkId(null);
+            setPendingMergeAcceptSuggestion(false);
+          }
+        }}
         requirement={mergeDrawerModal.data}
         overrideValues={drawerOverrideValues || undefined}
         onComplete={async () => {
-          // Close the drawer
           mergeDrawerModal.close();
 
-          // Reload requirements to refresh the linked requirements list
-          await loadLinkedRequirements();
+          // Create the extraction link now that merge is complete
+          let invalidatedIds: string[] = [];
+          if (pendingMergeLinkId) {
+            await linkNewRequirement(pendingMergeLinkId, "merge");
+            if (pendingMergeAcceptSuggestion) {
+              if (!selectedRequirement) {
+                throw new Error(
+                  "Cannot accept merge suggestion without a selected extracted requirement",
+                );
+              }
+              invalidatedIds = await acceptCurrentSuggestion(
+                selectedRequirement.id.toString(),
+              );
+            }
+            setPendingMergeLinkId(null);
+            setPendingMergeAcceptSuggestion(false);
+          } else {
+            await loadLinkedRequirements();
+          }
+          // Reload document data after merge to refresh hasLinks
+          await reloadDocumentData();
+          if (invalidatedIds.length > 0) {
+            await refreshSuggestionsForIds(invalidatedIds);
+          }
         }}
         productId={mergeDrawerModal.data?.product_id || null}
       />

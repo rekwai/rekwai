@@ -100,10 +100,11 @@ If the system missed relevant requirements or you need more context:
 
 #### Bulk Operations
 
-**Bulk Create Requirements:**
-- Use the "Add X unlinked requirements to Rekwai" button in the header
-- Creates main requirements from all unlinked source requirements at once
-- Useful when most extracted requirements should become new entries in your database
+**Accept All Suggestions:**
+- Use the "Accept all suggestions" button in the header to approve stored Rekwai suggestions for unlinked source requirements.
+- Rekwai will attach, merge, or create requirements according to the suggestions shown for each row.
+- If multiple merge suggestions target the same existing requirement, Rekwai accepts the first one, refreshes the skipped rows, and leaves them for manual review.
+- Linked rows are considered complete and will not receive new suggestions.
 
 ### Option 2: Add Requirements Manually
 

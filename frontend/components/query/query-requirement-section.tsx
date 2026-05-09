@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Link } from "lucide-react";
+import { Plus, Link2, RotateCcw } from "lucide-react";
 import { Requirement } from "@/types/requirement-types";
 import { CreateRequirementModal } from "@/components/requirement/create-requirement-modal";
 import { RequirementSelectionModal } from "./requirement-selection-modal";
-import { RequirementHeaderRow } from "./requirement-header-row";
 import { RequirementItem } from "./requirement-item";
 import { RequirementSkeleton } from "./requirement-skeleton";
 import { addIgnoredRequirement } from "@/lib/utils/question-ignored-requirements";
@@ -107,17 +106,17 @@ export function QueryRequirementsSection({
   const renderContent = () => {
     if (showEmptyState) {
       return (
-        <div className="flex flex-row items-start p-0 gap-4 w-[672px] h-[108px] flex-none order-1 self-stretch flex-grow-0">
+        <div className="grid w-full grid-cols-1 gap-4 self-stretch lg:grid-cols-2">
           {/* Create requirement button */}
           <button
             onClick={onCreateRequirement}
-            className="box-border flex flex-col justify-center items-center py-3 px-3 gap-2 w-[328px] h-[108px] border border-[#E6E6E6] rounded-[10px] hover:bg-gray-50 transition-colors flex-none flex-grow"
+            className="box-border flex h-[108px] w-full min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-[10px] border border-border bg-card px-3 py-3 transition-colors hover:bg-accent"
           >
-            <Plus size={16} className="text-[#080705] flex-none" />
-            <span className="font-inter font-medium text-sm leading-[130%] text-[#000000] flex-none">
+            <Plus size={16} className="text-foreground flex-none" />
+            <span className="font-inter font-medium text-sm leading-[130%] text-foreground flex-none">
               Create requirement
             </span>
-            <span className="font-inter font-normal text-[12px] leading-[130%] text-center text-[#1C2024] flex-none">
+            <span className="font-inter font-normal text-[12px] leading-[130%] text-center text-muted-foreground flex-none">
               This will create a new requirement based on the question.
             </span>
           </button>
@@ -125,13 +124,13 @@ export function QueryRequirementsSection({
           {/* Link requirement button */}
           <button
             onClick={() => setIsSelectionModalOpen(true)}
-            className="box-border flex flex-col justify-center items-center py-3 px-3 gap-2 w-[328px] h-[108px] border border-[#E6E6E6] rounded-[10px] hover:bg-gray-50 transition-colors flex-none flex-grow"
+            className="box-border flex h-[108px] w-full min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-[10px] border border-border bg-card px-3 py-3 transition-colors hover:bg-accent"
           >
-            <Link size={16} className="text-[#080705] flex-none" />
-            <span className="font-inter font-medium text-sm leading-[130%] text-[#000000] flex-none">
+            <Link2 size={16} className="text-foreground flex-none" />
+            <span className="font-inter font-medium text-sm leading-[130%] text-foreground flex-none">
               Link requirement(s)
             </span>
-            <span className="font-inter font-normal text-[10px] leading-[130%] text-center text-[#1C2024] flex-none">
+            <span className="font-inter font-normal text-[10px] leading-[130%] text-center text-muted-foreground flex-none">
               This will allow you to select and link associated requirements.
             </span>
           </button>
@@ -192,12 +191,52 @@ export function QueryRequirementsSection({
         className="flex flex-col items-start p-0 gap-2 flex-none order-2 self-stretch flex-grow-0"
         data-testid="query-requirement-section"
       >
-        <RequirementHeaderRow
-          onCreateRequirement={onCreateRequirement}
-          onLinkRequirement={() => setIsSelectionModalOpen(true)}
-          onRefreshSimilarRequirements={onRefreshSimilarRequirements}
-          isSearchingSimilar={isSearchingSimilar}
-        />
+        {/* Title row + icon-button group (matches Figma track) */}
+        <div className="flex items-center gap-2.5">
+          <div className="font-inter font-semibold text-base leading-4 tracking-[0.04px] text-semantic-text">
+            Requirement(s)
+          </div>
+
+          <div className="inline-flex items-center gap-1 rounded-[8px] bg-semantic-bg-elevation-2 p-1">
+            <button
+              type="button"
+              onClick={onCreateRequirement}
+              className="flex items-center justify-center px-[10px] py-[4px] h-7 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-semantic-text hover:bg-semantic-highlight transition-colors"
+              data-testid="create-requirement-button"
+              title="Create requirement"
+            >
+              <Plus size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsSelectionModalOpen(true)}
+              className="flex items-center justify-center px-[10px] py-[4px] h-7 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-semantic-text hover:bg-semantic-highlight transition-colors"
+              data-testid="link-requirement-button"
+              title="Link requirement(s)"
+            >
+              <Link2 size={12} />
+            </button>
+            {onRefreshSimilarRequirements && (
+              <button
+                type="button"
+                onClick={onRefreshSimilarRequirements}
+                disabled={isSearchingSimilar}
+                className="flex items-center justify-center px-[10px] py-[4px] h-7 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-semantic-text hover:bg-semantic-highlight transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                data-testid="refresh-requirements-button"
+                title="Refresh"
+              >
+                <RotateCcw
+                  size={12}
+                  className={
+                    isSearchingSimilar
+                      ? "animate-[spin_1s_linear_infinite_reverse]"
+                      : undefined
+                  }
+                />
+              </button>
+            )}
+          </div>
+        </div>
 
         {linkingErrors.length > 0 && (
           <div className="text-sm text-red-500 space-y-1">
@@ -208,6 +247,7 @@ export function QueryRequirementsSection({
         )}
 
         {renderContent()}
+
       </div>
 
       {/* Edit Requirement Modal */}

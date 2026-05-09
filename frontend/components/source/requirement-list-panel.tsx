@@ -1,6 +1,10 @@
 "use client";
 
-import { RequirementItem, DocumentMetadata } from "@/types/requirement-types";
+import {
+  RequirementItem,
+  DocumentMetadata,
+  SuggestedAction,
+} from "@/types/requirement-types";
 import { ItemListPanel } from "@/components/common/item-list-panel";
 import {
   MetadataRow,
@@ -16,6 +20,9 @@ interface RequirementListPanelProps {
   onRequirementSelect: (index: number) => void;
   combinedLoading: boolean;
   documentMetadata: DocumentMetadata;
+  refreshingSuggestionIds?: Set<string>;
+  /** Live suggestion for the selected row (same object as the right panel); only non-null when it applies to the current selection */
+  selectedRowSuggestedAction?: SuggestedAction | null;
 }
 
 export function RequirementListPanel({
@@ -26,7 +33,11 @@ export function RequirementListPanel({
   onRequirementSelect,
   combinedLoading,
   documentMetadata,
+  refreshingSuggestionIds,
+  selectedRowSuggestedAction,
 }: RequirementListPanelProps) {
+  const selectedReq = requirements[selectedRequirementIndex];
+
   return (
     <ItemListPanel
       activeTab={activeTab}
@@ -44,6 +55,25 @@ export function RequirementListPanel({
       getItemId={(req) => req.id}
       getItemText={(req) => req.text}
       isItemCompleted={(req) => req.hasLinks}
+      getItemLinkType={(req) => req.linkType ?? null}
+      getItemSuggestionType={(req) => {
+        if (req.hasLinks) {
+          return null;
+        }
+        if (
+          selectedRowSuggestedAction &&
+          selectedReq &&
+          String(req.id) === String(selectedReq.id)
+        ) {
+          return selectedRowSuggestedAction.action;
+        }
+        return req.suggestedAction ?? null;
+      }}
+      isItemRefreshingSuggestion={
+        refreshingSuggestionIds
+          ? (req) => refreshingSuggestionIds.has(req.id.toString())
+          : undefined
+      }
       itemTestIdPrefix="extracted-requirement"
       renderMetadata={() => (
         <div className="p-4 space-y-6">

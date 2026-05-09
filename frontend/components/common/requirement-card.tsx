@@ -1,107 +1,105 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
-import { getStatusBadgeStyles } from "@/lib/utils/question-modal";
 
 interface RequirementCardProps {
-  description: string;
-  types?: string[];
-  implementationStatus?: string;
-  implementationDescription?: string;
-  verificationDescription?: string;
-  header?: ReactNode;
-  actions?: ReactNode;
+  /** Requirement id / key shown once at the top of the body, above Description */
+  title?: ReactNode;
+  description: ReactNode;
+  typeBadges?: ReactNode;
+  statusBadge?: ReactNode;
+  implementationDescription?: ReactNode;
+  verificationDescription?: ReactNode;
+  footer?: ReactNode;
+  pinFooterToBottom?: boolean;
   showVerification?: boolean;
 }
 
 export function RequirementCard({
+  title,
   description,
-  types = [],
-  implementationStatus = "To do",
-  implementationDescription = "",
-  verificationDescription = "",
-  header,
-  actions,
+  typeBadges,
+  statusBadge,
+  implementationDescription,
+  verificationDescription,
+  footer,
+  pinFooterToBottom = false,
   showVerification = true,
 }: RequirementCardProps) {
+  const shellClass = pinFooterToBottom
+    ? "flex flex-col items-stretch p-0 flex-none self-stretch h-full flex-grow-0"
+    : "flex flex-col items-stretch p-0 flex-none self-stretch flex-grow-0";
+
+  const borderedClass = `flex flex-col items-stretch overflow-hidden rounded-lg border border-semantic-stroke bg-semantic-bg-elevation-2 self-stretch ${
+    pinFooterToBottom ? "min-h-0 flex-1" : "flex-none flex-grow-0"
+  }`;
+
+  const bodyClass = `flex flex-col items-start gap-2 self-stretch w-full min-h-0 px-4 pb-4 pt-4 ${
+    pinFooterToBottom ? "flex-1" : "flex-grow-0"
+  }`;
+
   return (
-    <div
-      className="flex flex-col items-start p-0 border border-[#E6E6E6] rounded-lg flex-none self-stretch flex-grow-0 bg-white"
-      data-testid="requirement-card"
-    >
-      {/* Header (if provided) */}
-      {header && (
-        <div className="flex flex-row items-center p-0 gap-2 h-11 border-b border-[#E6E6E6] flex-none order-0 self-stretch">
-          <div className="flex flex-row items-center p-2 gap-2 h-11 bg-[#F6F6F6] flex-none order-0 flex-grow">
-            {header}
-            {actions && <div className="flex gap-2 ml-auto">{actions}</div>}
-          </div>
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="flex flex-col items-start p-4 gap-2 flex-none order-1 self-stretch flex-grow-0 w-full">
-        {/* Description field */}
-        <div className="flex flex-col items-start p-0 gap-1 flex-none order-0 self-stretch flex-grow-0">
-          {/* Description header with type badges */}
-          <div className="flex flex-row items-center gap-2 w-full">
-            <span className="font-inter font-semibold text-sm leading-5 text-[#1C2024]">
-              Description
-            </span>
-            <div className="flex flex-row items-center gap-2 flex-wrap">
-              {types.map((type, index) => (
-                <Badge
-                  key={index}
-                  className="flex flex-row justify-center items-center px-1.5 py-0.5 gap-1.5 h-5 bg-[rgba(0,71,241,0.07)] rounded-[3px] font-inter font-medium text-xs leading-4 tracking-[0.04px] text-[rgba(0,43,183,0.77)]"
-                >
-                  {type}
-                </Badge>
-              ))}
+    <div className={shellClass} data-testid="requirement-card">
+      <div className={borderedClass}>
+        <div className={bodyClass}>
+          {title ? (
+            <div className="flex w-full flex-none flex-col items-start pb-1">
+              {title}
             </div>
-          </div>
-          {/* Description text */}
-          <div className="flex flex-row items-center py-2 px-0 w-full rounded">
-            <div className="w-full font-inter font-normal text-sm leading-[150%] text-[#080705]">
-              {description || "N/A"}
-            </div>
-          </div>
-        </div>
+          ) : null}
 
-        {/* Implementation field */}
-        <div className="flex flex-col items-start p-0 gap-1 flex-none order-1 self-stretch flex-grow-0">
-          {/* Implementation header with status badge */}
-          <div className="flex flex-row items-center gap-2 w-full">
-            <span className="font-inter font-semibold text-sm leading-5 text-[#1C2024]">
-              Implementation
-            </span>
-            <Badge
-              className={`px-1.5 py-0.5 text-xs font-medium rounded ${getStatusBadgeStyles(implementationStatus)}`}
-            >
-              {implementationStatus}
-            </Badge>
-          </div>
-          {/* Implementation text */}
-          <div className="flex flex-row items-center py-2 px-0 w-full rounded">
-            <div className="w-full font-inter font-normal text-sm leading-[150%] text-[#080705]">
-              {implementationDescription || "N/A"}
+          {/* Description field */}
+          <div className="flex flex-none flex-grow-0 flex-col items-start gap-1 self-stretch">
+            <div className="flex w-full flex-row items-center gap-2">
+              <span className="font-inter text-sm font-semibold leading-5 text-semantic-emphasis">
+                Description
+              </span>
+              <div className="flex flex-row flex-wrap items-center gap-2">
+                {typeBadges}
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Requirement Verification field - only show if has content and showVerification is true */}
-        {showVerification && verificationDescription && (
-          <div className="flex flex-col items-start p-0 gap-1 flex-none order-2 self-stretch flex-grow-0">
-            <span className="font-inter font-semibold text-sm leading-5 text-[#1C2024]">
-              Requirement Verification
-            </span>
-            <div className="flex flex-row items-center py-2 px-0 w-full rounded">
-              <div className="w-full font-inter font-normal text-sm leading-[150%] text-[#080705]">
-                {verificationDescription}
+            <div className="flex w-full flex-row items-center rounded px-0 py-2">
+              <div className="w-full font-inter text-sm font-normal leading-[150%] text-semantic-text">
+                {description || "N/A"}
               </div>
             </div>
           </div>
-        )}
+
+          {/* Implementation field */}
+          <div className="flex flex-none flex-grow-0 flex-col items-start gap-1 self-stretch">
+            <div className="flex w-full flex-row items-center gap-2">
+              <span className="font-inter text-sm font-semibold leading-5 text-semantic-emphasis">
+                Implementation
+              </span>
+              {statusBadge}
+            </div>
+            <div className="flex w-full flex-row items-center rounded px-0 py-2">
+              <div className="w-full font-inter text-sm font-normal leading-[150%] text-semantic-text">
+                {implementationDescription || "N/A"}
+              </div>
+            </div>
+          </div>
+
+          {/* Requirement Verification field */}
+          {showVerification && verificationDescription && (
+            <div className="flex flex-none flex-grow-0 flex-col items-start gap-1 self-stretch">
+              <span className="font-inter text-sm font-semibold leading-5 text-semantic-emphasis">
+                Requirement Verification
+              </span>
+              <div className="flex w-full flex-row items-center rounded px-0 py-2">
+                <div className="w-full font-inter text-sm font-normal leading-[150%] text-semantic-text">
+                  {verificationDescription}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {footer ? (
+          <div className="w-full flex-none border-t border-semantic-stroke bg-semantic-highlight p-2">
+            {footer}
+          </div>
+        ) : null}
       </div>
     </div>
   );

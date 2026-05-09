@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils/cn";
 
 const buttonVariants = cva(
   // Base styles applied to all buttons for consistency
-  "inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer font-inter leading-normal text-center select-none",
+  "inline-flex items-center justify-center whitespace-nowrap !rounded-[4px] text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer font-inter leading-normal text-center select-none",
   {
     variants: {
       variant: {
@@ -25,8 +25,8 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-full px-3 text-sm",
-        lg: "h-11 rounded-full px-8 text-base",
+        sm: "h-9 px-3 text-sm",
+        lg: "h-11 px-8 text-base",
         icon: "h-10 w-10 p-0",
       },
     },

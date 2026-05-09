@@ -1,155 +1,270 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Plus, Link } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Requirement } from "@/types/requirement-types";
-import { RequirementItem } from "@/components/query/requirement-item";
+import { useMemo, useState } from "react";
+import {
+  Requirement,
+  RequirementItem as RequirementItemType,
+  SuggestedAction,
+  MergedRequirement,
+  MergeInfo,
+  CreateInfo,
+  LinkType,
+} from "@/types/requirement-types";
 import { RequirementSelectionModal } from "@/components/query/requirement-selection-modal";
-import { LinkedRequirementsHeader } from "./linked-requirements-header";
-import { withLoadingState } from "@/lib/utils/loading-state";
+import { AISuggestionBanner } from "./ai-suggestion-banner";
+import { MergeStatusBanner } from "./merge-status-banner";
+import { CreateStatusBanner } from "./create-status-banner";
+import { RequirementCard } from "@/components/common/requirement-card";
+import { TypeBadges, StatusBadge } from "@/components/common/requirement-badges";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Link, Merge, Plus, type LucideIcon } from "lucide-react";
+
+interface SuggestionProps {
+  isFetchingSuggestion?: boolean;
+  suggestedAction?: SuggestedAction | null;
+  lastMergeInfo?: MergeInfo | null;
+  lastCreateInfo?: CreateInfo | null;
+  mergePreview?: MergedRequirement | null;
+  selectedRequirement?: RequirementItemType | null;
+}
+
+interface SuggestionHandlers {
+  onFetchSuggestedAction?: () => Promise<void>;
+  onConfirmSuggestion?: () => Promise<unknown>;
+  onEditSuggestion?: () => Promise<unknown>;
+  onUndoMerge?: () => Promise<void>;
+  onUndoCreate?: () => Promise<void>;
+  onEditCreatedRequirement?: (requirement: Requirement) => void;
+  onEditRequirement?: () => void;
+}
 
 interface LinkedRequirementsSectionProps {
-  linkedRequirements: Requirement[];
-  linkedRequirementsLoading: boolean;
-  mergingRequirementId: string | null;
   productId: string;
-  onLinkExistingRequirements: (requirements: Requirement[]) => Promise<void>;
-  onUnlinkRequirement: (requirement: Requirement) => Promise<void>;
-  onGenerateMerge: (requirement: Requirement) => void;
+  linkedRequirements?: Requirement[];
   onCreateNewRequirement: () => void;
   onEditLinkedRequirement: (requirement: Requirement) => void;
-  onRefreshSimilarRequirements?: () => Promise<void>;
-  isSearchingSimilar?: boolean;
+  onLinkExistingRequirements: (requirements: Requirement[]) => Promise<void>;
+  suggestion?: SuggestionProps;
+  suggestionHandlers?: SuggestionHandlers;
+}
+
+/** Matches completed link-type row icons in `item-list-panel` (full palette). */
+function LinkedSectionStatusChip({ linkType }: { linkType?: LinkType | null }) {
+  const variant: {
+    label: string;
+    chipClass: string;
+    Icon: LucideIcon;
+  } =
+    linkType === "create"
+      ? {
+          label: "Requirement Created",
+          chipClass: "bg-semantic-success-fg text-semantic-white",
+          Icon: Plus,
+        }
+      : linkType === "merge"
+        ? {
+            label: "Merged Requirement",
+            chipClass: "bg-semantic-indicator-3 text-semantic-white",
+            Icon: Merge,
+          }
+        : {
+            label: "Linked Requirements",
+            chipClass: "bg-semantic-indicator-2 text-semantic-white",
+            Icon: Link,
+          };
+
+  const { label, chipClass, Icon } = variant;
+
+  return (
+    <Badge
+      variant="chip"
+      data-testid="linked-section-status-chip"
+      className={`inline-flex w-fit flex-row items-center gap-1.5 rounded-[3px] border-transparent px-2 py-0.5 font-inter text-xs font-medium ${chipClass}`}
+    >
+      <Icon size={12} className="shrink-0" aria-hidden />
+      {label}
+    </Badge>
+  );
 }
 
 export function LinkedRequirementsSection({
-  linkedRequirements,
-  linkedRequirementsLoading,
-  mergingRequirementId,
   productId,
-  onLinkExistingRequirements,
-  onUnlinkRequirement,
-  onGenerateMerge,
+  linkedRequirements = [],
   onCreateNewRequirement,
   onEditLinkedRequirement,
-  onRefreshSimilarRequirements,
-  isSearchingSimilar = false,
+  onLinkExistingRequirements,
+  suggestion = {},
+  suggestionHandlers = {},
 }: LinkedRequirementsSectionProps) {
-  const [unlinkingRequirementIds, setUnlinkingRequirementIds] = useState<
-    Set<string>
-  >(new Set());
+  const {
+    isFetchingSuggestion = false,
+    suggestedAction,
+    lastMergeInfo,
+    lastCreateInfo,
+    mergePreview,
+    selectedRequirement,
+  } = suggestion;
+  const {
+    onFetchSuggestedAction,
+    onConfirmSuggestion,
+    onEditSuggestion,
+    onUndoMerge,
+    onUndoCreate,
+    onEditCreatedRequirement,
+    onEditRequirement,
+  } = suggestionHandlers;
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
+  const emptyLinkedIds = useMemo(() => new Set<string>(), []);
 
-  const handleIgnoreRequirement = async (requirement: Requirement) => {
-    const reqId = requirement.id.toString();
-    await withLoadingState(reqId, setUnlinkingRequirementIds, async () => {
-      await onUnlinkRequirement(requirement);
-    });
-  };
-
-  const handleSelectRequirements = async (
-    selectedRequirements: Requirement[],
-  ) => {
-    // Close the modal immediately
-    setIsSelectionModalOpen(false);
-
-    // Link all requirements at once - let errors propagate to caller
-    await onLinkExistingRequirements(selectedRequirements);
-  };
-
-  // Create a Set of linked requirement IDs for the modal (memoized to avoid recalculation)
-  const linkedIds = useMemo(
-    () => new Set(linkedRequirements.map((r) => r.id.toString())),
-    [linkedRequirements],
-  );
-
-  const showEmptyState =
-    !linkedRequirementsLoading && linkedRequirements.length === 0;
+  const hasSuggestion = !!(suggestedAction && onConfirmSuggestion);
 
   return (
     <>
       <div className="flex-1 space-y-4">
-        <LinkedRequirementsHeader
-          onCreateNewRequirement={onCreateNewRequirement}
-          onOpenLinkModal={() => setIsSelectionModalOpen(true)}
-          onRefreshSimilarRequirements={onRefreshSimilarRequirements}
-          isSearchingSimilar={isSearchingSimilar}
-        />
+        {/* Merge Status Banner (post-merge with undo) */}
+        {lastMergeInfo && onUndoMerge && (
+          <MergeStatusBanner
+            targetRequirementKey={lastMergeInfo.targetReqKey}
+            mergedRequirement={lastMergeInfo.mergedRequirement}
+            onUndo={onUndoMerge}
+            onEdit={onEditLinkedRequirement}
+          />
+        )}
 
-        {showEmptyState ? (
-          // Empty state action buttons
-          <div className="flex flex-row items-start p-0 gap-4 w-full h-[87px]">
-            {/* Create requirement button */}
-            <button
-              onClick={onCreateNewRequirement}
-              className="box-border flex flex-col justify-center items-center py-3 px-3 gap-2 flex-1 h-[87px] border border-[#E6E6E6] rounded-[10px] hover:bg-gray-50 transition-colors"
-              data-testid="create-requirement-action-button"
-            >
-              <Plus size={16} className="text-[#080705] flex-none" />
-              <span className="font-inter font-medium text-sm leading-[130%] text-[#000000] flex-none">
-                Create requirement
-              </span>
-              <span className="font-inter font-normal text-[10px] leading-[130%] text-center text-[#1C2024] flex-none">
-                This will create a new requirement based on the extracted
-                requirement.
-              </span>
-            </button>
+        {/* Create Status Banner (post-create with undo/edit) */}
+        {lastCreateInfo && onUndoCreate && (
+          <CreateStatusBanner
+            createdRequirement={lastCreateInfo.createdRequirement}
+            isLinked={lastCreateInfo.isLinked}
+            onUndo={onUndoCreate}
+            onEdit={onEditCreatedRequirement}
+          />
+        )}
 
-            {/* Link requirement button */}
-            <button
-              onClick={() => setIsSelectionModalOpen(true)}
-              className="box-border flex flex-col justify-center items-center py-3 px-3 gap-2 flex-1 h-[87px] border border-[#E6E6E6] rounded-[10px] hover:bg-gray-50 transition-colors"
-              data-testid="link-requirement-action-button"
-            >
-              <Link size={16} className="text-[#080705] flex-none" />
-              <span className="font-inter font-medium text-sm leading-[130%] text-[#000000] flex-none">
-                Link requirement(s)
-              </span>
-              <span className="font-inter font-normal text-[10px] leading-[130%] text-center text-[#1C2024] flex-none">
-                This will allow you to select and link associated requirements.
-              </span>
-            </button>
-          </div>
-        ) : (
-          // Requirements list (loading or populated)
-          <div className="space-y-3" data-testid="linked-requirements-list">
-            {linkedRequirementsLoading ? (
-              <div className="space-y-3">
-                {[1, 2].map((i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
-              </div>
-            ) : (
-              linkedRequirements.map((linkedReq) => {
-                const reqId = linkedReq.id.toString();
-                const isToggling = unlinkingRequirementIds.has(reqId);
-                const isMerging = mergingRequirementId === reqId;
+        {/* AI Suggestion Banner */}
+        {hasSuggestion && !lastMergeInfo && !lastCreateInfo && (
+          <AISuggestionBanner
+            suggestion={suggestedAction}
+            onConfirm={onConfirmSuggestion}
+            onEdit={onEditSuggestion}
+            mergePreview={mergePreview}
+            extractedRequirement={selectedRequirement}
+            onEditExtraction={onEditRequirement}
+          />
+        )}
 
-                return (
-                  <RequirementItem
-                    key={linkedReq.id}
-                    requirement={linkedReq}
-                    isToggling={isToggling}
-                    isMerging={isMerging}
-                    onEdit={onEditLinkedRequirement}
-                    onMerge={onGenerateMerge}
-                    onIgnore={handleIgnoreRequirement}
-                  />
-                );
-              })
-            )}
+        {isFetchingSuggestion && !lastMergeInfo && !lastCreateInfo && !hasSuggestion && selectedRequirement && (
+          <div className="space-y-3" data-testid="suggestion-loading-state">
+            <div className="font-inter text-sm text-semantic-text">Loading AI suggestion…</div>
+            <RequirementCard
+              description={selectedRequirement.text || selectedRequirement.description}
+              typeBadges={<TypeBadges types={selectedRequirement.types || []} />}
+              statusBadge={
+                <StatusBadge status={selectedRequirement.implementation || "To do"} />
+              }
+              implementationDescription={selectedRequirement.implementationDescription || ""}
+              verificationDescription={selectedRequirement.requirementVerification || ""}
+            />
           </div>
         )}
+
+        {!lastMergeInfo &&
+          !lastCreateInfo &&
+          !hasSuggestion &&
+          !isFetchingSuggestion &&
+          !!onFetchSuggestedAction && (
+            <div className="space-y-3" data-testid="linked-requirements-fallback">
+              {linkedRequirements.length > 0 ? (
+                <>
+                  <LinkedSectionStatusChip
+                    linkType={selectedRequirement?.linkType}
+                  />
+                  {linkedRequirements.map((requirement) => (
+                    <RequirementCard
+                      key={requirement.id}
+                      title={
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-inter text-xs font-semibold leading-5 text-semantic-text">
+                            {requirement.requirement_key}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onEditLinkedRequirement(requirement)}
+                            className="flex flex-row items-center justify-center gap-1.5 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-2 px-2.5 py-1 text-xs text-semantic-text hover:bg-semantic-highlight hover:text-semantic-text active:bg-semantic-highlight"
+                            data-testid={`edit-linked-requirement-${requirement.id}`}
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      }
+                      description={requirement.description}
+                      typeBadges={<TypeBadges types={requirement.types} />}
+                      statusBadge={
+                        <StatusBadge status={requirement.implementation_status} />
+                      }
+                      implementationDescription={
+                        requirement.implementation_description
+                      }
+                      verificationDescription={
+                        requirement.requirement_verification || ""
+                      }
+                    />
+                  ))}
+                </>
+              ) : (
+                <div className="space-y-3 rounded-lg border border-semantic-stroke bg-semantic-bg-elevation-2 p-4">
+                  <p className="font-inter text-sm text-semantic-text">
+                    No active suggestion for this extraction yet.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {onFetchSuggestedAction && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onFetchSuggestedAction}
+                        className="h-7 rounded-[4px] border-semantic-stroke bg-semantic-bg-elevation-2 px-2.5 py-1 text-xs text-semantic-text hover:bg-semantic-highlight"
+                        data-testid="fallback-rerun-suggestion-button"
+                      >
+                        Re-run suggestion
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsSelectionModalOpen(true)}
+                      className="h-7 rounded-[4px] border-semantic-stroke bg-semantic-bg-elevation-2 px-2.5 py-1 text-xs text-semantic-text hover:bg-semantic-highlight"
+                      data-testid="fallback-attach-requirement-button"
+                    >
+                      Link Requirements
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={onCreateNewRequirement}
+                      className="h-7 rounded-[4px] bg-custom-yellow px-2.5 py-1 text-xs text-semantic-text hover:bg-custom-yellow/90"
+                      data-testid="fallback-add-requirement-button"
+                    >
+                      Add requirement
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
       </div>
 
-      {/* Requirement Selection Modal - rendered once */}
+      {/* Requirement Selection Modal — manual link from fallback state */}
       <RequirementSelectionModal
         isOpen={isSelectionModalOpen}
         onClose={() => setIsSelectionModalOpen(false)}
         productId={productId}
-        onSelectRequirements={handleSelectRequirements}
-        alreadyLinkedIds={linkedIds}
+        onSelectRequirements={async (selected) => {
+          setIsSelectionModalOpen(false);
+          await onLinkExistingRequirements(selected);
+        }}
+        alreadyLinkedIds={emptyLinkedIds}
       />
     </>
   );

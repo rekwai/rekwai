@@ -1,12 +1,13 @@
 import {
   Requirement,
-  RequirementItem,
-  SimilarRequirementWithLLM,
   CreateRequirementPayload,
   RequirementUpdate,
   MergedRequirement,
   RequirementHistory,
   ExtractedRequirementDto,
+  SuggestedAction,
+  SuggestedActionType,
+  LinkType,
 } from "../../types/requirement-types";
 import { QuestionAnswer, QuestionRequest } from "../../types/query-types";
 
@@ -84,22 +85,22 @@ export async function getRequirementHistory(
   const response = await fetch(`${getApiUrl()}/requirements/${id}/history`);
   return handleResponse<RequirementHistory[]>(response);
 }
-export async function getSimilarRequirements(
-  docReq: RequirementItem,
-  excludeRequirementIds?: string[],
-): Promise<SimilarRequirementWithLLM[]> {
+export async function getSuggestedAction(
+  extractedRequirementId: string,
+  excludeIds?: string[],
+): Promise<SuggestedAction> {
   const url = new URL(
-    `${getApiUrl()}/requirements/extracted-requirement/${docReq.id}/similar`,
+    `${getApiUrl()}/requirements/extracted-requirement/${extractedRequirementId}/suggest-action`,
   );
 
-  if (excludeRequirementIds && excludeRequirementIds.length > 0) {
-    excludeRequirementIds.forEach((id) => {
-      url.searchParams.append("filter_req", id);
+  if (excludeIds && excludeIds.length > 0) {
+    excludeIds.forEach((id) => {
+      url.searchParams.append("exclude_req", id);
     });
   }
 
   const response = await fetch(url.toString());
-  return handleResponse<SimilarRequirementWithLLM[]>(response);
+  return handleResponse<SuggestedAction>(response);
 }
 
 // --- Integration API Functions ---
@@ -169,6 +170,13 @@ export interface DocumentWithRequirements {
     requirement_verification: string | null;
     order: number;
     has_links: boolean;
+    link_type?: string | null;
+    suggested_action?: SuggestedActionType | null;
+    suggested_target_requirement_id?: string | null;
+    suggestion_justification?: string | null;
+    suggestion_similarity_score?: number | null;
+    suggested_target_requirement?: Requirement | null;
+    merge_preview?: MergedRequirement | null;
   }>;
 }
 
@@ -186,6 +194,8 @@ export interface RequirementDocument {
   created_at: string;
   requirements_count: number;
   linked_requirements_count: number;
+  created_requirements_count?: number;
+  merged_requirements_count?: number;
 }
 
 /**
@@ -305,6 +315,7 @@ export async function deleteQuestionLink(
 export async function createExtractionLink(
   requirementId: string,
   extractedRequirementId: string,
+  linkType?: LinkType,
 ): Promise<void> {
   const response = await fetch(
     `${getApiUrl()}/requirements/${requirementId}/extraction-links`,
@@ -315,6 +326,7 @@ export async function createExtractionLink(
       },
       body: JSON.stringify({
         extracted_requirement_id: extractedRequirementId,
+        link_type: linkType,
       }),
     },
   );
@@ -369,6 +381,112 @@ export async function generateMerge(
     `${getApiUrl()}/requirements/extracted-requirement/${extractedRequirementId}/generate-merge/${requirementId}`,
   );
   return handleResponse<MergedRequirement>(response);
+}
+
+/**
+ * Accepts the AI suggestion for an extracted requirement.
+ * For attach/merge: creates the extraction link and clears suggestion.
+ * For create_new: just clears suggestion.
+ */
+export interface BulkAcceptSuggestionItem {
+  extracted_requirement_id: string;
+  status: "accepted" | "skipped" | "failed";
+  action?: SuggestedActionType | null;
+  reason?:
+    | "already_linked"
+    | "no_suggestion"
+    | "invalidated_duplicate"
+    | "missing_target"
+    | "missing_merge_preview"
+    | "unsupported_action"
+    | "error"
+    | null;
+  requirement_id?: string | null;
+  invalidated_ids: string[];
+  message?: string | null;
+}
+
+export interface BulkAcceptSuggestionsResult {
+  accepted: number;
+  failed: number;
+  skipped: number;
+  already_linked: number;
+  no_suggestion: number;
+  invalidated_duplicate: number;
+  items: BulkAcceptSuggestionItem[];
+}
+
+export async function acceptSuggestion(
+  extractedRequirementId: string,
+): Promise<{
+  action: SuggestedActionType;
+  target_requirement_id: string | null;
+  invalidated_ids: string[];
+}> {
+  const response = await fetch(
+    `${getApiUrl()}/requirements/extracted-requirement/${extractedRequirementId}/accept-suggestion`,
+    { method: "POST" },
+  );
+  return handleResponse<{
+    action: SuggestedActionType;
+    target_requirement_id: string | null;
+    invalidated_ids: string[];
+  }>(response);
+}
+
+/**
+ * Dismisses the AI suggestion for an extracted requirement.
+ */
+export async function bulkAcceptSuggestions(
+  documentId: string,
+): Promise<BulkAcceptSuggestionsResult> {
+  const response = await fetch(
+    `${getApiUrl()}/requirements/document/${documentId}/accept-suggestions`,
+    { method: "POST" },
+  );
+  return handleResponse<BulkAcceptSuggestionsResult>(response);
+}
+
+export async function dismissSuggestion(
+  extractedRequirementId: string,
+): Promise<{ status: string }> {
+  const response = await fetch(
+    `${getApiUrl()}/requirements/extracted-requirement/${extractedRequirementId}/dismiss-suggestion`,
+    { method: "POST" },
+  );
+  return handleResponse<{ status: string }>(response);
+}
+
+export async function undoMerge(
+  extractedRequirementId: string,
+  requirementId: string,
+  suggestionRestore?: {
+    suggested_action?: string;
+    suggested_target_requirement_id?: string | null;
+    suggestion_justification?: string | null;
+    suggestion_similarity_score?: number | null;
+    merge_preview?: MergedRequirement | null;
+  },
+): Promise<{
+  status: string;
+  restored_requirement: Record<string, unknown>;
+  invalidated_ids: string[];
+}> {
+  const response = await fetch(
+    `${getApiUrl()}/requirements/extracted-requirement/${extractedRequirementId}/undo-merge/${requirementId}`,
+    {
+      method: "POST",
+      headers: suggestionRestore
+        ? { "Content-Type": "application/json" }
+        : {},
+      body: suggestionRestore ? JSON.stringify(suggestionRestore) : undefined,
+    },
+  );
+  return handleResponse<{
+    status: string;
+    restored_requirement: Record<string, unknown>;
+    invalidated_ids: string[];
+  }>(response);
 }
 
 /**

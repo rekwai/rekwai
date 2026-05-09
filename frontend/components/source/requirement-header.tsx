@@ -12,18 +12,25 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useDocumentDelete } from "@/hooks/use-document-delete";
-import { useBulkCreateRequirements } from "@/hooks/use-bulk-create-requirements";
+import { useBulkApproveSuggestions } from "@/hooks/use-bulk-approve-suggestions";
 import { PageHeader } from "@/components/common/page-header";
-import { BulkCreateDialog } from "@/components/source/bulk-create-dialog";
+import { BulkApproveDialog } from "@/components/source/bulk-approve-dialog";
 import { RequirementItem } from "@/types/requirement-types";
-import { Loader2 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Loader2, Check } from "lucide-react";
+import { Trash } from "@phosphor-icons/react";
 
 const BASE_BUTTON_STYLES =
   "font-inter flex flex-row justify-center items-center px-2.5 py-1 gap-1.5 h-7 border-none rounded-[12px] text-xs leading-[15px] font-normal";
 
-const DELETE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-[#FBDBDD] dark:bg-[#8B2635] text-[#080705] dark:text-[#FAFFFD] hover:bg-[#FBDBDD]/90 dark:hover:bg-[#8B2635]/90`;
+const DELETE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} group bg-semantic-error-bg text-semantic-black hover:!bg-semantic-error-fg dark:hover:!bg-semantic-error-fg hover:!text-semantic-white dark:hover:!text-semantic-white`;
 
-const BULK_CREATE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-primary text-primary-foreground hover:bg-primary/90`;
+const BULK_CREATE_BUTTON_STYLES = `${BASE_BUTTON_STYLES} bg-semantic-success-fg !text-semantic-white transition-colors hover:!bg-[color-mix(in_srgb,var(--semantic-success-fg)_90%,transparent)] hover:!text-semantic-white`;
 
 interface RequirementHeaderProps {
   productKey: string;
@@ -31,8 +38,8 @@ interface RequirementHeaderProps {
   documentKey?: string;
   documentId: string;
   requirements: RequirementItem[];
-  productId: string;
-  onBulkCreateComplete: () => Promise<void>;
+  onBulkApproveComplete: () => Promise<void>;
+  onRefreshSkippedSuggestions: (ids: string[]) => Promise<void>;
 }
 
 export function RequirementHeader({
@@ -41,8 +48,8 @@ export function RequirementHeader({
   documentKey,
   documentId,
   requirements,
-  productId,
-  onBulkCreateComplete,
+  onBulkApproveComplete,
+  onRefreshSkippedSuggestions,
 }: RequirementHeaderProps) {
   const {
     isDeleting,
@@ -53,16 +60,21 @@ export function RequirementHeader({
   } = useDocumentDelete(documentId, productKey);
 
   const {
-    isBulkCreating,
-    showConfirmDialog: showBulkCreateDialog,
-    unlinkedCount,
+    isApproving,
+    showDialog: showBulkApproveDialog,
+    breakdown,
     progress,
     result,
-    openConfirmDialog: openBulkCreateDialog,
-    closeConfirmDialog: closeBulkCreateDialog,
-    handleDone: handleBulkCreateDone,
-    confirmBulkCreate,
-  } = useBulkCreateRequirements(requirements, productId, onBulkCreateComplete);
+    openDialog: openBulkApproveDialog,
+    closeDialog: closeBulkApproveDialog,
+    handleDone: handleBulkApproveDone,
+    confirmBulkApprove,
+  } = useBulkApproveSuggestions(
+    requirements,
+    documentId,
+    onBulkApproveComplete,
+    onRefreshSkippedSuggestions,
+  );
 
   const breadcrumbs: Array<{ label: string; path?: string; isBold?: boolean }> =
     [
@@ -86,28 +98,54 @@ export function RequirementHeader({
         breadcrumbs={breadcrumbs}
         actions={
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={openBulkCreateDialog}
-              disabled={isBulkCreating || unlinkedCount === 0}
-              className={BULK_CREATE_BUTTON_STYLES}
-            >
-              {isBulkCreating ? (
-                <>
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                `Add ${unlinkedCount} unlinked requirements to Rekwai`
-              )}
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      variant="outline"
+                      onClick={openBulkApproveDialog}
+                      disabled={isApproving || breakdown.total === 0}
+                      className={BULK_CREATE_BUTTON_STYLES}
+                    >
+                      {isApproving ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Approving...
+                        </>
+                      ) : (
+                        <>
+                          Accept all suggestions
+                          <Check className="h-3 w-3" />
+                        </>
+                      )}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-xs">
+                  This will auto decision all of the extractions with the Rekwai
+                  suggestions
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button
               variant="outline"
               onClick={openDeleteDialog}
               disabled={isDeleting}
               className={DELETE_BUTTON_STYLES}
             >
-              {isDeleting ? "Deleting..." : "Delete source"}
+              {isDeleting ? (
+                "Deleting..."
+              ) : (
+                <>
+                  <Trash
+                    size={14}
+                    weight="bold"
+                    className="text-semantic-black group-hover:text-semantic-white"
+                  />
+                  Delete source
+                </>
+              )}
             </Button>
           </div>
         }
@@ -139,16 +177,16 @@ export function RequirementHeader({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Bulk Create Confirmation Dialog */}
-      <BulkCreateDialog
-        open={showBulkCreateDialog}
-        onOpenChange={closeBulkCreateDialog}
-        unlinkedCount={unlinkedCount}
-        isBulkCreating={isBulkCreating}
+      {/* Bulk Approve Confirmation Dialog */}
+      <BulkApproveDialog
+        open={showBulkApproveDialog}
+        onOpenChange={closeBulkApproveDialog}
+        breakdown={breakdown}
+        isApproving={isApproving}
         progress={progress}
         result={result}
-        onConfirm={confirmBulkCreate}
-        onDone={handleBulkCreateDone}
+        onConfirm={confirmBulkApprove}
+        onDone={handleBulkApproveDone}
       />
     </>
   );

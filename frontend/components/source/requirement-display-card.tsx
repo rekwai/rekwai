@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { RequirementItem } from "@/types/requirement-types";
 import { buttonStyles } from "@/lib/utils/styles";
 import { RequirementCard } from "@/components/common/requirement-card";
+import { TypeBadges, StatusBadge } from "@/components/common/requirement-badges";
 
 interface RequirementDisplayCardProps {
   requirement: RequirementItem;
@@ -29,7 +30,7 @@ export function RequirementDisplayCard({
     >
       {/* Header with badge and edit button */}
       <div className="flex flex-row items-center p-0 gap-2.5">
-        <Badge className="flex flex-row justify-center items-center px-3 py-1.5 gap-1.5 bg-[#080705] dark:bg-[#080705] text-[#FAFFFD] dark:text-[#FAFFFD] rounded-[3px] font-inter font-medium text-sm leading-4 tracking-[0.04px]">
+        <Badge className="flex flex-row justify-center items-center px-3 py-1.5 gap-1.5 bg-semantic-emphasis text-semantic-white rounded-[3px] font-inter font-medium text-sm leading-4 tracking-[0.04px]">
           Requirement from Source
         </Badge>
 
@@ -41,15 +42,15 @@ export function RequirementDisplayCard({
           className={buttonStyles.iconButton}
           data-testid="edit-requirement-button"
         >
-          <Pencil size={12} className="text-[#080705] dark:text-[#080705]" />
+          <Pencil size={12} className="text-semantic-text" />
         </Button>
       </div>
 
       {/* Card */}
       <RequirementCard
         description={requirementText}
-        types={types}
-        implementationStatus={implementationStatus}
+        typeBadges={<TypeBadges types={types} />}
+        statusBadge={<StatusBadge status={implementationStatus} />}
         implementationDescription={implementationDescription}
         verificationDescription={requirementVerification}
       />

@@ -139,6 +139,222 @@ class RequirementService:
             raise HTTPException(status_code=404, detail="Requirement not found")
         return deleted_req
 
+    def _create_extraction_link_with_history(
+        self,
+        requirement_id: str,
+        extracted_requirement_id: str,
+        link_type: str,
+    ) -> None:
+        """Create an extraction link and provenance history in one transaction."""
+        link_data = RequirementExtractionLinkCreate(
+            requirement_id=requirement_id,
+            extracted_requirement_id=extracted_requirement_id,
+            link_type=link_type,
+        )
+        self.extraction_link_repository.create_link(link_data, commit=False)
+        self.repository.record_extraction_link_history(
+            requirement_id=requirement_id,
+            link_type=link_type,
+            extracted_requirement_id=extracted_requirement_id,
+            commit=False,
+        )
+        self.repository.db.commit()
+
+    async def bulk_accept_suggestions_for_document(
+        self, document_id: str
+    ) -> models.BulkAcceptSuggestionsResult:
+        """Approve stored suggestions for a document without re-suggesting.
+
+        If accepting one suggestion invalidates later merge suggestions targeting the
+        same requirement, those later extracted requirements are skipped so users can
+        review them manually outside the bulk flow.
+        """
+        self.requirement_document_service.get_by_id(document_id)
+        extracted_requirements = self.repository.get_extracted_requirements_by_document_id(
+            document_id
+        )
+        result = models.BulkAcceptSuggestionsResult()
+        invalidated_ids: set[str] = set()
+
+        for extracted_requirement in extracted_requirements:
+            extracted_id = str(extracted_requirement.id)
+            action = extracted_requirement.suggested_action
+
+            if self.extraction_link_repository.get_links_for_extracted_requirement(
+                extracted_id
+            ):
+                result.skipped += 1
+                result.already_linked += 1
+                result.items.append(
+                    models.BulkAcceptSuggestionItem(
+                        extracted_requirement_id=extracted_id,
+                        status="skipped",
+                        action=action,
+                        reason="already_linked",
+                    )
+                )
+                continue
+
+            if extracted_id in invalidated_ids:
+                result.skipped += 1
+                result.invalidated_duplicate += 1
+                result.items.append(
+                    models.BulkAcceptSuggestionItem(
+                        extracted_requirement_id=extracted_id,
+                        status="skipped",
+                        action=action,
+                        reason="invalidated_duplicate",
+                    )
+                )
+                continue
+
+            if not action:
+                result.skipped += 1
+                result.no_suggestion += 1
+                result.items.append(
+                    models.BulkAcceptSuggestionItem(
+                        extracted_requirement_id=extracted_id,
+                        status="skipped",
+                        reason="no_suggestion",
+                    )
+                )
+                continue
+
+            if action == models.SuggestedActionType.ATTACH.value:
+                accept_result = self.requirement_document_service.accept_suggestion(
+                    extracted_id
+                )
+                accepted_invalidated_ids = accept_result.get("invalidated_ids", [])
+                invalidated_ids.update(accepted_invalidated_ids)
+                result.accepted += 1
+                result.items.append(
+                    models.BulkAcceptSuggestionItem(
+                        extracted_requirement_id=extracted_id,
+                        status="accepted",
+                        action=models.SuggestedActionType.ATTACH,
+                        requirement_id=accept_result.get("target_requirement_id"),
+                        invalidated_ids=accepted_invalidated_ids,
+                    )
+                )
+                continue
+
+            if action == models.SuggestedActionType.MERGE.value:
+                target_id = (
+                    str(extracted_requirement.suggested_target_requirement_id)
+                    if extracted_requirement.suggested_target_requirement_id
+                    else None
+                )
+                if not target_id:
+                    result.skipped += 1
+                    result.items.append(
+                        models.BulkAcceptSuggestionItem(
+                            extracted_requirement_id=extracted_id,
+                            status="skipped",
+                            action=models.SuggestedActionType.MERGE,
+                            reason="missing_target",
+                        )
+                    )
+                    continue
+
+                merge_preview = models.MergedRequirement.from_json(
+                    extracted_requirement.merge_preview
+                )
+                if not merge_preview:
+                    result.skipped += 1
+                    result.items.append(
+                        models.BulkAcceptSuggestionItem(
+                            extracted_requirement_id=extracted_id,
+                            status="skipped",
+                            action=models.SuggestedActionType.MERGE,
+                            reason="missing_merge_preview",
+                        )
+                    )
+                    continue
+
+                await self.update_requirement(
+                    target_id,
+                    models.RequirementUpdate(
+                        description=merge_preview.description,
+                        types=merge_preview.types,
+                        requirement_verification=merge_preview.requirement_verification,
+                        implementation_description=merge_preview.implementation_description,
+                        implementation_status=merge_preview.implementation_status,
+                        product_id=str(extracted_requirement.product_id),
+                    ),
+                )
+                self._create_extraction_link_with_history(
+                    target_id, extracted_id, "merge"
+                )
+                accept_result = self.requirement_document_service.accept_suggestion(
+                    extracted_id
+                )
+                accepted_invalidated_ids = accept_result.get("invalidated_ids", [])
+                invalidated_ids.update(accepted_invalidated_ids)
+                result.accepted += 1
+                result.items.append(
+                    models.BulkAcceptSuggestionItem(
+                        extracted_requirement_id=extracted_id,
+                        status="accepted",
+                        action=models.SuggestedActionType.MERGE,
+                        requirement_id=target_id,
+                        invalidated_ids=accepted_invalidated_ids,
+                    )
+                )
+                continue
+
+            if action == models.SuggestedActionType.CREATE_NEW.value:
+                if extracted_requirement.implementation_description is None:
+                    raise ValueError(
+                        f"Extracted requirement {extracted_id} is missing "
+                        "implementation_description"
+                    )
+                if extracted_requirement.implementation_status is None:
+                    raise ValueError(
+                        f"Extracted requirement {extracted_id} is missing "
+                        "implementation_status"
+                    )
+
+                types = self.repository.get_extracted_requirement_types(extracted_id)
+                created = await self.create_requirement(
+                    models.RequirementCreate(
+                        description=extracted_requirement.description,
+                        types=types,
+                        requirement_verification=extracted_requirement.requirement_verification,
+                        implementation_description=extracted_requirement.implementation_description,
+                        implementation_status=extracted_requirement.implementation_status,
+                        product_id=str(extracted_requirement.product_id),
+                    )
+                )
+                self._create_extraction_link_with_history(
+                    created.id, extracted_id, "create"
+                )
+                accept_result = self.requirement_document_service.accept_suggestion(
+                    extracted_id
+                )
+                accepted_invalidated_ids = accept_result.get("invalidated_ids", [])
+                result.accepted += 1
+                result.items.append(
+                    models.BulkAcceptSuggestionItem(
+                        extracted_requirement_id=extracted_id,
+                        status="accepted",
+                        action=models.SuggestedActionType.CREATE_NEW,
+                        requirement_id=created.id,
+                        invalidated_ids=accepted_invalidated_ids,
+                    )
+                )
+                continue
+
+            result.skipped += 1
+            result.items.append(
+                models.BulkAcceptSuggestionItem(
+                    extracted_requirement_id=extracted_id,
+                    status="skipped",
+                    reason="unsupported_action",
+                )
+            )
+
+        return result
+
     def get_distinct_requirement_types(self) -> List[str]:
         org_id = get_organization_id()
         return self.repository.get_distinct_types(org_id)
@@ -355,64 +571,40 @@ class RequirementService:
             # Check for cancellation after saving requirements
             self.async_tasks_service.check_cancellation(task_id)
 
-            # Auto-link similar requirements during upload (parallel)
+            # Generate AI suggestions for each extracted requirement (parallel)
             self.async_tasks_service.update_task(
                 task_id,
                 progress=0.85,
-                message="Finding and linking similar requirements...",
+                message="Generating AI suggestions...",
             )
 
-            async def link_requirement(saved_req) -> int:
-                """Find and link similar requirements for a single extracted requirement."""
+            async def generate_suggestion(saved_req) -> int:
+                """Generate and store AI suggestion for a single extracted requirement."""
                 try:
-                    # Find similar requirements with LLM comparison
-                    similar_requirements = (
-                        await self.find_similar_requirements_with_llm(
-                            extracted_requirement_id=str(saved_req.id),
-                            limit=SIMILAR_REQUIREMENTS_LIMIT,
-                            filter_reqs=None,
-                        )
+                    await self.suggest_action_for_extracted_requirement(
+                        extracted_requirement_id=str(saved_req.id),
+                        filter_reqs=None,
                     )
-
-                    # Auto-link requirements where LLM determined they are similar
-                    links_created = 0
-                    for similar_req in similar_requirements:
-                        if similar_req.llm_result and similar_req.llm_result.is_similar:
-                            try:
-                                link_data = RequirementExtractionLinkCreate(
-                                    requirement_id=similar_req.id,
-                                    extracted_requirement_id=str(saved_req.id),
-                                )
-                                self.extraction_link_repository.create_link(link_data)
-                                links_created += 1
-                            except ValueError as link_error:
-                                # Link might already exist or have invalid foreign key - log and continue
-                                logger.info(
-                                    f"Could not create link for requirement {similar_req.id}: {link_error}"
-                                )
-                                continue
-                    return links_created
+                    return 1
                 except TaskCancelledException:
-                    # Re-raise cancellation to propagate through asyncio.gather
                     raise
                 except Exception as req_error:
-                    # Log error but continue processing other requirements
                     logger.warning(
-                        f"Error finding similar requirements for extracted requirement {saved_req.id}: {req_error}"
+                        f"Error generating suggestion for extracted requirement {saved_req.id}: {req_error}"
                     )
                     return 0
 
-            # Run all linking in parallel
-            link_results = await asyncio.gather(
-                *[link_requirement(req) for req in saved_extracted_requirements]
+            # Run all suggestions in parallel
+            suggestion_results = await asyncio.gather(
+                *[generate_suggestion(req) for req in saved_extracted_requirements]
             )
-            total_links_created = sum(link_results)
+            total_suggestions = sum(suggestion_results)
 
             self.async_tasks_service.update_task(
                 task_id,
                 status=TaskStatus.COMPLETED,
                 progress=1.0,
-                message=f"Successfully extracted {len(extracted_requirements)} requirements and created {total_links_created} links",
+                message=f"Successfully extracted {len(extracted_requirements)} requirements and generated {total_suggestions} AI suggestions",
                 entity_id=created_document.document_key,
             )
 
@@ -477,6 +669,13 @@ class RequirementService:
         linked_req_ids = self.extraction_link_repository.get_requirement_ids_for_extracted_requirement(
             extracted_requirement_id
         )
+        # Resolve suggested target requirement if set
+        suggested_target_req = None
+        if updated.suggested_target_requirement_id:
+            suggested_target_req = self.repository.get(
+                str(updated.suggested_target_requirement_id)
+            )
+
         return models.ExtractedRequirementDto(
             id=str(updated.id),
             document_name=updated.document_name,
@@ -489,11 +688,22 @@ class RequirementService:
             extraction_timestamp=updated.extraction_timestamp,
             order=updated.order,
             has_links=len(linked_req_ids) > 0,
+            suggested_action=updated.suggested_action,
+            suggested_target_requirement_id=str(updated.suggested_target_requirement_id)
+            if updated.suggested_target_requirement_id
+            else None,
+            suggestion_justification=updated.suggestion_justification,
+            suggestion_similarity_score=updated.suggestion_similarity_score,
+            suggested_target_requirement=suggested_target_req,
+            merge_preview=models.MergedRequirement.from_json(updated.merge_preview),
         )
 
-    async def find_similar_requirements_with_llm(
-        self, extracted_requirement_id: str, limit: int, filter_reqs: List[str] = None
-    ) -> List[models.SimilarRequirementWithLLM]:
+    async def suggest_action_for_extracted_requirement(
+        self,
+        extracted_requirement_id: str,
+        filter_reqs: List[str] = None,
+    ) -> models.SuggestedAction:
+        """Suggest a single action (attach, merge, or create_new) for an extracted requirement."""
         extracted_requirement = self.repository.get_extracted_requirement_by_id(
             extracted_requirement_id
         )
@@ -514,15 +724,50 @@ class RequirementService:
             extracted_requirement.implementation_description,
         )
 
-        return (
-            await self.comparison_service.find_similar_requirements_with_llm_comparison(
-                text_to_embed=text_to_embed,
-                doc_req_text=extracted_requirement.description,
-                product_id=extracted_requirement.product_id,
-                limit=limit,
-                filter_reqs=filter_reqs,
-            )
+        # Build full extracted requirement text for the LLM
+        types = self.repository.get_extracted_requirement_types(
+            extracted_requirement_id
         )
+        doc_req_text = (
+            f"Description: {extracted_requirement.description}\n"
+            f"Types: {', '.join(types) if types else 'N/A'}\n"
+            f"Implementation: {extracted_requirement.implementation_status or 'N/A'}"
+            f" — {extracted_requirement.implementation_description or 'N/A'}\n"
+            f"Verification: {extracted_requirement.requirement_verification or 'N/A'}"
+        )
+
+        suggestion = await self.comparison_service.decide_action_for_requirement(
+            text_to_embed=text_to_embed,
+            doc_req_text=doc_req_text,
+            product_id=extracted_requirement.product_id,
+            limit=SIMILAR_REQUIREMENTS_LIMIT,
+            filter_reqs=filter_reqs,
+        )
+
+        # Persist the suggestion on the extracted requirement row
+        self.repository.set_extracted_requirement_suggestion(
+            extracted_requirement_id,
+            action=suggestion.action.value,
+            target_requirement_id=suggestion.target_requirement_id,
+            justification=suggestion.justification,
+            similarity_score=suggestion.similarity_score,
+        )
+
+        # Pre-generate merge preview for merge suggestions
+        if (
+            suggestion.action.value == "merge"
+            and suggestion.target_requirement_id
+        ):
+            merge_preview = await self.requirement_document_service.generate_merge(
+                extracted_requirement_id,
+                suggestion.target_requirement_id,
+            )
+            self.repository.set_extracted_requirement_merge_preview(
+                extracted_requirement_id, merge_preview.model_dump()
+            )
+            suggestion.merge_preview = merge_preview
+
+        return suggestion
 
     async def answer_question(
         self,

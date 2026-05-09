@@ -15,16 +15,19 @@ class RequirementExtractionLinkRepository:
         self.db = db
 
     def create_link(
-        self, link: RequirementExtractionLinkCreate
+        self, link: RequirementExtractionLinkCreate, commit: bool = True
     ) -> RequirementExtractionLink:
         """Create a single requirement-extraction link."""
         try:
             db_link = RequirementExtractionLinkDB(
                 requirement_id=link.requirement_id,
                 extracted_requirement_id=link.extracted_requirement_id,
+                link_type=link.link_type,
             )
             self.db.add(db_link)
-            self.db.commit()
+            self.db.flush()
+            if commit:
+                self.db.commit()
             self.db.refresh(db_link)
             return RequirementExtractionLink.model_validate(db_link)
         except IntegrityError:
@@ -55,6 +58,19 @@ class RequirementExtractionLinkRepository:
             .all()
         )
         return [link.extracted_requirement_id for link in links]
+
+    def get_links_for_extracted_requirement(
+        self, extracted_requirement_id: str
+    ) -> list[RequirementExtractionLinkDB]:
+        """Get all links for a specific extracted requirement."""
+        return (
+            self.db.query(RequirementExtractionLinkDB)
+            .filter(
+                RequirementExtractionLinkDB.extracted_requirement_id
+                == extracted_requirement_id
+            )
+            .all()
+        )
 
     def delete_link(self, requirement_id: str, extracted_requirement_id: str) -> bool:
         """Delete a specific requirement-extraction link."""

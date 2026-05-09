@@ -45,13 +45,10 @@ export function QuestionNavigationFooter({
             <Button
               variant="ghost"
               size="sm"
-              className="flex items-center justify-center p-1 px-2.5 gap-1 w-8 h-7 bg-[#F6F6F6] dark:bg-[#2a2a2a] rounded-xl hover:bg-[#eeeeee] dark:hover:bg-[#3a3a3a]"
+              className="flex items-center justify-center p-1 px-2.5 gap-1 w-8 h-7 bg-semantic-bg-elevation-1 border border-semantic-stroke rounded-[4px] hover:bg-semantic-highlight"
               data-testid="more-options-button"
             >
-              <MoreHorizontal
-                size={16}
-                className="text-[#000000] dark:text-[#FAFFFD]"
-              />
+              <MoreHorizontal size={16} className="text-semantic-text" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

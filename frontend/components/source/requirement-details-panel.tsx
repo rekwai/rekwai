@@ -1,25 +1,36 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { RequirementDisplayCard } from "./requirement-display-card";
 import { LinkedRequirementsSection } from "./linked-requirements-section";
-import { RequirementItem, Requirement } from "@/types/requirement-types";
+import {
+  RequirementItem,
+  Requirement,
+  SuggestedAction,
+  MergedRequirement,
+  MergeInfo,
+  CreateInfo,
+} from "@/types/requirement-types";
 
 interface LinkedRequirementsProps {
-  linkedRequirements: Requirement[];
-  linkedRequirementsLoading: boolean;
-  mergingRequirementId: string | null;
-  isSearchingSimilar?: boolean;
+  linkedRequirements?: Requirement[];
+  isFetchingSuggestion?: boolean;
+  suggestedAction?: SuggestedAction | null;
+  lastMergeInfo?: MergeInfo | null;
+  lastCreateInfo?: CreateInfo | null;
+  mergePreview?: MergedRequirement | null;
 }
 
 interface ActionHandlers {
   onEditRequirement: () => void;
   onEditLinkedRequirement: (requirement: Requirement) => void;
   onLinkExistingRequirements: (requirements: Requirement[]) => Promise<void>;
-  onUnlinkRequirement: (requirement: Requirement) => Promise<void>;
-  onGenerateMerge: (requirement: Requirement) => void;
   onCreateNewRequirement: () => void;
-  onRefreshSimilarRequirements?: () => Promise<void>;
+  onFetchSuggestedAction?: () => Promise<void>;
+  onConfirmSuggestion?: () => Promise<unknown>;
+  onEditSuggestion?: () => Promise<unknown>;
+  onUndoMerge?: () => Promise<void>;
+  onUndoCreate?: () => Promise<void>;
+  onEditCreatedRequirement?: (requirement: Requirement) => void;
 }
 
 interface RequirementDetailsPanelProps {
@@ -69,30 +80,33 @@ export function RequirementDetailsPanel({
   }
 
   return (
-    <div className="p-8 space-y-6" data-testid="requirement-details-panel">
-      {/* Requirement Display Card */}
-      <RequirementDisplayCard
-        requirement={selectedRequirement}
-        onEdit={actionHandlers.onEditRequirement}
-      />
-
-      {/* Linked Requirements Section */}
+    <div
+      className="min-h-full space-y-6 px-8 pt-8 pb-20"
+      data-testid="requirement-details-panel"
+    >
       <LinkedRequirementsSection
-        linkedRequirements={linkedRequirementsProps.linkedRequirements}
-        linkedRequirementsLoading={
-          linkedRequirementsProps.linkedRequirementsLoading
-        }
-        mergingRequirementId={linkedRequirementsProps.mergingRequirementId}
         productId={productId}
-        onLinkExistingRequirements={actionHandlers.onLinkExistingRequirements}
-        onUnlinkRequirement={actionHandlers.onUnlinkRequirement}
-        onGenerateMerge={actionHandlers.onGenerateMerge}
+        linkedRequirements={linkedRequirementsProps.linkedRequirements || []}
         onCreateNewRequirement={actionHandlers.onCreateNewRequirement}
         onEditLinkedRequirement={actionHandlers.onEditLinkedRequirement}
-        onRefreshSimilarRequirements={
-          actionHandlers.onRefreshSimilarRequirements
-        }
-        isSearchingSimilar={linkedRequirementsProps.isSearchingSimilar}
+        onLinkExistingRequirements={actionHandlers.onLinkExistingRequirements}
+        suggestion={{
+          isFetchingSuggestion: linkedRequirementsProps.isFetchingSuggestion,
+          suggestedAction: linkedRequirementsProps.suggestedAction,
+          lastMergeInfo: linkedRequirementsProps.lastMergeInfo,
+          lastCreateInfo: linkedRequirementsProps.lastCreateInfo,
+          mergePreview: linkedRequirementsProps.mergePreview,
+          selectedRequirement,
+        }}
+        suggestionHandlers={{
+          onFetchSuggestedAction: actionHandlers.onFetchSuggestedAction,
+          onConfirmSuggestion: actionHandlers.onConfirmSuggestion,
+          onEditSuggestion: actionHandlers.onEditSuggestion,
+          onUndoMerge: actionHandlers.onUndoMerge,
+          onUndoCreate: actionHandlers.onUndoCreate,
+          onEditCreatedRequirement: actionHandlers.onEditCreatedRequirement,
+          onEditRequirement: actionHandlers.onEditRequirement,
+        }}
       />
     </div>
   );

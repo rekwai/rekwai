@@ -21,16 +21,16 @@ interface ExportMenuItemProps {
 function ExportMenuItem({ title, description, onSelect }: ExportMenuItemProps) {
   return (
     <DropdownMenuItem
-      className="flex flex-col justify-center items-start px-3 py-1 rounded bg-white dark:bg-[#2a2a2a] hover:bg-gray-50 dark:hover:bg-[#3a3a3a] focus:bg-gray-50 dark:focus:bg-[#3a3a3a]"
+      className="flex flex-col justify-center items-start px-3 py-4 rounded-[4px] focus:bg-accent"
       onSelect={(e) => {
         e.preventDefault();
         onSelect();
       }}
     >
-      <span className="text-[16px] leading-5 text-[#1C2024] dark:text-[#FAFFFD] font-normal w-full">
+      <span className="text-[14px] leading-5 text-foreground font-normal w-full">
         {title}
       </span>
-      <span className="text-[12px] leading-[130%] text-[#1C2024] dark:text-[#CCCCCC] font-normal w-full">
+      <span className="text-[12px] leading-[130%] text-muted-foreground font-normal w-full">
         {description}
       </span>
     </DropdownMenuItem>
@@ -91,14 +91,14 @@ export function QuestionHeader({
               <Button
                 variant="outline"
                 disabled={isExporting}
-                className="font-inter flex flex-row justify-center items-center px-2.5 py-1 gap-1.5 h-7 bg-[#00100B] dark:bg-[#FAFFFD] border-none rounded-[12px] text-sm leading-[15px] font-normal text-[#FAFFFD] dark:text-[#080705] hover:bg-[#00100B]/90 dark:hover:bg-[#FAFFFD]/90 hover:text-[#FAFFFD] dark:hover:text-[#080705]"
+                className="font-inter flex flex-row justify-center items-center px-2.5 py-1 gap-1.5 h-7 bg-semantic-bg-elevation-2 border border-semantic-stroke rounded-[4px] text-xs leading-[15px] font-normal text-semantic-text hover:bg-semantic-highlight"
               >
                 {isExporting ? "Exporting..." : "Export"}{" "}
                 <ChevronDown size={16} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="font-inter w-[245px] p-2 bg-white dark:bg-[#2a2a2a] border border-[rgba(0,0,51,0.0588235)] dark:border-[#3a3a3a] rounded-lg"
+              className="font-inter w-[245px] p-2 bg-popover text-popover-foreground border border-border rounded-[8px]"
               align="end"
               style={{
                 boxShadow:
@@ -122,7 +122,7 @@ export function QuestionHeader({
             variant="outline"
             onClick={deleteWithConfirmation}
             disabled={isDeleting}
-            className="font-inter flex flex-row justify-center items-center px-2.5 py-1 gap-1.5 h-7 bg-[#FBDBDD] dark:bg-[#8B2635] border-none rounded-[12px] text-sm leading-[15px] font-normal text-[#080705] dark:text-[#FAFFFD] hover:bg-[#FBDBDD]/90 dark:hover:bg-[#8B2635]/90"
+            className="font-inter flex flex-row justify-center items-center px-2.5 py-1 gap-1.5 h-7 bg-semantic-error-bg border-none rounded-[4px] text-xs leading-[15px] font-normal text-semantic-black hover:!bg-semantic-error-fg dark:hover:!bg-semantic-error-fg hover:!text-semantic-white dark:hover:!text-semantic-white"
           >
             {isDeleting ? "Deleting..." : "Delete questionnaire"}
           </Button>

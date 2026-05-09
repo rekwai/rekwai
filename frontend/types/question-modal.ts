@@ -12,6 +12,7 @@ export interface QuestionListPanelProps {
   questionnaireKey: string | null;
   clientName: string | null;
   requirements: Requirement[];
+  errorQuestionIds?: string[];
   onIndexChange: (index: number) => void;
   onTabChange: (tab: "questions" | "metadata") => void;
 }

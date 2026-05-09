@@ -4,22 +4,33 @@ import * as React from "react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
 
-export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+export function ThemeToggle({ className }: { className?: string }) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => setMounted(true), []);
+
+  const isDark = resolvedTheme === "dark";
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-      className="h-16px w-16px p-0 text-[#080705] dark:text-[#FAFFFD] hover:text-[#080705] dark:hover:text-[#FAFFFD] transition-colors"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className={cn(
+        "h-8 w-8 shrink-0 p-0 text-semantic-text hover:bg-semantic-highlight hover:text-semantic-text transition-colors",
+        className,
+      )}
+      disabled={!mounted}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
-      {theme === "dark" ? (
-        // Sun icon for dark mode (to switch to light)
+      {!mounted ? (
+        <span className="h-4 w-4" aria-hidden />
+      ) : isDark ? (
         <Sun size={16} />
       ) : (
-        // Moon icon for light mode (to switch to dark)
         <Moon size={16} />
       )}
       <span className="sr-only">Toggle theme</span>

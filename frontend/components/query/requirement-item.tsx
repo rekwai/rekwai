@@ -1,8 +1,8 @@
 import { Pencil, X, Loader2, Merge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Requirement } from "@/types/requirement-types";
-import { buttonStyles } from "@/lib/utils/question-modal";
 import { RequirementCard } from "@/components/common/requirement-card";
+import { TypeBadges, StatusBadge } from "@/components/common/requirement-badges";
 
 interface RequirementItemProps {
   requirement: Requirement;
@@ -24,64 +24,77 @@ export function RequirementItem({
   return (
     <RequirementCard
       description={requirement.description}
-      types={requirement.types}
-      implementationStatus={requirement.implementation_status}
+      typeBadges={<TypeBadges types={requirement.types} />}
+      statusBadge={<StatusBadge status={requirement.implementation_status} />}
       implementationDescription={requirement.implementation_description}
+      pinFooterToBottom
       showVerification={false}
-      header={
-        <div className="flex flex-row items-center p-0 gap-1.5 h-5 flex-none order-0 flex-grow">
-          <span className="font-inter font-semibold text-xs leading-5 text-[#080705] flex-none order-0">
-            {requirement.requirement_key}
-          </span>
-        </div>
+      title={
+        <span className="font-inter text-xs font-semibold leading-5 text-semantic-text">
+          {requirement.requirement_key}
+        </span>
       }
-      actions={
-        <>
-          {/* Edit Button */}
+      footer={
+        <div className="flex items-center justify-end gap-1 overflow-clip rounded-[4px]">
           <Button
-            variant="ghost"
+            type="button"
+            variant="outline"
             size="sm"
             onClick={() => onEdit(requirement)}
-            className={`${buttonStyles.iconButtonWithBorder} flex-none order-1`}
+            className="h-7 gap-3 pl-2.5 pr-2 py-1 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-xs font-normal text-semantic-text hover:bg-semantic-highlight shadow-none"
             data-testid="edit-requirement-button"
           >
-            <Pencil size={12} className="text-[#080705]" />
+            Edit
+            <Pencil size={14} />
           </Button>
-          {/* Merge Button */}
+
           {onMerge && (
             <Button
-              variant="ghost"
+              type="button"
+              variant="outline"
               size="sm"
               onClick={() => onMerge(requirement)}
               disabled={isMerging}
-              className={`${buttonStyles.iconButtonWithBorder} flex-none order-2 disabled:opacity-50`}
+              className="h-7 gap-3 pl-2.5 pr-2 py-1 rounded-[4px] border border-semantic-stroke bg-semantic-bg-elevation-1 text-xs font-normal text-semantic-text hover:bg-semantic-highlight disabled:opacity-50 shadow-none"
               data-testid="merge-requirement-button"
               title="Merge this requirement"
             >
               {isMerging ? (
-                <Loader2 size={12} className="animate-spin text-[#080705]" />
+                <Loader2
+                  size={12}
+                  className="animate-spin text-semantic-text"
+                />
               ) : (
-                <Merge size={12} className="text-[#080705]" />
+                <Merge size={14} className="text-semantic-text" />
               )}
+              Merge
             </Button>
           )}
-          {/* Ignore Button */}
+
           <Button
-            variant="ghost"
+            type="button"
+            variant="outline"
             size="sm"
             onClick={() => onIgnore(requirement)}
             disabled={isToggling}
-            className={`${buttonStyles.iconButtonDestructive} flex-none order-3 disabled:opacity-50`}
+            className="group h-7 gap-3 pl-2.5 pr-2 py-1 rounded-[4px] bg-semantic-error-bg text-xs font-normal text-semantic-black hover:!bg-semantic-error-fg dark:hover:!bg-semantic-error-fg hover:!text-semantic-white dark:hover:!text-semantic-white disabled:opacity-50 border-none shadow-none"
             data-testid="ignore-requirement-button"
             title="Ignore this requirement"
           >
+            Remove
             {isToggling ? (
-              <Loader2 size={12} className="animate-spin text-[#080705]" />
+              <Loader2
+                size={14}
+                className="animate-spin text-semantic-black group-hover:text-semantic-white"
+              />
             ) : (
-              <X size={12} className="text-[#080705]" />
+              <X
+                size={14}
+                className="text-semantic-black group-hover:text-semantic-white"
+              />
             )}
           </Button>
-        </>
+        </div>
       }
     />
   );

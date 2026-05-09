@@ -15,30 +15,38 @@ from pydantic_ai.providers.anthropic import AnthropicProvider
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 # Default timeout for HTTP requests to LLM providers.
-# read=30s catches hung connections (no data flowing) without affecting streaming responses.
+# read timeout catches hung connections (no data flowing) without affecting streaming responses.
 DEFAULT_TIMEOUT = Timeout(connect=10.0, read=30.0, write=30.0, pool=10.0)
+SMART_MODEL_TIMEOUT = Timeout(connect=10.0, read=60.0, write=60.0, pool=10.0)
 
-# Shared HTTP client for all LLM providers.
+# Shared HTTP clients for LLM providers.
 # Created eagerly at module load to avoid race conditions.
-# Reusing a single client provides connection pooling and avoids resource leaks.
+# Reusing clients provides connection pooling and avoids resource leaks.
 _shared_http_client = AsyncClient(timeout=DEFAULT_TIMEOUT)
+_smart_model_http_client = AsyncClient(timeout=SMART_MODEL_TIMEOUT)
 
 
-def get_shared_http_client() -> AsyncClient:
+def get_shared_http_client(model_name: str | None = None) -> AsyncClient:
     """Get the shared HTTP client for LLM providers.
+
+    Args:
+        model_name: The model alias requested. The "smart" alias gets a longer timeout.
 
     Returns:
         The shared AsyncClient instance with configured timeout.
     """
+    if model_name == "smart":
+        return _smart_model_http_client
     return _shared_http_client
 
 
 async def close_shared_http_client() -> None:
-    """Close the shared HTTP client and release resources.
+    """Close the shared HTTP clients and release resources.
 
     Call this during application shutdown to properly close connections.
     """
     await _shared_http_client.aclose()
+    await _smart_model_http_client.aclose()
 
 
 class ProviderConfig(TypedDict):
@@ -128,6 +136,7 @@ def create_model(
         raise ValueError(f"Unsupported provider: {provider}")
 
     config = PROVIDER_REGISTRY[provider]
+    requested_model_name = model_name
 
     # Resolve model_name if it's "smart" or "fast"
     if model_name in ("smart", "fast"):
@@ -144,7 +153,7 @@ def create_model(
     provider_kwargs: dict[str, Any] = {}
 
     # Add shared HTTP client with timeout to prevent hung connections
-    provider_kwargs["http_client"] = get_shared_http_client()
+    provider_kwargs["http_client"] = get_shared_http_client(requested_model_name)
 
     # Resolve api_key if required
     if "api_key" in config["required_params"]:

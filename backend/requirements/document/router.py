@@ -5,7 +5,7 @@ This router handles HTTP routing concerns only, delegating business logic
 to the requirements service module.
 """
 
-from typing import List
+from typing import List, Optional
 
 from fastapi import (
     APIRouter,
@@ -25,13 +25,14 @@ from dependencies import (
     get_requirement_extraction_link_repository,
     get_requirement_document_service,
 )
-from ..crud.services import RequirementService, SIMILAR_REQUIREMENTS_LIMIT
+from ..crud.services import RequirementService
 from ..extraction_link.repository import RequirementExtractionLinkRepository
 from ..crud.models import (
-    SimilarRequirementWithLLM,
+    SuggestedAction,
     MergedRequirement,
     ExtractedRequirementDto,
     ExtractedRequirementUpdate,
+    BulkAcceptSuggestionsResult,
 )
 from .services import RequirementDocumentService
 from async_tasks.models import TaskCreateResponse
@@ -56,25 +57,23 @@ async def update_extracted_requirement(
 
 
 @router.get(
-    "/extracted-requirement/{extracted_requirement_id}/similar",
-    response_model=List[SimilarRequirementWithLLM],
+    "/extracted-requirement/{extracted_requirement_id}/suggest-action",
+    response_model=SuggestedAction,
     tags=["requirements_document"],
 )
-async def get_similar_main_requirements_with_llm(
+async def suggest_action_for_extracted_requirement(
     extracted_requirement_id: str,
-    limit: int = SIMILAR_REQUIREMENTS_LIMIT,
-    filter_req: List[str] = Query(default=[]),
+    exclude_req: List[str] = Query(default=[]),
     service: RequirementService = Depends(get_requirement_service),
 ):
     """
-    Finds main requirements similar to a given document requirement using vector search,
-    then performs LLM-based comparison on the top results.
+    Suggests a single action (attach, merge, or create_new) for an extracted requirement.
 
-    Uses the extracted requirement ID to load the requirement from the database.
-    Optionally filters out specific requirement IDs using the 'req' query parameter.
+    Uses vector search to find candidates, then a single LLM call to decide the best action,
+    validated by a second LLM agent. Also stores the suggestion on the extracted requirement row.
     """
-    return await service.find_similar_requirements_with_llm(
-        extracted_requirement_id, limit, filter_req or None
+    return await service.suggest_action_for_extracted_requirement(
+        extracted_requirement_id, exclude_req or None
     )
 
 
@@ -166,6 +165,23 @@ async def get_document_with_requirements_by_key(
     return await service.get_document_with_requirements_by_key(document_key)
 
 
+@router.post(
+    "/document/{document_id}/accept-suggestions",
+    response_model=BulkAcceptSuggestionsResult,
+    tags=["requirements_document"],
+)
+async def bulk_accept_suggestions(
+    document_id: str,
+    service: RequirementService = Depends(get_requirement_service),
+):
+    """Accept all stored AI suggestions for a document.
+
+    Duplicate merge targets are invalidated and skipped so users can review
+    them manually after the bulk operation.
+    """
+    return await service.bulk_accept_suggestions_for_document(document_id)
+
+
 @router.get(
     "/document/{document_id}/download",
     tags=["requirements_document"],
@@ -230,6 +246,46 @@ async def delete_document(
         )
 
     return {"message": "Document successfully deleted"}
+
+
+@router.post(
+    "/extracted-requirement/{extracted_requirement_id}/accept-suggestion",
+    tags=["requirements_document"],
+)
+def accept_suggestion(
+    extracted_requirement_id: str,
+    service: RequirementDocumentService = Depends(get_requirement_document_service),
+):
+    """Accept the AI suggestion for an extracted requirement."""
+    return service.accept_suggestion(extracted_requirement_id)
+
+
+@router.post(
+    "/extracted-requirement/{extracted_requirement_id}/dismiss-suggestion",
+    tags=["requirements_document"],
+)
+def dismiss_suggestion(
+    extracted_requirement_id: str,
+    service: RequirementDocumentService = Depends(get_requirement_document_service),
+):
+    """Dismiss the AI suggestion for an extracted requirement."""
+    return service.dismiss_suggestion(extracted_requirement_id)
+
+
+@router.post(
+    "/extracted-requirement/{extracted_requirement_id}/undo-merge/{requirement_id}",
+    tags=["requirements_document"],
+)
+def undo_merge(
+    extracted_requirement_id: str,
+    requirement_id: str,
+    suggestion_restore: Optional[dict] = None,
+    service: RequirementDocumentService = Depends(get_requirement_document_service),
+):
+    """Undo a merge by restoring the target requirement to its pre-merge state."""
+    return service.undo_merge(
+        extracted_requirement_id, requirement_id, suggestion_restore
+    )
 
 
 @router.get(

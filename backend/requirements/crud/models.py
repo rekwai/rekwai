@@ -1,7 +1,7 @@
 """Pydantic models for requirements and related data structures."""
 
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List
+from typing import Literal, Optional, List
 from datetime import datetime
 import enum
 
@@ -67,6 +67,13 @@ class ExtractedRequirementDto(BaseModel):
     extraction_timestamp: datetime
     order: float  # Sequential order within document for frontend sorting
     has_links: bool = False  # Whether this requirement has any linked main requirements
+    link_type: Optional[Literal["attach", "merge", "create"]] = None
+    suggested_action: Optional[str] = None
+    suggested_target_requirement_id: Optional[str] = None
+    suggestion_justification: Optional[str] = None
+    suggestion_similarity_score: Optional[float] = None
+    suggested_target_requirement: Optional["RequirementDto"] = None
+    merge_preview: Optional["MergedRequirement"] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -151,6 +158,101 @@ class LLMSimilarityResult(BaseModel):
     )
 
 
+class SuggestedActionType(str, enum.Enum):
+    """The action the AI suggests for an extracted requirement."""
+
+    ATTACH = "attach"
+    MERGE = "merge"
+    CREATE_NEW = "create_new"
+
+
+class LLMActionDecision(BaseModel):
+    """Internal LLM output: the AI's decision for a single extracted requirement."""
+
+    action: SuggestedActionType = Field(
+        ...,
+        description="The recommended action: 'attach' (existing requirement fully covers this), "
+        "'merge' (existing requirement is close but would benefit from details in the source), "
+        "or 'create_new' (no existing requirement captures this).",
+    )
+    best_match_index: Optional[int] = Field(
+        None,
+        description="0-based index of the best matching candidate requirement. "
+        "Required for 'attach' and 'merge', null for 'create_new'.",
+    )
+    similarity_score: float = Field(
+        ...,
+        description="A score between 0.0 and 1.0 indicating how close the best match is.",
+        ge=0.0,
+        le=1.0,
+    )
+    justification: str = Field(
+        ...,
+        description="A brief explanation (1-3 sentences) justifying the decision.",
+    )
+
+
+class SuggestedAction(BaseModel):
+    """API response: the AI's suggested action for an extracted requirement."""
+
+    action: SuggestedActionType
+    target_requirement_id: Optional[str] = None
+    target_requirement: Optional[RequirementDto] = None
+    justification: str
+    similarity_score: float = Field(ge=0.0, le=1.0)
+    merge_preview: Optional["MergedRequirement"] = None
+
+
+class BulkAcceptSuggestionItem(BaseModel):
+    """Per-extracted-requirement result for bulk suggestion approval."""
+
+    extracted_requirement_id: str
+    status: Literal["accepted", "skipped", "failed"]
+    action: Optional[SuggestedActionType] = None
+    reason: Optional[
+        Literal[
+            "already_linked",
+            "no_suggestion",
+            "invalidated_duplicate",
+            "missing_target",
+            "missing_merge_preview",
+            "unsupported_action",
+            "error",
+        ]
+    ] = None
+    requirement_id: Optional[str] = None
+    invalidated_ids: List[str] = Field(default_factory=list)
+    message: Optional[str] = None
+
+
+class BulkAcceptSuggestionsResult(BaseModel):
+    """Summary response for approving stored suggestions in bulk."""
+
+    accepted: int = 0
+    failed: int = 0
+    skipped: int = 0
+    already_linked: int = 0
+    no_suggestion: int = 0
+    invalidated_duplicate: int = 0
+    items: List[BulkAcceptSuggestionItem] = Field(default_factory=list)
+
+
+class ActionDecisionValidationResult(BaseModel):
+    """Validation output for an AI action decision."""
+
+    is_valid: bool = Field(
+        ..., description="Whether the decision passes validation."
+    )
+    issues: List[str] = Field(
+        default_factory=list,
+        description="List of issues found during validation.",
+    )
+    suggested_action: Optional[SuggestedActionType] = Field(
+        None,
+        description="If invalid, the action the validator thinks is correct.",
+    )
+
+
 class SimilarRequirementWithLLM(RequirementDto):
     """Extends RequirementDto to include optional LLM comparison results."""
 
@@ -173,6 +275,9 @@ class RequirementHistoryBase(BaseModel):
     previous_requirement_verification: Optional[str] = None
     previous_implementation_description: Optional[str] = None
     previous_implementation_status: Optional[str] = None
+    source_extracted_requirement_id: Optional[str] = None
+    source_document_id: Optional[str] = None
+    source_action: Optional[Literal["attach", "merge", "create"]] = None
     new_description: Optional[str] = None
     new_types: Optional[List[str]] = None
     new_requirement_verification: Optional[str] = None
@@ -196,6 +301,13 @@ class MergedRequirement(BaseModel):
     implementation_status: str
     implementation_description: str
     requirement_verification: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, data: Optional[dict]) -> Optional["MergedRequirement"]:
+        """Deserialize a JSON dict to a MergedRequirement, returning None if data is None."""
+        if data is None:
+            return None
+        return cls(**data)
 
 
 class IntermediateExtractedRequirementBase(BaseModel):

@@ -44,6 +44,7 @@ import { useRequirementHistory } from "@/hooks/use-requirement-history";
 import { FieldCheckmark } from "./field-checkmark";
 import { RequirementTypeSelector } from "./requirement-type-selector";
 import { RequirementHistoryDisplay } from "./requirement-history-display";
+import { RequiredLabel } from "@/components/ui/required-label";
 
 interface CreateRequirementModalProps {
   open: boolean;
@@ -197,13 +198,14 @@ export function CreateRequirementModal({
               </span>
             </div>
           )}
-          <button
+          <Button
+            variant="outline"
             onClick={() => onOpenChange(false)}
-            className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-[#1a1a1a] rounded text-black dark:text-[#FAFFFD]"
+            className="mr-2 h-7 w-7 rounded-xl bg-cancel-btn dark:bg-[#312F2F] border-none text-black dark:text-[#FAFFFD] hover:bg-semantic-highlight dark:hover:bg-semantic-highlight p-0"
             aria-label="Close"
           >
             <CloseIcon />
-          </button>
+          </Button>
         </div>
 
         <DialogDescription className="sr-only">
@@ -243,9 +245,13 @@ export function CreateRequirementModal({
           ) : (
             <>
               {/* Form description */}
-              <p className="text-sm text-black dark:text-[#FAFFFD]">
+              <p className="text-sm text-semantic-text dark:text-[#FAFFFD]">
                 Fill in the details below to create a new requirement. Fields
-                marked with * are required.
+                marked with{" "}
+                <span className="text-semantic-error-fg" aria-hidden="true">
+                  *
+                </span>{" "}
+                are required.
               </p>
 
               {/* Type Field - Multiple Selection */}
@@ -261,7 +267,7 @@ export function CreateRequirementModal({
                   htmlFor="req-description"
                   className="text-sm font-medium text-label-text dark:text-[#FAFFFD]"
                 >
-                  Requirement Description*
+                  <RequiredLabel text="Requirement Description" />
                 </label>
                 <div className="relative">
                   <Textarea
@@ -270,6 +276,7 @@ export function CreateRequirementModal({
                     onChange={(e) =>
                       formState.setRequirementDescription(e.target.value)
                     }
+                    withFieldCheckmarkGutter
                     className="text-xs resize-none h-[52px] bg-input-white dark:bg-[#312F2F] border-input-light dark:border-[#1a1a1a] shadow-input-inset rounded text-black dark:text-[#FAFFFD] placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     placeholder="Enter a detailed description of what is required..."
                     required
@@ -288,7 +295,7 @@ export function CreateRequirementModal({
               {/* Implementation Dropdown */}
               <div className="space-y-1">
                 <label className="text-sm font-medium text-label-text dark:text-[#FAFFFD]">
-                  Implementation*
+                  <RequiredLabel text="Implementation" />
                 </label>
                 <div className="relative">
                   <DropdownMenu>
@@ -327,7 +334,7 @@ export function CreateRequirementModal({
                   htmlFor="impl-description"
                   className="text-sm font-medium text-label-text dark:text-[#FAFFFD]"
                 >
-                  Implementation Description*
+                  <RequiredLabel text="Implementation Description" />
                 </label>
                 <div className="relative">
                   <Textarea
@@ -336,6 +343,7 @@ export function CreateRequirementModal({
                     onChange={(e) =>
                       formState.setImplementationDescription(e.target.value)
                     }
+                    withFieldCheckmarkGutter
                     className="text-xs resize-none h-[52px] bg-input-white dark:bg-[#312F2F] border-input-light dark:border-[#1a1a1a] shadow-input-inset rounded text-black dark:text-[#FAFFFD] placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     placeholder="Describe how this requirement will be implemented..."
                     required
@@ -364,6 +372,7 @@ export function CreateRequirementModal({
                     onChange={(e) =>
                       formState.setRequirementVerification(e.target.value)
                     }
+                    withFieldCheckmarkGutter
                     className="text-xs resize-none h-[52px] bg-input-white dark:bg-[#312F2F] border-input-light dark:border-[#1a1a1a] shadow-input-inset rounded text-black dark:text-[#FAFFFD] placeholder:text-gray-500 dark:placeholder:text-gray-400"
                     placeholder="How can this requirement be verified or tested?"
                     data-testid="requirement-verification"
