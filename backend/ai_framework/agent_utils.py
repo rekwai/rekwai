@@ -124,6 +124,21 @@ def api_retry_wait_seconds(retry_count: int) -> float:
     return INITIAL_API_RETRY_DELAY * (2 ** retry_count) + random.uniform(0, 1)
 
 
+async def _sleep_with_cancellation_checks(
+    total_seconds: float,
+    cancellation_check: Callable[[], None] | None = None,
+    check_interval_seconds: float = 1.0,
+) -> None:
+    """Sleep in short intervals so cancellation can interrupt retry backoff."""
+    remaining_seconds = total_seconds
+    while remaining_seconds > 0:
+        if cancellation_check:
+            cancellation_check()
+        sleep_seconds = min(check_interval_seconds, remaining_seconds)
+        await asyncio.sleep(sleep_seconds)
+        remaining_seconds -= sleep_seconds
+
+
 async def _handle_retryable_error(
     error_description: str,
     attempt: int,
@@ -150,9 +165,10 @@ async def _handle_retryable_error(
             f"{error_description} (attempt {attempt + 1}/{max_retries}). "
             f"Retrying in {RETRY_DELAY_SECONDS} seconds..."
         )
-        if cancellation_check:
-            cancellation_check()
-        await asyncio.sleep(RETRY_DELAY_SECONDS)
+        await _sleep_with_cancellation_checks(
+            RETRY_DELAY_SECONDS,
+            cancellation_check,
+        )
         return (True, False)
     else:
         if exhausted_message:
@@ -357,11 +373,10 @@ async def run_agent_with_retry(
                         f"Provider API returned {status}; retrying in "
                         f"{wait_time:.2f}s (attempt {api_retry_count}/{MAX_API_RETRIES})"
                     )
-                    if cancellation_check:
-                        cancellation_check()
-                    await asyncio.sleep(wait_time)
-                    if cancellation_check:
-                        cancellation_check()
+                    await _sleep_with_cancellation_checks(
+                        wait_time,
+                        cancellation_check,
+                    )
         except ValidationError as e:
             # Handle malformed API responses (e.g., null function.arguments)
             if _is_malformed_api_response_error(e):
