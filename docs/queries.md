@@ -26,9 +26,10 @@ Each questionnaire becomes a "query" in the system that gets processed to genera
 ### Step 1: Upload Your Questionnaire
 
 1. Go to the Queries tab in your product
-2. Click to upload a questionnaire document (PDF, Word, Excel, Text, or Markdown)
-3. Enter the client or project name for this questionnaire
-4. The app saves your document and begins processing
+2. Click the "Upload" dropdown and select "Upload Query"
+3. Choose a questionnaire document (PDF, Word `.docx`, Excel, Markdown, or plain text)
+4. Confirm the product and select a client from the dropdown, or click "New client" to add one on the spot
+5. The app saves your document and begins processing
 
 ### Step 2: Automatic Question Extraction
 
@@ -64,7 +65,7 @@ When you open a question, you'll see the generated answer and the requirements R
 - Shows requirements Rekwai found and used to generate the answer
 - Each requirement displays its description, types, and implementation status
 - **Edit** (pencil icon): Modify the requirement details
-- **Ignore** (X icon): Remove this requirement and exclude it from future suggestions
+- **Remove** (X icon): Remove this requirement and exclude it from future suggestions for this question
 
 **Adding More Requirements:**
 If Rekwai missed relevant requirements or you need more context:
@@ -73,14 +74,16 @@ If Rekwai missed relevant requirements or you need more context:
 - **Refresh** (rotate icon): Search for similar requirements again and auto-link matches
 
 **Regenerating Answers:**
+The generated answer is shown in the **Answer** section, with a small toolbar of icon buttons next to the heading.
 After adding or removing requirements:
-1. Click "Regenerate answer" to generate an improved answer using the updated context
-2. **Successful Generation**: Answer appears in the Result section and is automatically saved
-3. **Insufficient Context**: System shows "Context insufficient" badge with a tooltip containing the partial answer - add more requirements and try again
+1. Click the **regenerate** (rotate) icon to generate an improved answer using the updated context
+2. **Successful Generation**: The new answer appears in the Answer section and is automatically saved
+3. **Insufficient Context**: System shows a "Context insufficient" badge with a tooltip containing the partial answer - add more requirements and try again
+4. **No Requirements Found**: If no requirements are linked, the section explains that an answer can't be generated until you add relevant requirements
 
 **Answer Review and Editing:**
-- **View Generated Answer**: Answer appears in the Result section with an edit button on hover
-- **Edit Answer**: Click the edit icon to modify the answer text directly
+- **View Generated Answer**: The answer appears in the Answer section
+- **Edit Answer**: Click the **edit** (pencil) icon in the toolbar to modify the answer text directly
 - **Save Changes**: Click "Save" to store your edited answer
 
 **Source Tracking:**
@@ -120,17 +123,17 @@ You don't need to complete all answers before exporting. Questions without answe
 
 ## Managing Your Questionnaires
 
-**Main Queries Tab:**
-- **Document Name**: Original filename of uploaded questionnaire
-- **Client**: Project or client name
+**Main Queries Tab columns:**
+- **Key**: The questionnaire's unique key (product-key prefixed)
+- **Client**: Client name
+- **Document Name**: Original filename of the uploaded questionnaire
+- **Questions**: Progress badge showing answered / total questions (turns green at 100%)
 - **Uploaded**: Upload date
-- **# of questions**: Total extracted questions
-- **# answered**: Answered questions with percentage complete
 
 **Actions:**
-- Click any row to open the Question Extraction modal for processing
+- Click any row to open the questionnaire and work through its questions
 - Search by client name or document name
-- Hover over rows to access download and delete actions
+- Use the row actions to download or delete a questionnaire
 - Download original questionnaire files
 - Keep completed questionnaires as references to track what was communicated to clients
 - Delete questionnaires only if uploaded by mistake or contain errors

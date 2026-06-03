@@ -2,7 +2,7 @@
 
 ## What is the Rekwai App?
 
-The Rekwai App is a smart document processing system that helps organizations manage requirements and answer questionnaires efficiently. Whether you're dealing with business requirements, compliance standards, project specifications, or any other type of organizational requirements, the app uses AI to automate these tasks while keeping humans in control of important decisions.
+The Rekwai App is a smart document processing system that helps organizations manage requirements and answer questionnaires efficiently. Whether you're dealing with business requirements, compliance standards, project specifications, or any other type of organizational requirements, Rekwai automates these tasks while keeping humans in control of important decisions.
 
 To get started, see the **[Installation Guide](installation.md)** for complete setup instructions.
 
@@ -63,7 +63,7 @@ For detailed workflows and interface guide, see **[Query Management](queries.md)
 
 ## Getting Started
 
-First, follow the **[Installation Guide](installation.md)** to set up the Rekwai App with Docker and your Google AI API key.
+First, follow the **[Installation Guide](installation.md)** to set up the Rekwai App with Docker and your AI provider API key.
 
 The app has three main sections organized within **[Products](product.md)**:
 

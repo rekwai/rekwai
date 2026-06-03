@@ -30,7 +30,7 @@ Products are scoped within an organization and maintain complete data isolation 
 
 Access product creation through:
 - "Create Your First Product" (when no products exist)
-- "+ Add new" button in the sidebar
+- "Add new" button in the sidebar
 
 ### Configuration Options
 
@@ -38,6 +38,11 @@ Access product creation through:
 - Unique identifier within your organization
 - Used in navigation and product selection
 - Maximum 25 characters
+
+**Product Key** (Required)
+- A short code of 3–6 uppercase letters (A–Z), e.g. `ABC` or `MYPRD`
+- Used to identify the product in URLs and as a prefix for requirement, source, and questionnaire keys
+- Cannot be changed after the product is created
 
 ## Product Interface
 
@@ -69,8 +74,8 @@ Products display in the left sidebar with visual indicators:
 
 Access product settings dialog to:
 - Edit product name (maximum 25 characters)
-- Delete product and all associated data
-- Changes require confirmation before saving
+- View the product key (read-only; the key cannot be changed)
+- Delete product and all associated data (requires confirmation)
 
 ## Product Management
 

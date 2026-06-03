@@ -61,50 +61,48 @@ When processing completes, you are navigated to the Requirement Indexing page wh
 #### Step 3: Working in the Requirement Indexing Interface
 
 **Interface Layout:**
-- **Left Panel**: All extracted requirements with completion indicators (checkmark when linked to your database)
+- **Left Panel**: All extracted requirements, each with an indicator showing its suggested action (link, merge, or create) and a checkmark once the row has been resolved
 - **Metadata Tab**: Document information (key, name, type, size) and upload date
-- **Right Panel**: Details for the selected requirement with linking tools
+- **Right Panel**: Details for the selected requirement and its Rekwai suggestion
 
-When you open a requirement, you'll see any requirements the system already linked from your database. Your job is to **review and refine** - most of the matching work is already done.
+When you open an extracted requirement, Rekwai shows a single **suggested action** for it. Your job is to **review and confirm** - most of the analysis is already done.
 
-#### Reviewing and Improving Links
+#### Reviewing and Confirming Suggestions
 
-**The Linked Requirements Section:**
-- Shows requirements from your database that match this source requirement
-- The system has already linked high-confidence matches automatically
-- Each linked requirement displays its description, types, and implementation status
+For each extracted requirement, Rekwai recommends exactly one of three actions and explains its reasoning in a **Suggestion** banner:
 
-**Actions for Each Linked Requirement:**
-- **Edit** (pencil icon): Modify the linked requirement details
-- **Merge** (arrows icon): Combine source requirement content into the linked requirement
-- **Unlink** (X icon): Remove this link if it's not relevant
+- **Link Requirements**: the source matches one or more existing requirements; confirming links them
+- **Merge Requirements**: the source adds detail to an existing requirement; the banner shows a diff preview of the merged text
+- **Create Requirement**: no good match exists; confirming creates a new requirement from the source (a preview card shows what will be created)
 
-**Adding More Links:**
-If the system missed relevant requirements or you need more context:
-- **Refresh** (rotate icon): Search again for similar requirements and auto-link matches
-- **Link requirement(s)**: Opens a modal to search and select from all requirements in your product
-- **Create requirement**: Create a new requirement based on the source (the form is pre-filled)
+**Working with a suggestion:**
+- **Confirm**: Click the action button (e.g. "Merge Requirements") to apply the suggested action
+- **Edit**: Adjust the details before confirming. For a merge, edit the merged text; for a create, edit the requirement that will be created
+- **Inspect the target**: When a suggestion references an existing requirement, its key is a link you can click to view that requirement's full details
 
-**Merging Requirements:**
-- Click the merge icon on any linked requirement
-- The system creates merged text that preserves important details from both requirements
-- Review the merged content in the edit dialog and save to update the requirement
-- Use this to enrich your database as new sources provide additional context
+**After you confirm:**
+- A status banner appears summarizing what happened (merged or created) with an **Undo** option and a quick **Edit** link
+- The row is marked complete in the left panel
+
+**If there's no suggestion** (or you want a different outcome), the panel offers a fallback with:
+- **Re-run suggestion**: Ask Rekwai to analyze the requirement again
+- **Link Requirements**: Open a modal to search and select from all requirements in your product
+- **Add requirement**: Create a new requirement based on the source (the form is pre-filled)
 
 #### Navigation and Progress
 
 - Use "Previous" and "Next" buttons to work through requirements systematically
-- Green checkmarks indicate requirements that are linked to your database
+- Green checkmarks indicate requirements that have been resolved (linked, merged, or created)
 - Progress is automatically saved - return to any source later to continue
 - Click "Close" on the last requirement to finish
 
 #### Bulk Operations
 
 **Accept All Suggestions:**
-- Use the "Accept all suggestions" button in the header to approve stored Rekwai suggestions for unlinked source requirements.
-- Rekwai will attach, merge, or create requirements according to the suggestions shown for each row.
+- Use the "Accept all suggestions" button in the header to approve the stored Rekwai suggestions for all unresolved source requirements at once.
+- Rekwai will link, merge, or create requirements according to the suggestion shown for each row.
 - If multiple merge suggestions target the same existing requirement, Rekwai accepts the first one, refreshes the skipped rows, and leaves them for manual review.
-- Linked rows are considered complete and will not receive new suggestions.
+- Rows that are already resolved are considered complete and will not receive new suggestions.
 
 ### Option 2: Add Requirements Manually
 
@@ -152,7 +150,7 @@ If the system missed relevant requirements or you need more context:
 The Rekwai app provides comprehensive source management capabilities to help you organize and track all your requirement sources.
 
 ### Sources Tab Features
-- **Source library**: View all uploaded requirement sources with file details, upload dates, and processing status
+- **Source library**: View all uploaded requirement sources with their key, document name, extracted requirement count, and upload date
 - **Download sources**: Download original files for offline reference or sharing
 - **Source details**: See exactly how many requirements were extracted from each source
 - **Source deletion**: Remove sources and all their associated extracted requirements. This breaks the links to main requirements but preserves the main requirements themselves

@@ -1,28 +1,39 @@
-# Rekwai App
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/rekwai-banner.svg">
+    <img alt="Rekwai" src=".github/assets/rekwai-banner-light.svg" width="280">
+  </picture>
+</p>
 
-Rekwai is a smart document processing system that helps organizations manage requirements and answer questionnaires efficiently. Whether you're dealing with business requirements, compliance standards, project specifications, or any type of organizational requirements, the app uses AI to automate these tasks while keeping humans in control of important decisions.
+# Rekwai
+
+**Actionable knowledge, not paperwork.**
+
+Rekwai is an open-source requirements management platform that turns your scattered documents into a living knowledge base, then uses it to answer compliance questionnaires, security reviews, and RFPs automatically.
+
+Every organization keeps requirements everywhere: standards and regulations, internal policies, architecture docs, release notes, project plans. When someone asks a question, the answer is buried across documents, wikis, and people's memories. Rekwai extracts structured requirements from any document, remembers exactly where each one came from, and keeps that knowledge accurate and accessible no matter which project or sprint it belongs to. Rekwai does the heavy lifting while you stay in control of every decision.
 
 ## What Can You Do With Rekwai?
 
-### 📄 Upload and Process Requirements Documents
-- Upload documents containing any type of requirements (PDF, Word, Excel files)
-- Automatically extract and organize all requirements from your documents
-- Build a central database of all your organizational requirements
-- Track exactly where each requirement came from for compliance and auditing
+### Build a Requirements Knowledge Base
+- Upload any document, such as regulations, standards, policies, architecture docs, release notes, or project plans (PDF, Word, Excel)
+- Automatically extract and organize structured requirements
+- Capture not just what needs to be done, but whether it's implemented or planned, how it's handled, and how to verify it
+- Keep complete source traceability for every requirement, so nothing is lost when projects end
 
-### ❓ Process Questionnaires Automatically
-- Upload questionnaires that you need to complete (compliance, security assessments, RFPs)
-- Automatically generate answers based on your stored requirements
-- Review and approve answers before finalizing
-- Export completed questionnaires ready for submission
+### Answer Questionnaires Automatically
+- Upload compliance assessments, security reviews, or RFPs
+- Generate draft answers backed by your own requirements
+- Review and approve every answer before it's final
+- Export with full source citations for audits, or clean answers for client delivery
 
-## Key Benefits
+## Why Rekwai?
 
-- **Save Time**: Automate the tedious work of reading documents and writing responses
-- **Stay Consistent**: All answers are based on your actual requirements database
-- **Maintain Control**: You review and approve everything before it's final
-- **Track Everything**: See what requirements you have and where they came from
-- **Reduce Errors**: Automated processing reduces manual mistakes
+- **A single source of truth**: every answer is grounded in your actual requirements database
+- **Stay in control**: Rekwai proposes, you review and approve before anything is final
+- **Full traceability**: see what you have, where it came from, and how it evolved over time
+- **Save time**: stop answering the same questionnaire from scratch, over and over
+- **Yours to run**: 100% open source, self-hosted on your infrastructure, with your own AI keys
 
 ## Quick Start
 
@@ -50,31 +61,11 @@ For complete installation instructions, see the **[Installation Guide](docs/inst
 4. **Access the app** at `http://localhost:3000`
 
 
-## How It Works
-
-### Requirements Management Workflow
-1. **Upload Your Documents** - Drop in any document containing requirements
-2. **Automatic Extraction** - The app identifies all requirements
-3. **Review and Organize** - Review what was found and make adjustments
-4. **Smart Duplicate Detection** - Identifies if requirements are duplicates or updates
-5. **Build Your Database** - All approved requirements are stored for future use
-
-For detailed workflows and advanced features, see **[Requirements Management](docs/requirements.md)**.
-
-### Questionnaire Processing Workflow
-1. **Upload a Questionnaire** - Drop in any questionnaire you need to complete
-2. **Question Detection** - The app identifies all questions that need answers
-3. **Smart Answer Generation** - Finds relevant requirements and suggests answers
-4. **Review and Approve** - You review each answer and can modify or approve them
-5. **Export Completed Document** - Download your finished questionnaire
-
-For detailed interface guides and best practices, see **[Query Management](docs/queries.md)**.
-
 ## Getting Started
 
 1. **Create a Product** - Set up a workspace for your requirements and questionnaires (see **[Product Management](docs/product.md)** for details)
 2. **Upload Requirements** - Start by uploading documents containing your requirements (see **[Requirements Management](docs/requirements.md)** for the complete workflow)
-3. **Process Questionnaires** - Upload questionnaires and let the AI generate answers using your requirements (see **[Query Management](docs/queries.md)** for step-by-step instructions)
+3. **Process Questionnaires** - Upload questionnaires and let Rekwai generate answers using your requirements (see **[Query Management](docs/queries.md)** for step-by-step instructions)
 
 The more complete your requirements database, the better your questionnaire responses will be.
 

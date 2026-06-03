@@ -306,7 +306,7 @@ export function UploadModal({
                 Upload Source
               </DialogTitle>
               <DialogDescription>
-                Upload a document (.pdf, .doc, .docx, .xls, .xlsx, .md, .txt) to
+                Upload a document (.pdf, .docx, .xls, .xlsx, .md, .txt) to
                 extract requirements.
               </DialogDescription>
             </DialogHeader>
@@ -340,7 +340,7 @@ export function UploadModal({
                 type="file"
                 className="hidden"
                 onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.md,.txt"
+                accept=".pdf,.docx,.xls,.xlsx,.md,.txt"
                 disabled={taskUpload.isLoading}
               />
 
