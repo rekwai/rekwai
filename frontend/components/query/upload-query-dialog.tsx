@@ -337,7 +337,7 @@ export function UploadQueryDialog({
               type="file"
               className="hidden"
               onChange={handleFileChange}
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
+              accept=".pdf,.docx,.xls,.xlsx,.md,.txt"
               disabled={taskUpload.isLoading}
             />
             {taskUpload.isLoading ? (
