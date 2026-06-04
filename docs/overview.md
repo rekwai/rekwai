@@ -60,6 +60,7 @@ For detailed workflows and interface guide, see **[Query Management](queries.md)
 - **Maintain Control**: You review and approve everything before it's final
 - **Track Everything**: See what requirements you have and where they came from
 - **Reduce Errors**: Automated processing reduces manual mistakes
+- **Yours to Run**: 100% open source, self-hosted on your own infrastructure, with your own AI provider API keys
 
 ## Getting Started
 
