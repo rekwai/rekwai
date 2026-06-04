@@ -33,7 +33,7 @@ Every organization keeps requirements everywhere: standards and regulations, int
 - **Stay in control**: Rekwai proposes, you review and approve before anything is final
 - **Full traceability**: see what you have, where it came from, and how it evolved over time
 - **Save time**: stop answering the same questionnaire from scratch, over and over
-- **Yours to run**: 100% open source, self-hosted on your infrastructure, with your own AI keys
+- **Yours to run**: 100% open source, self-hosted on your own infrastructure, with your own AI provider API keys
 
 ## Quick Start
 

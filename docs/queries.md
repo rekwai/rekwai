@@ -27,7 +27,7 @@ Each questionnaire becomes a "query" in the system that gets processed to genera
 
 1. Go to the Queries tab in your product
 2. Click the "Upload" dropdown and select "Upload Query"
-3. Choose a questionnaire document (PDF, Word `.docx`, Excel, Markdown, or plain text)
+3. Choose a questionnaire document that is supported by Rekwai
 4. Confirm the product and select a client from the dropdown, or click "New client" to add one on the spot
 5. The app saves your document and begins processing
 
